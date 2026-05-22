@@ -1,0 +1,60 @@
+{
+    auto_https off
+    admin off
+}
+
+:8200 {
+    log {
+        output file /var/log/caddy/access.log
+        format console
+    }
+
+    handle /grafana* {
+        reverse_proxy localhost:7777 {
+            header_up Host {host}
+            header_up X-Forwarded-Proto https
+            header_up X-Forwarded-Host {host}
+        }
+    }
+
+    handle /promql* {
+        reverse_proxy localhost:40001 {
+            header_up Host {host}
+            header_up X-Forwarded-Proto https
+            header_up X-Forwarded-Host {host}
+        }
+    }
+
+    handle_path /ray/* {
+        reverse_proxy localhost:8201 {
+            header_up Host {host}
+            header_up X-Forwarded-Proto https
+        }
+    }
+    redir /ray /ray/ 308
+
+    @rayAbs {
+        path /static/* /api/* /logs/* /metrics_export/* /events/* /worker/* /dashboard/* /test* /tasks/* /nodes/* /actors/* /jobs/* /component_activities*
+    }
+    handle @rayAbs {
+        reverse_proxy localhost:8201
+    }
+
+    # 项目文档静态目录挂载 — /docs/* 转发到容器内 /srv/docs/
+    # 容器外路径:$V4_WORK/caddy/static/(由 bring_up_caddy.sh 同步)
+    # 后续加页面:只需把新 html 加到 bring_up_caddy.sh 的 DOCS_FILES 数组
+    # 默认入口:/docs/  → 列目录(browse);/docs/WRITEUP.html → 项目实录
+    handle_path /docs/* {
+        root * /srv/docs
+        file_server browse
+    }
+    redir /docs /docs/ 308
+
+    handle / {
+        redir / /ray/ 302
+    }
+
+    handle {
+        respond "Not Found" 404
+    }
+}

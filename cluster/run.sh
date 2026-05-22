@@ -1,0 +1,341 @@
+#!/usr/bin/env bash
+# Unified launch entry.
+#
+# 用法 (任选):
+#   bash run.sh --fleet h20_16node --scale tp8pp8ep8_layout --workload sft_prod
+#   V4_FLEET=h20_16node V4_SCALE=tp8pp8ep8_layout V4_WORKLOAD=sft_prod bash run.sh
+#
+# Common overrides (each maps to a PRESET_* / HW_* variable):
+#   --num-rollout N           training steps
+#   --lr X                    learning rate
+#   --lr-decay-style S        constant / cosine / linear
+#   --save-interval N         save ckpt every N steps
+#   --save-retain-interval N  keep a permanent ckpt every N steps (rolling)
+#   --max-tokens-per-gpu N    per-CP-rank token cap (trade memory for batch)
+#   --global-batch-size N
+#   --attn-impl IMPL          tilelang / dense
+#
+# --dry-run: generate launch_in_container.sh but do NOT submit it to ray.
+#
+# Load order (later overrides earlier):
+#   fleet/$V4_FLEET.env  →  base.env  →  hw/$V4_GPU_MODEL.env  →
+#   scale/$V4_SCALE.env  →  workload/$V4_WORKLOAD.env  →  CLI overrides
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+
+# ---------- parse args -------------------------------------------------------
+DRY_RUN=0
+PROFILE_ENABLED=0
+NO_SAVE_OPTIM=0
+declare -A OVERRIDES=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run) DRY_RUN=1; shift ;;
+    --fleet)                 export V4_FLEET="$2"; shift 2 ;;
+    --scale)                 export V4_SCALE="$2"; shift 2 ;;
+    --workload)              export V4_WORKLOAD="$2"; shift 2 ;;
+    -h|--help)
+      sed -n '2,/^set -euo/p' "$0" | sed 's/^# \?//; /^set -euo/d'
+      echo "Available fleets:    $(ls "$SCRIPT_DIR/fleet/" | sed 's/\.env$//' | tr '\n' ' ')"
+      echo "Available scales:    $(ls "$SCRIPT_DIR/scale/" | sed 's/\.env$//' | tr '\n' ' ')"
+      echo "Available workloads: $(ls "$SCRIPT_DIR/workload/" | sed 's/\.env$//' | tr '\n' ' ')"
+      exit 0 ;;
+    --num-rollout)           OVERRIDES[PRESET_NUM_ROLLOUT]="$2"; shift 2 ;;
+    --lr)                    OVERRIDES[PRESET_LR]="$2"; shift 2 ;;
+    --lr-decay-style)        OVERRIDES[PRESET_LR_DECAY_STYLE]="$2"; shift 2 ;;
+    --lr-warmup-iters)       OVERRIDES[PRESET_LR_WARMUP_ITERS]="$2"; shift 2 ;;
+    --profile)               PROFILE_ENABLED=1; shift ;;
+    --no-save-optim)         NO_SAVE_OPTIM=1; shift ;;
+    --save-interval)         OVERRIDES[PRESET_SAVE_INTERVAL]="$2"; shift 2 ;;
+    --save-retain-interval)  OVERRIDES[PRESET_SAVE_RETAIN_INTERVAL]="$2"; shift 2 ;;
+    --max-tokens-per-gpu)    OVERRIDES[HW_MAX_TOKENS_PER_GPU]="$2"; shift 2 ;;
+    --global-batch-size)     OVERRIDES[PRESET_GLOBAL_BATCH_SIZE]="$2"; shift 2 ;;
+    --rollout-batch-size)    OVERRIDES[PRESET_ROLLOUT_BATCH_SIZE]="$2"; shift 2 ;;
+    --attn-impl)             OVERRIDES[PRESET_ATTN_IMPL]="$2"; shift 2 ;;
+    --)                      shift; break ;;
+    *) echo "[err] unknown arg: $1 (see $0 --help)" >&2; exit 1 ;;
+  esac
+done
+
+: "${V4_SCALE:?[err] V4_SCALE / --scale required (see $0 --help)}"
+: "${V4_WORKLOAD:?[err] V4_WORKLOAD / --workload required (see $0 --help)}"
+
+# ---------- layered source ---------------------------------------------------
+# env.sh handles: fleet → base → hw → scale → workload.
+source "$SCRIPT_DIR/env.sh"
+
+# CLI overrides (applied last in the source chain)
+for k in "${!OVERRIDES[@]}"; do
+  printf '[info] override: %s=%s\n' "$k" "${OVERRIDES[$k]}"
+  export "$k=${OVERRIDES[$k]}"
+done
+
+# Preset can set PRESET_CPU_OFFLOAD_FLAGS="" to disable cpu-offload optimizer (saves Memcpy% but
+# costs ~40 GB GPU mem for optimizer state — V4 single-rank exceeds 95 GB, so default keeps offload).
+: "${PRESET_CPU_OFFLOAD_FLAGS=--optimizer-cpu-offload --overlap-cpu-optimizer-d2h-h2d --use-precision-aware-optimizer}"
+
+# ZeRO-1: shard optimizer state along DP. Only meaningful when DP > 1
+# (64 GPU TP=8 PP=8 CP=1 → DP=1, no-op; 128 GPU same shape → DP=2, ~20 GB Adam/rank).
+DIST_OPT_FLAGS=""
+if [[ "${PRESET_USE_DIST_OPT:-0}" == "1" ]]; then
+  DIST_OPT_FLAGS="--use-distributed-optimizer"
+fi
+
+# Recompute flags depend on granularity: selective rejects --recompute-method; full needs it; none omits both.
+# selective + HW_RECOMPUTE_MODULES emits --recompute-modules (Megatron defaults to core_attn when omitted;
+# we want explicit moe_act/layernorm/mla_up_proj subset for cheap-recompute big-activation wins).
+case "${HW_RECOMPUTE_GRANULARITY:-full}" in
+  none|"") HW_RECOMPUTE_FLAGS="" ;;
+  selective)
+    HW_RECOMPUTE_FLAGS="--recompute-granularity selective"
+    if [[ -n "${HW_RECOMPUTE_MODULES:-}" ]]; then
+      HW_RECOMPUTE_FLAGS="$HW_RECOMPUTE_FLAGS --recompute-modules $HW_RECOMPUTE_MODULES"
+    fi
+    ;;
+  *) HW_RECOMPUTE_FLAGS="--recompute-granularity $HW_RECOMPUTE_GRANULARITY --recompute-method $HW_RECOMPUTE_METHOD --recompute-num-layers $HW_RECOMPUTE_NUM_LAYERS" ;;
+esac
+
+# Optional --tool-key (datasets with separate tool spec column, e.g. albaliang agent SFT).
+# Empty by default; presets needing it set PRESET_TOOL_KEY=<column-name>.
+SFT_TOOL_KEY_FLAGS=""
+if [[ -n "${PRESET_TOOL_KEY:-}" ]]; then
+  SFT_TOOL_KEY_FLAGS="--tool-key $PRESET_TOOL_KEY"
+fi
+
+# Optional --lr-warmup-iters. Megatron's default with this unset is 0; we only emit
+# the flag when caller asked for warmup so existing presets stay byte-for-byte equal.
+LR_WARMUP_FLAGS=""
+if [[ "${PRESET_LR_WARMUP_ITERS:-0}" -gt 0 ]]; then
+  LR_WARMUP_FLAGS="--lr-warmup-iters $PRESET_LR_WARMUP_ITERS"
+fi
+
+# Pipeline layer layout. Two modes:
+#   1. PRESET_PIPELINE_LAYOUT set → emit --pipeline-model-parallel-layout <string> (Megatron
+#      explicit layout, e.g. 'Etttt|(tttttt|)*6,tttL' for 43-layer V4 PP=8). Mutually exclusive
+#      with decoder-first/last in Megatron; we DROP those when layout is set.
+#   2. Otherwise → emit --decoder-first/last-pipeline-num-layers (existing behavior).
+#
+# Layout-special chars (| ( ) *) get backslash-escaped, then wrapped in single quotes
+# inside the launch script. Reason: ray job submit does NOT shlex.quote argv when joining
+# back to a shell command on the cluster side; without escaping, sh parses '(' as syntax
+# error. The single-quotes survive heredoc text-substitution; the backslashes survive sh's
+# parse on cluster (\|→|, \(→(, etc.) so argparse + Megatron see the clean layout string.
+if [[ -n "${PRESET_PIPELINE_LAYOUT:-}" ]]; then
+  ESCAPED_LAYOUT=$(printf '%s' "$PRESET_PIPELINE_LAYOUT" | sed 's/[|()*]/\\&/g')
+  PIPELINE_PP_FLAGS="--pipeline-model-parallel-layout '$ESCAPED_LAYOUT'"
+else
+  PIPELINE_PP_FLAGS="--decoder-first-pipeline-num-layers $PRESET_DECODER_FIRST_PIPELINE_NUM_LAYERS --decoder-last-pipeline-num-layers $PRESET_DECODER_LAST_PIPELINE_NUM_LAYERS"
+fi
+
+# Virtual pipeline parallel. Two paths in Megatron (mutually exclusive — see arguments.py:503):
+#   1. Layout mode (PRESET_PIPELINE_LAYOUT set): VPP is auto-derived as
+#      num_stages_in_layout / pipeline_model_parallel_size. PRESET_VPP is documentation
+#      only; we DO NOT emit --num-virtual-stages-per-pipeline-rank (Megatron asserts).
+#   2. Decoder-first/last mode: PRESET_VPP >= 2 emits --num-virtual-stages-per-pipeline-rank.
+#      Won't work for 43-layer V4 due to divisibility (see §6.5), but keep for future models.
+VPP_FLAGS=""
+if [[ -z "${PRESET_PIPELINE_LAYOUT:-}" ]] && [[ "${PRESET_VPP:-1}" -gt 1 ]]; then
+  VPP_FLAGS="--num-virtual-stages-per-pipeline-rank $PRESET_VPP"
+fi
+
+# EP all-to-all overlap (batch-level MoE A2A overlapped with computation). Requires:
+#   - VPP enabled when PP > 1 (we satisfy via layout)
+#   - EP > 1 (we have EP=8)
+#   - --moe-token-dispatcher-type in [alltoall, flex] (V4 uses alltoall)
+#   - torch >= 2.6.0 (image torch 2.12 satisfies)
+# Megatron arguments.py:941 warns that on Hopper (H20) combining TP/CP with EP overlap is
+# suboptimal — TP wants CUDA_DEVICE_MAX_CONNECTIONS=1, EP overlap prefers 32. Keep =1 for
+# now (TP=8 is heavier in our config); revisit only if EP overlap shows minimal gain.
+EP_OVERLAP_FLAGS=""
+if [[ "${PRESET_EP_OVERLAP:-0}" == "1" ]]; then
+  EP_OVERLAP_FLAGS="--overlap-moe-expert-parallel-comm --delay-wgrad-compute"
+fi
+
+# DeepEP backend (kernel-level NVL + IB pipelining inside MoE a2a). Different from EP_OVERLAP
+# which is schedule-level (1F1B combined). DeepEP overlaps inside the dispatcher kernel and
+# doesn't need attention to expose backward_dw.
+# Switches dispatcher: V4 model script sets --moe-token-dispatcher-type alltoall in MODEL_ARGS;
+# this flag emits flex + enable-deepep AFTER it in argparse (last-wins). Default SM budget = 20
+# (Megatron transformer_config.moe_deepep_num_sms default); raise via PRESET_MOE_DEEPEP_NUM_SMS.
+DEEPEP_FLAGS=""
+if [[ "${PRESET_MOE_DEEPEP:-0}" == "1" ]]; then
+  DEEPEP_FLAGS="--moe-token-dispatcher-type flex --moe-enable-deepep"
+  if [[ -n "${PRESET_MOE_DEEPEP_NUM_SMS:-}" ]]; then
+    DEEPEP_FLAGS="$DEEPEP_FLAGS --moe-deepep-num-sms $PRESET_MOE_DEEPEP_NUM_SMS"
+  fi
+fi
+
+# MoE router dtype (Megatron warns at num_experts>=32 without fp32; DeepEP token_dispatcher.py:1178
+# also emits "DeepEP only supports float32 probs" on bf16 path → internal cast overhead).
+# Set PRESET_MOE_ROUTER_DTYPE=fp32 to enable. Off by default to keep baselines byte-equal.
+ROUTER_DTYPE_FLAGS=""
+if [[ -n "${PRESET_MOE_ROUTER_DTYPE:-}" ]]; then
+  ROUTER_DTYPE_FLAGS="--moe-router-dtype $PRESET_MOE_ROUTER_DTYPE"
+fi
+
+# Profile flags are finalized below after RUN_ID is set (needs $SAVE_DIR for tb_dir).
+PROFILE_FLAGS=""
+PROFILE_TBDIR=""
+
+# ---------- preflight ----------------------------------------------------------
+source "$SCRIPT_DIR/lib/preflight.sh"
+if [[ "$V4_WORKLOAD" == "sft_smoke" ]]; then
+  preflight_64gpu_strict || exit 1
+else
+  preflight_64gpu || exit 1
+fi
+
+# ---------- run id / save dir --------------------------------------------------
+RUN_ID="${PRESET_RUN_ID_PREFIX}-$(date +%Y%m%d-%H%M%S)"
+SAVE_DIR="$V4_OUT/$RUN_ID"
+mkdir -p "$SAVE_DIR"
+echo "[info] config   : fleet=$V4_FLEET scale=$V4_SCALE workload=$V4_WORKLOAD"
+echo "[info] cluster  : $V4_CLUSTER_NAME ($V4_GPU_MODEL × $V4_NUM_NODES nodes × $V4_NUM_GPUS_PER_NODE gpus)"
+echo "[info] run id    : $RUN_ID"
+echo "[info] save dir  : $SAVE_DIR"
+echo "[info] dashboard : http://$V4_MASTER_IP:$V4_DASHBOARD_PORT"
+
+# Finalize profile flags (needs SAVE_DIR).
+if (( PROFILE_ENABLED == 1 )); then
+  : "${PROFILE_STEP_START:=5}"
+  : "${PROFILE_STEP_END:=$((PROFILE_STEP_START + 1))}"   # active=1 (PP=4 trace-safe)
+  PROFILE_TBDIR="$SAVE_DIR/profiler_traces"
+  mkdir -p "$PROFILE_TBDIR"
+  PROFILE_FLAGS="--use-pytorch-profiler --profile-step-start $PROFILE_STEP_START --profile-step-end $PROFILE_STEP_END --profile-target train_overall --tensorboard-dir $PROFILE_TBDIR"
+  echo "[info] profile  : ON  active steps [$PROFILE_STEP_START,$PROFILE_STEP_END)  tb_dir=$PROFILE_TBDIR"
+fi
+
+# ---------- generate in-container launch script ------------------------------
+LAUNCH=$SAVE_DIR/launch_in_container.sh
+cat > "$LAUNCH" <<EOF
+#!/usr/bin/env bash
+set -e
+cd $V4_MILES
+source scripts/models/deepseek-v4-flash.sh
+
+CKPT_ARGS=(
+  --hf-checkpoint  $V4_BF16_DIR
+  --ref-load       $V4_TORCH_DIST
+  --load           $SAVE_DIR/checkpoints
+  --save           $SAVE_DIR/checkpoints
+  --save-interval  $PRESET_SAVE_INTERVAL
+  --save-retain-interval $PRESET_SAVE_RETAIN_INTERVAL
+)
+# Workaround for module 3 Problem 8 — skip optimizer state save to avoid the
+# dist_checkpointing async D2H cudaErrorInvalidValue under 64K + long runs.
+# SFT terminal state does not need optimizer state for resume.
+[[ "$NO_SAVE_OPTIM" == "1" ]] && CKPT_ARGS+=(--no-save-optim)
+
+SFT_ARGS=(
+  --rollout-function-path miles.rollout.sft_rollout.generate_rollout
+  --prompt-data    $V4_SFT_DATA
+  --input-key      messages
+  --rollout-shuffle
+  --num-rollout            $PRESET_NUM_ROLLOUT
+  --rollout-batch-size     $PRESET_ROLLOUT_BATCH_SIZE
+  --global-batch-size      $PRESET_GLOBAL_BATCH_SIZE
+
+  --loss-type sft_loss
+  --calculate-per-token-loss
+  --disable-compute-advantages-and-returns
+  --debug-train-only
+
+  --loss-mask-type deepseek_v4
+  $SFT_TOOL_KEY_FLAGS
+)
+
+PERF_ARGS=(
+  --tensor-model-parallel-size $PRESET_TP
+  --sequence-parallel
+  --pipeline-model-parallel-size $PRESET_PP
+  $PIPELINE_PP_FLAGS
+  $VPP_FLAGS
+  --context-parallel-size $PRESET_CP
+  --expert-model-parallel-size $PRESET_EP
+  --expert-tensor-parallel-size $PRESET_ETP
+  $EP_OVERLAP_FLAGS
+  $DEEPEP_FLAGS
+  $ROUTER_DTYPE_FLAGS
+
+  $HW_RECOMPUTE_FLAGS
+
+  --micro-batch-size 1
+  --use-dynamic-batch-size
+  --max-tokens-per-gpu $HW_MAX_TOKENS_PER_GPU
+)
+
+OPTIMIZER_ARGS=(
+  --optimizer adam
+  --lr $PRESET_LR
+  --lr-decay-style $PRESET_LR_DECAY_STYLE
+  $LR_WARMUP_FLAGS
+  --weight-decay 0.1
+  --adam-beta1 0.9 --adam-beta2 0.95
+  $PRESET_CPU_OFFLOAD_FLAGS
+  $DIST_OPT_FLAGS
+)
+
+MISC_ARGS=(
+  --attention-dropout 0.0
+  --hidden-dropout    0.0
+  --accumulate-allreduce-grads-in-fp32
+  --attention-softmax-in-fp32
+  --model-name deepseekv4
+  --qkv-format thd
+  --moe-router-freeze-gate
+  --freeze-e-score-correction-bias
+  --update-weight-buffer-size 1073741824
+  --train-memory-margin-bytes 3221225472
+
+  --actor-num-nodes $V4_NUM_NODES
+  --actor-num-gpus-per-node $V4_NUM_GPUS_PER_NODE
+  --num-gpus-per-node $V4_NUM_GPUS_PER_NODE
+  --colocate
+  --no-offload-train
+  --no-offload-rollout
+  --use-fault-tolerance
+  --dump-details $SAVE_DIR/dump_details
+  $PROFILE_FLAGS
+)
+
+RUNTIME_ENV='{
+  "env_vars": {
+    "PYTHONPATH": "$V4_MEGATRON:$V4_TILE_KERNELS",
+    "CUDA_DEVICE_MAX_CONNECTIONS": "1",
+    "MASTER_ADDR": "$V4_MASTER_IP",
+    "MILES_DSV4_THINKING_MODE": "chat",
+    "MILES_DSV4_DROP_THINKING": "0",
+    "NCCL_NVLS_ENABLE": "$HW_NCCL_NVLS_ENABLE",
+    "GLOO_SOCKET_IFNAME": "eth0",
+    "NCCL_SOCKET_IFNAME": "eth0",
+    "LD_PRELOAD": "/usr/local/lib/python3.12/dist-packages/torch_memory_saver_hook_mode_preload.abi3.so",
+    "MEGATRON_SPARSE_ATTN_IMPL": "$PRESET_ATTN_IMPL",
+    "PYTORCH_CUDA_ALLOC_CONF": "${HW_PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
+  }
+}'
+
+ray job submit --address=http://127.0.0.1:$V4_DASHBOARD_PORT \\
+   --runtime-env-json="\$RUNTIME_ENV" \\
+   -- python3 train.py \\
+   "\${MODEL_ARGS[@]}" \\
+   "\${CKPT_ARGS[@]}" \\
+   "\${SFT_ARGS[@]}" \\
+   "\${OPTIMIZER_ARGS[@]}" \\
+   "\${PERF_ARGS[@]}" \\
+   "\${MISC_ARGS[@]}"
+EOF
+
+chmod +x "$LAUNCH"
+echo "[info] launch script: $LAUNCH"
+
+if (( DRY_RUN == 1 )); then
+  echo "[info] --dry-run: launch_in_container.sh generated, NOT submitting to ray"
+  exit 0
+fi
+
+echo
+echo "=== submit ray job (live logs mirrored to $SAVE_DIR/job.log) ==="
+ssh "root@$V4_MASTER_IP" "docker exec $V4_CONTAINER bash $LAUNCH" 2>&1 | tee "$SAVE_DIR/job.log"
