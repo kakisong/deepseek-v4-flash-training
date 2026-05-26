@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeepSeek-V4-Flash SFT 训练方案</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --ink:#171717; --ink-mid:#4a4a48; --ink-low:#8a8a85; --ink-faint:#b8b7b1;
+  --paper:#fafaf9; --paper-alt:#f5f4f1; --border:#e8e7e3; --border-soft:#efeeea;
+  --accent:#00a866; --accent-soft:#e6f6ee;
+  --warn:#c2410c;  --warn-soft:#fdf1ea;
+  --bad:#c84747;   --bad-soft:#fbecec;
+}
+html { scroll-behavior:smooth; scroll-padding-top:24px; }
+body { background:#fff; color:var(--ink);
+  font-family: system-ui,-apple-system,BlinkMacSystemFont,'PingFang SC','Noto Sans SC',sans-serif;
+  letter-spacing:-0.005em; -webkit-font-smoothing:antialiased; }
+code.inline { background:var(--paper-alt); color:var(--ink); padding:.12rem .42rem; border-radius:3px;
+  font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.85em; border:1px solid var(--border-soft);
+  word-break:break-word; }
+pre { background:var(--paper); color:var(--ink-mid); border:1px solid var(--border-soft);
+  padding:14px 16px; border-radius:5px; overflow-x:auto;
+  font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:12.5px; line-height:1.65; margin:1rem 0; }
+
+h1 { font-size:38px; font-weight:600; letter-spacing:-0.02em; line-height:1.1; }
+main > section { margin-top:5rem; padding-top:2.5rem; border-top:2px solid var(--ink); scroll-margin-top:24px; }
+main > section:first-of-type { margin-top:0; padding-top:0; border-top:none; }
+main > section > h2 {
+  font-size:42px !important; font-weight:700 !important; letter-spacing:-0.03em;
+  line-height:1.05; color:var(--ink); margin:0 0 1.75rem 0;
+}
+main > section > h2::before {
+  content: attr(data-kicker); display:block;
+  font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:12px; font-weight:500; letter-spacing:0.16em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:16px;
+}
+h3 { font-size:13px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase;
+  color:var(--ink-low); font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  margin-top:2rem; margin-bottom:.8rem; }
+h4 { font-size:15px; font-weight:600; color:var(--ink-mid); margin-top:1.2rem; margin-bottom:.5rem; }
+p  { margin:.7rem 0; line-height:1.7; color:var(--ink-mid); font-size:14.5px; }
+p strong, li strong { color:var(--ink); font-weight:600; }
+ul, ol { margin:.7rem 0 .7rem 1.5rem; line-height:1.75; }
+li { margin:.2rem 0; color:var(--ink-mid); font-size:14.5px; }
+a { color:var(--ink); text-decoration:underline; text-decoration-color:var(--ink-faint); text-underline-offset:2px; }
+a:hover { color:var(--accent); text-decoration-color:var(--accent); }
+
+table { border-collapse:collapse; width:100%; margin:1.1rem 0; font-size:13.5px;
+  border:1px solid var(--border); border-radius:6px; overflow:hidden; }
+th, td { border:none; border-bottom:1px solid var(--border-soft); padding:.6rem .85rem; text-align:left; vertical-align:top; }
+tbody tr:last-child td { border-bottom:none; }
+thead tr { background:var(--paper-alt); }
+th { background:var(--paper-alt); color:var(--ink-low); font-weight:500; font-size:11px;
+  letter-spacing:0.06em; text-transform:uppercase;
+  font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  border-bottom:1px solid var(--border); }
+tbody tr:hover { background:var(--paper); }
+td { color:var(--ink-mid); }
+td code.inline, th code.inline { font-size:.82em; }
+
+.callout { padding:.9rem 1.2rem; margin:1rem 0; border-radius:4px; border-left:3px solid; line-height:1.65; }
+.callout p { margin:.4rem 0; }
+.callout-info    { background:var(--paper-alt); border-color:var(--ink-low); color:var(--ink-mid); }
+.callout-warn    { background:var(--warn-soft); border-color:var(--warn); color:var(--ink); }
+.callout-success { background:var(--accent-soft); border-color:var(--accent); color:var(--ink); }
+.callout-danger  { background:var(--bad-soft); border-color:var(--bad); color:var(--ink); }
+
+.badge { display:inline-block; padding:2px 8px; border-radius:3px; font-size:11px; font-weight:500;
+  font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.badge-ok   { background:var(--accent-soft); color:var(--accent); }
+.badge-out  { background:var(--bad-soft);    color:var(--bad); }
+.badge-warn { background:var(--warn-soft);   color:var(--warn); }
+
+.kpi-row { display:grid; grid-template-columns: repeat(auto-fit, minmax(170px,1fr)); gap:12px; margin:1.25rem 0; }
+.kpi { padding:18px 20px; border:1px solid var(--border); border-radius:6px; background:#fff; }
+.kpi-label { font-size:11px; color:var(--ink-low); letter-spacing:.04em; text-transform:uppercase; margin-bottom:10px;
+  font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.kpi-value { display:flex; align-items:baseline; gap:5px;
+  font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.kpi-value .num { font-size:28px; font-weight:500; letter-spacing:-0.02em; color:var(--ink); }
+.kpi-value .unit { font-size:13px; color:var(--ink-low); }
+.kpi-delta { margin-top:8px; font-size:11.5px; color:var(--accent);
+  font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.kpi-sub { margin-top:4px; font-size:11px; color:var(--ink-low); }
+
+.masthead { background:#fff; border-bottom:1px solid var(--ink); }
+.masthead h1 { font-size:36px; max-width:880px; margin:0 0 10px; line-height:1.15; }
+.masthead .meta { font-family:ui-monospace,monospace; font-size:12px; color:var(--ink-low); margin:0 0 14px; }
+.masthead .lede { color:var(--ink-mid); font-size:15.5px; line-height:1.6; max-width:760px; margin:0 0 20px; }
+
+.tldr-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; margin:22px 0 4px; }
+.tldr-cell { padding:12px 14px; border:1px solid var(--border); border-radius:5px; background:var(--paper-alt); }
+.tldr-cell .k { font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-low);
+  font-family:ui-monospace,monospace; margin-bottom:6px; }
+.tldr-cell .v { font-size:14px; color:var(--ink); font-weight:500; }
+.tldr-cell .v code { font-size:.78em; }
+
+nav.toc { position:sticky; top:0; z-index:50; background:rgba(255,255,255,0.96);
+  backdrop-filter:saturate(150%) blur(6px); border-bottom:1px solid var(--border);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12px; }
+nav.toc .inner { display:flex; gap:22px; flex-wrap:wrap; padding:10px 16px; max-width:1024px; margin:0 auto;
+  color:var(--ink-low); }
+nav.toc a { color:var(--ink-low); text-decoration:none; letter-spacing:.04em; }
+nav.toc a:hover { color:var(--accent); }
+nav.toc a .num { color:var(--ink-faint); margin-right:6px; }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="container mx-auto px-4 max-w-5xl" style="padding-top:48px; padding-bottom:24px;">
+    <h1>DeepSeek-V4-Flash SFT 训练方案</h1>
+    <div class="meta">last updated · 2026-05-26 · maintainer @kaynzhang · 完整工程实录 <a href="WRITEUP.html">WRITEUP.html</a></div>
+    <p class="lede">
+      面向 DeepSeek-V4-Flash(284B 总参 / 21B activated / 43 层全 MoE / sparse-MLA)的 SFT 训练方案。基于 miles 框架以 6 个 CLI flag 退化模式跑 SFT,16 节点 H20 集群上 4K shape step time 5.23s,32K / 64K 长 context 全部稳态打通。
+    </p>
+    <div class="tldr-grid">
+      <div class="tldr-cell"><div class="k">框架</div><div class="v">miles(RLHF 退化为 SFT)</div></div>
+      <div class="tldr-cell"><div class="k">集群</div><div class="v">16 × H20 / 128 GPU</div></div>
+      <div class="tldr-cell"><div class="k">切卡 (4K)</div><div class="v">TP8 · PP16 · EP8</div></div>
+      <div class="tldr-cell"><div class="k">4K step time</div><div class="v">5.23 s · MFU 48%</div></div>
+      <div class="tldr-cell"><div class="k">长跑稳定性</div><div class="v">400 步 · 漂移 0.10%</div></div>
+      <div class="tldr-cell"><div class="k">Shape 覆盖</div><div class="v">4K / 32K / 64K 全打通</div></div>
+    </div>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="inner">
+    <a href="#model"><span class="num">§1</span>模型特点</a>
+    <a href="#framework-choice"><span class="num">§2</span>为什么选 miles</a>
+    <a href="#design"><span class="num">§3</span>方案描述</a>
+    <a href="#metrics"><span class="num">§4</span>指标数据</a>
+    <a href="#repo"><span class="num">§5</span>代码与使用</a>
+  </div>
+</nav>
+
+<main class="container mx-auto px-4 py-12 max-w-5xl">
+
+<!-- =========================================================
+     §1  DeepSeek V4 Flash 的特点
+     ========================================================= -->
+<section id="model">
+<h2 data-kicker="§ 1 · MODEL">DeepSeek-V4-Flash 模型特点</h2>
+
+<p>V4-Flash 是 DeepSeek V4 系列的 long-context / sparse-attention 变体。和 V3 / R1 同代相比,核心差异在 <strong>attention 路径</strong>和 <strong>MoE 极致稀疏</strong>两个方向上同时下了重手 —— 这两点决定了训练路径的所有特殊性。</p>
+
+<h3>1.1 关键参数</h3>
+<table>
+<thead><tr><th>维度</th><th>值</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>总参数 / Activated</td><td>284 B / 21 B</td><td>稀疏度 ~7.4%(top-8 / 256 + 8 shared)</td></tr>
+<tr><td>层数</td><td><strong>43</strong></td><td>质数,无法被常用 PP 因子整除 — 影响切卡策略</td></tr>
+<tr><td>Attention</td><td>MLA + tilelang sparse-MLA</td><td>第 0/1/42 层 dense MLA,中间 40 层 sparse(top-128 blocks / 4-token compress)</td></tr>
+<tr><td>q-lora / kv-lora</td><td>1024 / 512</td><td>低秩压缩,显著降 KV cache 与 attention 通信量</td></tr>
+<tr><td>MoE</td><td>256 routed (top-8) + 8 shared</td><td>每 expert ffn-hidden 2048</td></tr>
+<tr><td>序列长度上限</td><td>原生 32K → 扩展 256K</td><td>由 sparse-MLA top-128 block 几何决定</td></tr>
+<tr><td>权重格式(发布)</td><td>HF FP8(per-tile 128×128)</td><td>训练前需 dequant 到 BF16 再切分</td></tr>
+</tbody>
+</table>
+
+<h3>1.2 工程上跟 V3 的关键差异</h3>
+<ul>
+<li><strong>43 层质数</strong>:常用 PP 因子 (4/8/16) 都不整除,简单 VPP API <code class="inline">--num-layers-per-virtual-pipeline-stage</code> 几何上不可解。必须走 <code class="inline">--pipeline-model-parallel-layout</code> 显式 16-stage 字符串布局,或借 <code class="inline">--decoder-first/last-pipeline-num-layers</code> 微调首尾 — V3 的常规模板搬不过来</li>
+<li><strong>sparse-MLA bwd 是新 kernel</strong>:走 tilelang 自定义 kernel,Megatron 的 selective recompute hook、checkpoint wrapper 都<strong>不接</strong>。所有"按层 / 按 op selective"的 activation 节省思路在 V4 上几何阻塞</li>
+<li><strong>Attention 通信稀疏化</strong>:q-lora/kv-lora 压缩让 CP ring 通信量比 V3 同 seq 下降 ~50%,反过来也让 CP 收益相对于 PP/TP 更明显</li>
+<li><strong>40 层全 MoE</strong>:EP all-to-all 是稳定瓶颈而非偶发热点。dispatcher 选择(alltoall vs DeepEP)直接决定 -5% 量级 wall</li>
+<li><strong>HF FP8 → Megatron BF16 转换</strong>是一次性大坑:涉及 megablocks 命名映射 / per-tile FP8 dequant / torch_dist 分片三段,本项目踩了 11 次失败迭代</li>
+</ul>
+
+<div class="callout callout-info">
+<p><strong>一句话</strong>:V4-Flash 的训练难度不是"参数多",而是"<strong>常规并行假设大量失效</strong>" — 43 层 + sparse-MLA + 全 MoE 联合作用,迫使每一档 shape 都要重新做切卡推导。</p>
+</div>
+
+</section>
+
+<!-- =========================================================
+     §2  为什么选 miles
+     ========================================================= -->
+<section id="framework-choice">
+<h2 data-kicker="§ 2 · WHY MILES">为什么选 miles 来跑 SFT</h2>
+
+<p>SFT 任务理论上有很多框架可选。最终选了 <strong>miles(RLHF 框架,退化模式跑 SFT)</strong>,不是因为它在 SFT 上比专用 SFT 框架强,而是因为团队接下来要做 RL,提前在同一套框架下把 SFT 跑通,RL 阶段就不需要再换框架 / 重切卡 / 重做权重转换。</p>
+
+<h3>2.1 候选框架对比</h3>
+<table>
+<thead><tr><th>框架</th><th>类型</th><th>V4-Flash 可用性</th><th>核心问题</th></tr></thead>
+<tbody>
+<tr style="background:var(--accent-soft);"><td><strong>miles</strong>(本方案)</td><td>RLHF</td><td><span class="badge badge-ok">CHOSEN</span></td><td>原生 V3/V4 plugin、Megatron backend、SGLang rollout 闭环;SFT 只需 6 个 flag 退化</td></tr>
+<tr><td>Megatron-LM 直跑</td><td>预训练</td><td>可,但需自写 SFT loop</td><td>没有现成 chat-template / loss-mask / rollout 抽象,后续切 RL 等于推倒重来</td></tr>
+<tr><td>DeepSpeed + HF Trainer</td><td>SFT / PT</td><td>不行</td><td>没有 V4 模型代码,sparse-MLA / MoE EP 全靠自己接;cpu-offload Adam 不如 Megatron 成熟</td></tr>
+<tr><td>OpenRLHF / TRL</td><td>RLHF</td><td>不行</td><td>不支持 V4 / sparse-MLA;只能跑小模型,大模型路径未打通</td></tr>
+<tr><td>verl</td><td>RLHF</td><td>勉强</td><td>见下方展开</td></tr>
+<tr><td>NeMo-Aligner</td><td>RLHF</td><td>不行</td><td>没有 V4 模型,改造成本接近重写</td></tr>
+<tr><td>NeMo-Automodel</td><td>SFT / 微调</td><td>可,但仅 demo 级</td><td>见下方 NeMo-Automodel 展开</td></tr>
+</tbody>
+</table>
+
+<h4>verl 为什么"勉强"</h4>
+
+<p>verl 是字节开源的 RLHF 框架,设计目标是 SPMD + FSDP 路径,跑中小 dense 模型(7B-70B)上效率很高。但放到 V4-Flash(284B / 43 层全 MoE / sparse-MLA)上,有四道几何 / 工程门槛同时卡住,逐个看:</p>
+
+<table>
+<thead><tr><th>门槛</th><th>verl 现状</th><th>V4-Flash 需求</th><th>差距</th></tr></thead>
+<tbody>
+<tr>
+  <td>主干并行路径</td>
+  <td>FSDP / FSDP2(zero-3 风格)为一等公民,Megatron 后端是后加且对 MoE 支持滞后</td>
+  <td>必须 TP=8 PP=16 EP=8 联立,FSDP 在 284B 上权重 + grad shard 跨节点 allgather 是 step-time 杀手</td>
+  <td>FSDP 在 H20 IB 200 Gbps 上 allgather 284B/16 ≈ 18 GB/step 已经接近 PP send/recv 一个数量级,跑不到当前 5.23s 量级</td>
+</tr>
+<tr>
+  <td>MoE EP 实现成熟度</td>
+  <td>FSDP 路径下 EP 走的是 token dispatcher 简化版,没有 alltoall + DeepEP 的 dispatcher 选择</td>
+  <td>40 层全 MoE,EP a2a 是稳定瓶颈;DeepEP backend(NVL/IB overlap)在本方案上拿到 -5.2% wall</td>
+  <td>verl 缺 DeepEP 集成,也缺 <code class="inline">--moe-token-dispatcher-type flex</code> + fp32 router 这一层 sweep 空间</td>
+</tr>
+<tr>
+  <td>43 层质数 + PP layout</td>
+  <td>FSDP 路径下不显式分 PP stage;Megatron 后端的 PP 走 verl 自己包的 layer 分配,没有 <code class="inline">--pipeline-model-parallel-layout</code> 显式字符串布局</td>
+  <td>43 层无法被 PP=16 整除,必须显式 16-stage layout 才能避开"中间 stage 多 1 层"造成的 bubble 倾斜</td>
+  <td>需要自己改 verl 的 PP partitioner,跟上游分叉</td>
+</tr>
+<tr>
+  <td>sparse-MLA / V4 plugin</td>
+  <td>verl 不接 <code class="inline">miles_plugins</code> 这一层 hook,也没 <code class="inline">MEGATRON_SPARSE_ATTN_IMPL</code> 切换</td>
+  <td>tilelang sparse-MLA 是 V4 唯一可行的 long-seq 路径,kernel 通过 plugin 注入到 Megatron attention layer</td>
+  <td>等于把 V4 模型代码 + tilelang kernel 在 verl 里重新接一遍,工程量以周计且需要持续 follow 上游</td>
+</tr>
+<tr>
+  <td>cpu-offload Adam + dist-ckpt</td>
+  <td>FSDP 路径有 CPU offload,但跟 Megatron-style dist-ckpt 不兼容</td>
+  <td>40 GB Adam state(8 节点)必须 cpu-offload;ckpt 要走 torch_dist 给后续 RL 阶段复用</td>
+  <td>切框架后 ckpt 格式不通,SFT → RL 之间多一道格式转换</td>
+</tr>
+</tbody>
+</table>
+
+<p><strong>verl 不是"差",而是"假设和 V4-Flash 错位"</strong>。它的设计选型(FSDP first、SPMD、dispatcher 简化)在 7B-70B dense + 中等 RL workload 上是最优的;但当模型同时具备:284B 总参 + 43 质数层 + 全 MoE + sparse-MLA + 长 seq + 大 Adam state 这五个特征,FSDP 路径的几何收益消失,反而要补齐 verl 当前没有的 PP layout / DeepEP / V4 plugin / Megatron dist-ckpt 四块拼图 —— 加起来比直接用已经原生支持这一切的 miles 多花几周以上。</p>
+
+<p>更关键的是 <strong>verl 当前在 H20 上 V4-Flash 量级的工业实测数据基本没有</strong>(社区跑的最大公开 case 是 70B dense + DP=8),没有可参考的 baseline 意味着所有性能调优都要自己摸,而 miles 已经被 V4 团队和 R1 团队踩过路。</p>
+
+<table>
+<thead><tr><th>对比维度</th><th>miles(本方案)</th><th>verl(假设迁移)</th></tr></thead>
+<tbody>
+<tr><td>V4 模型代码</td><td>原生 plugin 注入</td><td>自己接,~2 周</td></tr>
+<tr><td>PP=16 + 43 层 layout</td><td>已支持显式字符串</td><td>需改 PP partitioner</td></tr>
+<tr><td>DeepEP backend</td><td>已集成,prod 默认</td><td>没有</td></tr>
+<tr><td>cpu-offload Adam + torch_dist ckpt</td><td>Megatron 原生</td><td>FSDP 路径不兼容</td></tr>
+<tr><td>4K shape 当前 step time</td><td><strong>5.23 s</strong></td><td>未知,预期慢 2-3×</td></tr>
+<tr><td>SFT → RL 复用</td><td>同一套 ckpt / 集群</td><td>ckpt 要转换</td></tr>
+</tbody>
+</table>
+
+<h4>NeMo-Automodel 为什么"仅 demo 级"</h4>
+
+<p>NVIDIA NeMo-Automodel 仓库里确实有官方的 <code class="inline">examples/llm_finetune/deepseek_v4/deepseek_v4_flash_hellaswag.yaml</code>,模型从 HF 直接拉 <code class="inline">deepseek-ai/DeepSeek-V4-Flash</code>,attention 也用了 tilelang,dispatcher 用了 DeepEP。<strong>看起来很对路</strong>,但点开 yaml 仔细对比就会发现:这个 example 是为"在 NeMo 上把 V4-Flash 跑起来"准备的,不是为"产线 SFT"准备的 —— 两者差距很大。</p>
+
+<table>
+<thead><tr><th>维度</th><th>NeMo-Automodel YAML 实际配置</th><th>本方案 prod 配置</th><th>差距 / 影响</th></tr></thead>
+<tbody>
+<tr>
+  <td>主干并行路径</td>
+  <td><code class="inline">strategy: fsdp2</code> + <code class="inline">tp_size: 1</code> + <code class="inline">cp_size: 1</code></td>
+  <td>TP=8 + PP=16 + CP=2/4 + EP=8 联立</td>
+  <td>FSDP2 在 284B 上每 step allgather 全量权重(~18 GB shard / rank),H20 IB 200 Gbps 上是大头开销;且 <strong>关闭 TP/CP</strong> 等于放弃 attention activation 的两条主要节省路径</td>
+</tr>
+<tr>
+  <td>PP 配置</td>
+  <td><code class="inline">pp_size: 4</code> + <code class="inline">layers_per_stage: 2</code> + <code class="inline">interleaved1f1b</code></td>
+  <td>PP=16 + 显式 16-stage layout 字符串(43 层质数解)</td>
+  <td>PP=4 在本方案验证里慢 22%(per-stage 工作量翻倍);且 <code class="inline">layers_per_stage: 2</code> 隐含 8 stage 只覆盖 16 层,意味着剩余 27 层全在最后一个 stage —— 这是 demo 简化,真实 43 层需要显式 layout</td>
+</tr>
+<tr>
+  <td>EP 维度</td>
+  <td><code class="inline">ep_size: 32</code></td>
+  <td>EP=8</td>
+  <td>EP=32 意味着 256 routed expert 平均 8/rank,H20 节点内 NVLink 跨 4 卡才能凑满 EP=32 一个 group,a2a 一定跨节点 —— 跟 NVL/IB 拓扑不友好。本方案 EP=8 单节点内就能闭合一个 EP group,DeepEP NVL overlap 才有效</td>
+</tr>
+<tr>
+  <td>recompute / cpu-offload</td>
+  <td><code class="inline">activation_checkpointing: false</code>,无 cpu-offload</td>
+  <td>4K 关 recompute / 32K 64K 必须 full;H20 8 节点必须 cpu-offload,16 节点 PP=16 才能关 offload</td>
+  <td>NeMo yaml 默认假设显存够 —— 这只在 H100/H200 + FSDP2 shard 后成立。H20 上直接套用必 OOM</td>
+</tr>
+<tr>
+  <td>序列长度 / packing</td>
+  <td><code class="inline">packed_sequence_size: 0</code>(关 packing)+ <code class="inline">pad_seq_len_divisible: 64</code></td>
+  <td>32K / 64K shape 用 V4 chat-template + sub-span loss mask + tool_call schema flatten</td>
+  <td>HellaSwag demo 是短选择题,不需要 packing;本方案 albaliang 真数据中位 23.6K tokens,不 packing 直接每 step 浪费一半算力</td>
+</tr>
+<tr>
+  <td>数据 / loss</td>
+  <td>HellaSwag(分类选择题)+ <code class="inline">MaskedCrossEntropy</code></td>
+  <td>OpenHermes(generic SFT)+ albaliang agent SFT;V4 deepseek_v4 chat-template loss-mask</td>
+  <td>HellaSwag 是 LM evaluation 标定数据集,4 选 1 短样本;真实 SFT 需要多轮 dialog + tool_call schema,loss mask 必须按 V4 chat-template 边界识别 prompt/response,NeMo 默认 mask 不够</td>
+</tr>
+<tr>
+  <td>步数 / 规模</td>
+  <td><code class="inline">max_steps: 100</code>,<code class="inline">global_batch_size: 256</code></td>
+  <td>200-1600 步 prod long-run,GBS=128</td>
+  <td>NeMo yaml 是 100 步 demo,跑通即可;本方案 200 步 zero-drift 才算入产线基线</td>
+</tr>
+<tr>
+  <td>SFT → RL 闭环</td>
+  <td>仅 SFT,Automodel 本身无 RLHF rollout</td>
+  <td>同框架(miles)即 RL,SFT ckpt 直接用</td>
+  <td>NeMo 走 RL 要切到 NeMo-Aligner 或别的栈,ckpt 又要转一次</td>
+</tr>
+</tbody>
+</table>
+
+<p><strong>结论</strong>:NeMo-Automodel 的这份 yaml 是 NVIDIA 给 V4-Flash 做的 <em>"can-run"</em> reference,不是 <em>"production"</em> reference。把它当作产线起点,会在 (a) FSDP2 跨节点 allgather 性能、(b) 43 层 PP 真实切分、(c) H20 显存预算、(d) 真实 agent SFT 数据(非 HellaSwag)、(e) RL 切换路径 五个维度上同时撞墙。</p>
+
+<p>但这份 yaml 提供了<strong>两个非常有价值的横向参考</strong>:</p>
+<ul>
+<li><strong>tilelang sparse-MLA</strong>:NVIDIA 也认这条路径(<code class="inline">attn: tilelang</code>),证明 V4-Flash 在 NV 官方栈里 attention kernel 选型跟本方案一致 — 我们没走偏</li>
+<li><strong>DeepEP dispatcher</strong>:NeMo 也默认开 <code class="inline">dispatcher: deepep</code>,跟本方案 §3.4 的"DeepEP 默认开"决策互相印证 — 这条优化是行业共识,不是本项目的局部选择</li>
+</ul>
+
+<table>
+<thead><tr><th>对比维度</th><th>miles(本方案)</th><th>NeMo-Automodel(假设迁移)</th></tr></thead>
+<tbody>
+<tr><td>V4 模型代码</td><td>原生 plugin 注入</td><td>HF from_pretrained 拉,NV 官方维护</td></tr>
+<tr><td>主干并行</td><td>TP+PP+EP+CP 联立</td><td>FSDP2 + PP=4 + EP=32(纯 zero-3 风格)</td></tr>
+<tr><td>43 层 PP layout</td><td>显式 16-stage 字符串</td><td><code class="inline">layers_per_stage: 2</code> demo 简化</td></tr>
+<tr><td>H20 适配</td><td>cpu-offload Adam + PP=16 切 Adam</td><td>无 offload,假设 H100/H200 显存</td></tr>
+<tr><td>真实 SFT 数据 / packing</td><td>32K / 64K + chat-template + sub-span mask</td><td>HellaSwag 短样本 demo,无 packing</td></tr>
+<tr><td>SFT → RL 复用</td><td>同框架</td><td>需切 NeMo-Aligner,ckpt 转换</td></tr>
+<tr><td>4K 当前 step time</td><td><strong>5.23 s</strong>(实测)</td><td>无公开数据,demo 跑 100 步</td></tr>
+</tbody>
+</table>
+
+<h3>2.2 选 miles 的三个核心理由</h3>
+
+<h4>V4 模型支持是 miles 唯一原生具备的</h4>
+<p>V4-Flash 模型代码不在 miles 主仓,而是通过 <code class="inline">PYTHONPATH=$V4_MEGATRON</code>(<code class="inline">radixark/Megatron-LM</code> 的 <code class="inline">dsv4-pr28</code> 分支)+ <code class="inline">miles_plugins</code>(外部 wheel)注入。这个注入路径是 V4 团队上游已经维护的 — 任何其他框架都需要自己重新对接 sparse-MLA kernel、MoE router、权重 layout,工程量以周计且需要持续 follow 上游。</p>
+
+<h4>SFT → RL 复用同一套切卡 / ckpt / 集群脚本</h4>
+<p>本方案 SFT 跑出来的 torch_dist ckpt、TP/PP/EP/CP 切卡布局、Ray 集群拉起脚本,RL 阶段 100% 复用。换框架意味着 ckpt 要再做一次格式转换、切卡要重测、集群要重建 —— 项目时间表上不可承受。</p>
+
+<h4>6 个 flag 把 RL 退化成 SFT,不动框架源码一行</h4>
+<p>这是 miles 框架本身的设计美感:rollout 函数、loss 函数、advantage 计算都做成了可热插拔组件。SFT 在 miles 看来就是"rollout 不调推理引擎、loss 不算 KL、weight sync 切断"的一个特例。具体 6 个 flag 见 §3.1。</p>
+
+<div class="callout callout-success">
+<p><strong>关于"用 RL 框架跑 SFT 是否有抽象税"</strong>:理论上比专用 SFT 框架多了一些抽象(rollout pod、placement_group、Ray queue)。实测这些在 SFT 模式下基本零开销 —— rollout pod 退化成纯 CPU dataloader,Ray queue 一步一通,GPU 几乎被 actor 独占。<strong>付出的"框架抽象税"远小于换框架的迁移成本</strong>。</p>
+</div>
+
+</section>
+
+<!-- =========================================================
+     §3  方案描述
+     ========================================================= -->
+<section id="design">
+<h2 data-kicker="§ 3 · DESIGN">方案描述</h2>
+
+<h3>3.1 RL 如何降级到 SFT</h3>
+
+<p>miles 原生执行图是 RLHF 闭环:<strong>rollout pod</strong> 用 SGLang 做推理 + reward,<strong>actor pod</strong> 用 Megatron 做 PPO 训练,二者通过 weight sync 闭环。SFT 退化的核心是把这条闭环从三处切开:rollout 不调推理 / loss 不算 KL / weight sync 切断。具体由这 6 个 flag 完成。</p>
+
+<table>
+<thead><tr><th>Flag</th><th>源码作用</th><th>不开会怎样</th></tr></thead>
+<tbody>
+<tr><td><code class="inline">--rollout-function-path miles.rollout.sft_rollout.generate_rollout</code></td>
+    <td>hot-swap rollout 函数为纯 CPU tokenize + 构造 loss_mask</td>
+    <td>默认调 SGLang 推理,SFT 没 prompt-only 数据 → 报错</td></tr>
+<tr><td><code class="inline">--loss-type sft_loss</code></td>
+    <td><code class="inline">select_loss_function()</code> 分派到 <code class="inline">sft_loss_function</code>(per-token CE × mask)</td>
+    <td>默认走 <code class="inline">policy_loss</code>(PPO clip + KL),需要 reward / advantage</td></tr>
+<tr><td><code class="inline">--calculate-per-token-loss</code></td>
+    <td>loss 按 token 加权而非 sequence</td>
+    <td>长 response 欠拟合,短/长 response 权重失衡</td></tr>
+<tr><td><code class="inline">--disable-compute-advantages-and-returns</code></td>
+    <td>跳过 GAE / return 计算</td>
+    <td>actor 报 <code class="inline">KeyError: 'reward'</code></td></tr>
+<tr><td><code class="inline">--debug-train-only</code></td>
+    <td>切断 RL 反馈环,actor / rollout 不再 weight sync</td>
+    <td>actor 卡死等 weight sync</td></tr>
+<tr><td><code class="inline">--loss-mask-type deepseek_v4</code></td>
+    <td>用 V4 chat template token 边界识别 prompt / response</td>
+    <td>用错 mask,prompt token 被算入 loss</td></tr>
+</tbody>
+</table>
+
+<p>退化后的数据流(纯顺序,无 RL 闭环):</p>
+<pre>parquet
+   → [Rollout pod, 纯 CPU]
+       V4 chat template render → tokenize → 构造 loss_mask → Ray queue
+   → [Actor pod, GPU]
+       Megatron forward (TP×PP×EP + tilelang sparse-MLA) → CE × loss_mask
+       → backward → cpu-offload Adam → 每 N 步 torch_dist ckpt</pre>
+
+<p>RL 框架的 reward / advantage / weight sync 整条链路全部短路,但 <strong>rollout pod / placement_group / Ray queue 仍然存在</strong> —— miles 的执行图还是 RL 那张图,只是数据通路和 loss 函数被替换。这就是为什么"不动源码一行"能成立。</p>
+
+<h3>3.2 解决了哪些工程问题</h3>
+
+<p>方案落地踩了 5 个真实硬阻塞,每个都是 100% 复现、影响主路、不修跑不起来的级别。下面按"问题 / 根因 / 解决"三列展开,每个都有 commit 或 env 一级的可追溯定位。</p>
+
+<table>
+<thead><tr><th>#</th><th>问题</th><th>根因</th><th>解决</th></tr></thead>
+<tbody>
+<tr>
+  <td>P1</td>
+  <td>HF FP8 → Megatron torch_dist <strong>11 次失败</strong></td>
+  <td>三段任一错都全链路失败:(a) megablocks 命名 → V3 命名映射 (b) per-tile FP8 dequant(128×128 block) (c) BF16 → torch_dist 分片</td>
+  <td>分三步走的转换工具链(<code class="inline">tools/megablocks_to_hf_bf16.py</code> + <code class="inline">cluster/convert_hf_to_megatron.sh</code>),每步独立可验证(BF16 中间产物 / tensor 形状对齐 / ckpt 加载冒烟)</td>
+</tr>
+<tr>
+  <td>P2</td>
+  <td>V4 rope 100% NaN(in-place 破坏 autograd)</td>
+  <td>rope kernel in-place 修改了 autograd 的 saved_tensor,bwd 时 cos/sin 已被覆盖</td>
+  <td>commit <code class="inline">dda38773d</code>:改 out-of-place 写,bwd 拿到正确的 cos/sin</td>
+</tr>
+<tr>
+  <td>P3</td>
+  <td>tilelang sparse-MLA bwd 100% NaN</td>
+  <td>双 bug 叠加:(a) <code class="inline">TL_ENABLE_AGGRESSIVE_SHARED_MEMORY_MERGE</code> 让 shared mem 别名跨迭代污染 (b) 比较器 <code class="inline">if denom &gt; 0</code> 静默放过 NaN(<code class="inline">NaN &gt; 0</code> 为 False)</td>
+  <td>commit <code class="inline">1c417e1f3</code>:关 aggressive merge + 改 NaN-aware 比较</td>
+</tr>
+<tr>
+  <td>P4</td>
+  <td><code class="inline">--save-retain-interval=100</code> 静默失效,中间 ckpt 全删</td>
+  <td>off-by-one:miles 用 <code class="inline">step=rollout_id+1</code> 触发 save,但传 <strong>raw rollout_id</strong> 给 Megatron iteration → ckpt 命名 49/99/199...,<code class="inline">retain=100</code> 永不匹配 → 全删,只剩 final</td>
+  <td>修对齐:save trigger 与 Megatron iteration 同口径;追加单测覆盖 49/99/100/199 边界</td>
+</tr>
+<tr>
+  <td>P5</td>
+  <td>dense vs tilelang attention 决策摇摆</td>
+  <td>dense MLA 在长 seq 上 OOM;tilelang sparse-MLA 在短 seq 上比 dense 略慢且数值精度差</td>
+  <td>固定策略:第 0/1/42 层 dense MLA(模型本身决定),中间 40 层 sparse-MLA;env 切换由 <code class="inline">MEGATRON_SPARSE_ATTN_IMPL=tilelang_sparse_mla</code> 控制</td>
+</tr>
+</tbody>
+</table>
+
+<h3>3.3 切卡推导</h3>
+
+<p>三档 shape(4K / 32K / 64K)的并行配置不是试出来的,是被三个不等式联立倒推出来的<strong>唯一解</strong>:</p>
+
+<ul>
+<li><strong>等式约束</strong>:<code class="inline">TP × PP × CP × DP × world_replica = N_GPU</code></li>
+<li><strong>容量约束</strong>:每 rank 显存 = weights + Adam state + activation peak ≤ 95 GB(H20)/ 141 GB(H200)</li>
+<li><strong>带宽约束</strong>:TP / EP 走节点内 NVLink,PP / CP 跨节点走 IB(200 Gbps RoCE)</li>
+</ul>
+
+<h4>16 节点 三档 shape 配置</h4>
+<table>
+<thead><tr><th>shape</th><th>seq</th><th>TP</th><th>PP</th><th>CP</th><th>EP</th><th>DP</th><th>recompute</th><th>cpu-offload Adam</th></tr></thead>
+<tbody>
+<tr><td>prod 4K</td><td>4 K</td><td>8</td><td><strong>16</strong></td><td>1</td><td>8</td><td>1</td><td>none</td><td><strong>off</strong>(PP=16 把 Adam 切到 2.5 GB/rank)</td></tr>
+<tr><td>albaliang 32K</td><td>32 K</td><td>4</td><td><strong>16</strong></td><td>2</td><td>8</td><td>1</td><td><strong>full</strong>(activation 太大)</td><td>on</td></tr>
+<tr><td>albaliang_64k</td><td>64 K</td><td>2</td><td><strong>16</strong></td><td>4</td><td>8</td><td>1</td><td>full</td><td>on(safety margin)</td></tr>
+<tr><td>long_context(预留)</td><td>256 K</td><td>8</td><td>4</td><td>8</td><td>8</td><td>1</td><td>full</td><td>on(需 ≥32 H200 节点)</td></tr>
+</tbody>
+</table>
+
+<h4>为什么是 PP=16</h4>
+<p>这是本方案最关键的发现。2026-05-21 集群从 8 节点扩到 16 节点,先后试了三种用法:</p>
+<table>
+<thead><tr><th>方案</th><th>4K step time</th><th>vs 8 节点 prod (10.88s)</th><th>verdict</th></tr></thead>
+<tbody>
+<tr style="background:var(--bad-soft);"><td>16 节点 DP=2 + ZeRO-1 + 关 offload(同 shape)</td><td>OOM(86.96 GB allocated)</td><td>—</td><td>✗ activation 撑爆</td></tr>
+<tr style="background:var(--bad-soft);"><td>16 节点 DP=2 + ZeRO-1 + offload</td><td>11.69 s</td><td>+7.4%</td><td>✗ DP=2 跨节点 IB allreduce 抵消省的 Memcpy</td></tr>
+<tr><td>16 节点 PP=16 + offload</td><td>5.92 s</td><td>−45.6%</td><td>✓ memory 余量大</td></tr>
+<tr style="background:var(--accent-soft);"><td><strong>16 节点 PP=16 + 关 offload(winner)</strong></td><td><strong>5.23 s</strong></td><td><strong>−51.9%</strong></td><td>✓ H4 真正解锁,200 步零漂移,headroom 25%</td></tr>
+<tr><td>16 节点 PP=16 + 关 offload + DP=2 ZeRO-1</td><td>6.87 s</td><td>+31% vs winner</td><td>✗ Adam 已被 PP 切到 2.5 GB,ZeRO-1 边际收益 < 通信开销</td></tr>
+</tbody>
+</table>
+
+<p>PP=8 → PP=16 让每 rank 持有的 layer 数从 5-6 减到 2-3,三个因子同向叠加:</p>
+<ul>
+<li><strong>Adam state 折半再折半</strong>:40 GB → ~2.5 GB/rank,关 cpu-offload 完全无压力 — 之前在 8 节点上的 H4 假设(95 - 6 - 40 - 46 = -3 GB,装不下)被这一刀直接解锁</li>
+<li><strong>Activation peak 折半</strong>:每 rank 只算 1 stage(VPP 自动 disable,layout 16/16=1)</li>
+<li><strong>Pipeline 充实度 ×4</strong>:GBS=128 / PP=16 = 8 microbatch/stage,vs PP=8 时 2/stage,bubble 摊薄</li>
+<li><strong>Per-stage 算量减半</strong>,fwd/bwd 时间也跟着缩</li>
+</ul>
+
+<h4>H20 单卡显存账</h4>
+<table>
+<thead><tr><th>项</th><th>8 节点 PP=8</th><th>16 节点 PP=16</th></tr></thead>
+<tbody>
+<tr><td>Weights (BF16)</td><td>6-8 GB</td><td>3-4 GB</td></tr>
+<tr><td>Adam state(BF16 master + fp32 m/v)</td><td>40 GB</td><td>2.5 GB</td></tr>
+<tr><td>Activation peak(stage 内)</td><td>37-46 GB</td><td>~20 GB</td></tr>
+<tr><td><strong>合计 / 95 GB</strong></td><td><strong>83-94 GB(逼近)</strong></td><td><strong>26-30 GB(余量 65 GB)</strong></td></tr>
+</tbody>
+</table>
+
+<p>所以 H4("关 cpu-offload Adam")不是"换 H200 才能解锁",而是"PP 翻倍把 Adam 切到能放 GPU 的尺度"。这个解锁路径比 H200 迁移成本低得多 —— 16 节点 H20 已经够。</p>
+
+<h3>3.4 关键性能优化决策</h3>
+
+<p>方法论:<strong>先列假设,再用 trace 验证假设</strong>。Trace 是验证工具不是发现工具 —— "NCCL 占 50%" 可能是 PP spin-wait 等待时间,不是真传输。</p>
+
+<table>
+<thead><tr><th>假设</th><th>验证方法</th><th>结果</th></tr></thead>
+<tbody>
+<tr><td>H1 NCCL/IB 没启,跑 TCP 慢路径</td><td><code class="inline">ibstat</code></td><td><span class="badge badge-out">OUT</span> mlx5_bond_* Active 200 Gbps,48% NCCL 是 PP spin-wait</td></tr>
+<tr><td>H2 PP=8 → PP=4 减 bubble</td><td>step time 对比</td><td><span class="badge badge-out">OUT</span> 慢 22%(per-stage 工作量翻倍)</td></tr>
+<tr><td><strong>H3 关 recompute</strong></td><td>step / TFLOPS / mem 对比</td><td><span class="badge badge-ok">CONFIRM @4K</span> step −10%, TFLOPS +20%, <strong>mem −6 GB(反直觉)</strong></td></tr>
+<tr><td>H3' 32K shape 上关 recompute</td><td>step 0 mem</td><td><span class="badge badge-out">REVERSED</span> 32K activation 几何阻塞,<strong>必须 full</strong></td></tr>
+<tr><td>H4 关 cpu-offload Adam</td><td>跑 step 0</td><td><span class="badge badge-warn">8 节点 OOM / 16 节点 PP=16 解锁</span></td></tr>
+<tr><td>H5 attention impl 选型</td><td>trace 占比</td><td><span class="badge badge-out">OUT</span> 仅 4.5% wall,不是瓶颈</td></tr>
+<tr><td>H6 rollout/train 串行</td><td>trace wait_time</td><td><span class="badge badge-warn">PARTIAL</span> 35% wait,需改框架(P0 候选)</td></tr>
+</tbody>
+</table>
+
+<h4>H3 反直觉发现</h4>
+<p>常识里关 recompute = activation 占用增加 = 显存上涨。V4 上反过来:</p>
+<table>
+<thead><tr><th>项</th><th>recompute=full</th><th>recompute=none</th></tr></thead>
+<tbody>
+<tr><td>Activation</td><td>~10 GB(少,recompute 路径)</td><td>~16 GB(多,resident)</td></tr>
+<tr><td>Kernel workspace</td><td><strong>~12 GB</strong>(每 bwd 重分配,allocator churn)</td><td>~2 GB(复用,no churn)</td></tr>
+<tr><td>KV intermediate</td><td>~5 GB</td><td>~5 GB</td></tr>
+<tr><td><strong>峰值</strong></td><td><strong>60.0 GB</strong></td><td><strong>53.6 GB(−6.4 GB)</strong></td></tr>
+</tbody>
+</table>
+<p>根因:V4 tilelang sparse-MLA 在 recompute 路径下,bwd 每层重新分配 KV intermediate + kernel workspace。这个动态分配的峰值占用比保留 activation 更费。</p>
+
+<h4>H3 反转</h4>
+<p>activation 与 seq 长度线性相关。32K + PP=4 单 rank activation ~40 GB,把"省 12 GB churn"完全淹没,关 recompute → OOM at 95 GB。<strong>profile 结论严格绑定到 shape,跨 seq-length 不能盲移植</strong>。</p>
+
+<table>
+<thead><tr><th>Shape</th><th>recompute=full 峰值</th><th>recompute=none 峰值</th><th>推荐</th></tr></thead>
+<tbody>
+<tr><td>4K (TP=8 PP=8 CP=1)</td><td>60 GB</td><td>53.6 GB</td><td><span class="badge badge-ok">none</span></td></tr>
+<tr><td>32K (TP=4 PP=4 CP=4)</td><td>65-70 GB</td><td><span class="badge badge-out">OOM &gt;95 GB</span></td><td><span class="badge badge-warn">full(forced)</span></td></tr>
+<tr><td>64K (TP=2 PP=4 CP=8)</td><td>~85 GB</td><td>—</td><td><span class="badge badge-warn">full(forced)</span></td></tr>
+</tbody>
+</table>
+
+<h4>EP 通信优化</h4>
+<p>Megatron schedule 层 EP all-to-all overlap 需要 V4 attention 提供 <code class="inline">backward_dw</code> callable,目前 blocked。改走 <strong>DeepEP backend</strong> 在 dispatcher kernel 内部 overlap NVL + IB:</p>
+<pre>--moe-token-dispatcher-type flex --moe-enable-deepep --moe-router-dtype fp32</pre>
+<p>50 步 × 3 档 SM sweep:SM=20 sweet spot,<strong>median 10.88s vs alltoall+bf16 11.48s = -5.2%</strong>,variance −17%(stdev 0.85 vs 1.02)。叠加 layout+VPP 累积 -7.6%。<strong>已切 prod 默认</strong>。NV 官方 NeMo-Automodel yaml 也默认开 DeepEP,跟本方案选型一致。</p>
+
+<h4>VPP + 显式 layout</h4>
+<p>43 是质数,不能被 PP=16 整除。简单 <code class="inline">--num-layers-per-virtual-pipeline-stage</code> API 几何上不可解。改走 <code class="inline">--pipeline-model-parallel-layout</code> 显式 16-stage 字符串 + interleaved 1F1B,bubble 摊到所有 stage,prod 实测 <strong>median 11.48s vs baseline 11.79s = -2.6%</strong>(15 步窗口 -7.6%,长跑被 system noise 稀释一些)。</p>
+
+<h4>已验证不要做</h4>
+<table>
+<thead><tr><th>方案</th><th>为什么不做</th></tr></thead>
+<tbody>
+<tr><td>PP=4(从 PP=8 减,以为能减 bubble)</td><td>per-stage 工作量翻倍,实测慢 22%</td></tr>
+<tr><td>DP=2 + ZeRO-1(同 shape,16 节点)</td><td>跨节点 IB allreduce 抵消省的 Memcpy,实测 +7.4%;叠 PP=16 时 +31% vs winner</td></tr>
+<tr><td>32K 上 selective recompute</td><td>双重阻塞:activation 几何上不允许任何非 full;V4 plugin router 不接 selective hook,触发 <code class="inline">requires_grad</code> 断言(<code class="inline">moe_utils.py:733</code>)</td></tr>
+<tr><td>H20 上 FP8 GEMM</td><td>H20 FP8 仅 2× BF16(H200 是 4×),ROI 低 + 改动大,留给 H200</td></tr>
+<tr><td>关 cpu-offload Adam @ 8 节点</td><td>显存账 95 - 6 - 40 - 46 = -3 GB,装不下;走 PP=16 路径解锁,不是 H200</td></tr>
+</tbody>
+</table>
+
+</section>
+
+<!-- =========================================================
+     §4  当前指标数据
+     ========================================================= -->
+<section id="metrics">
+<h2 data-kicker="§ 4 · METRICS">当前指标数据</h2>
+
+<p>数据来自 wandb 长跑 <code class="inline">stageAlb16PP16-64KrealTP4-20260525-214109</code>(<code class="inline">v4-flash-post / l9ubcft9</code>),16 节点 H20 / 128 GPU,<strong>400 步全部跑完(state=finished)</strong>。配置 TP=4 PP=16 CP=2 EP=8,GBS=128,DeepEP + fp32 router,recompute=full uniform 1,cpu-offload Adam on,显式 16-stage layout <code class="inline">Ett|(ttt|)*11,(tt|)*3,ttL</code>。总耗时 ~19h39min(2026-05-25 21:41 → 2026-05-26 17:20)。</p>
+
+<h3>4.1 端到端 KPI</h3>
+<div class="kpi-row">
+  <div class="kpi">
+    <div class="kpi-label">step time median</div>
+    <div class="kpi-value"><span class="num">162.5</span><span class="unit">s</span></div>
+    <div class="kpi-delta">↗ p25/p75 158.5 / 167.1 s</div>
+    <div class="kpi-sub">400 步全程</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">actor TFLOPS / GPU</div>
+    <div class="kpi-value"><span class="num">71.2</span></div>
+    <div class="kpi-delta">↗ Megatron 内置</div>
+    <div class="kpi-sub">actor_train_tflops</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">MFU</div>
+    <div class="kpi-value"><span class="num">48.1</span><span class="unit">%</span></div>
+    <div class="kpi-delta">↗ vs H20 BF16 peak 148 TFLOPS</div>
+    <div class="kpi-sub">71.2 / 148</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">throughput</div>
+    <div class="kpi-value"><span class="num">24.7</span><span class="unit">k tok/s</span></div>
+    <div class="kpi-delta">↗ actor train</div>
+    <div class="kpi-sub">单 step 平均</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">wait_time ratio</div>
+    <div class="kpi-value"><span class="num">16.7</span><span class="unit">%</span></div>
+    <div class="kpi-delta">↗ rollout 串行残留</div>
+    <div class="kpi-sub">异步化候选</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">长跑漂移</div>
+    <div class="kpi-value"><span class="num">0.10</span><span class="unit">%</span></div>
+    <div class="kpi-delta">↘ 前后半 median Δ 0.17 s</div>
+    <div class="kpi-sub">19h39m / 400 步</div>
+  </div>
+</div>
+
+<h3>4.2 Step time 分布(400 步全程)</h3>
+<table>
+<thead><tr><th>统计量</th><th>值</th></tr></thead>
+<tbody>
+<tr><td>median</td><td>162.53 s</td></tr>
+<tr><td>mean</td><td>175.69 s</td></tr>
+<tr><td>p25</td><td>158.54 s</td></tr>
+<tr><td>p75</td><td>167.12 s</td></tr>
+<tr><td>p95</td><td>175.79 s</td></tr>
+<tr><td>actor_train_time(median)</td><td>136.04 s</td></tr>
+<tr><td>train_wait_time(median)</td><td>~22 s</td></tr>
+<tr><td>data_preprocess_time(median)</td><td>~0.35 s</td></tr>
+</tbody>
+</table>
+
+<p>actor_train_time 占 step 的 ~84%,train_wait_time 占 ~14%,其余是 rollout 拉数据 / data preprocess / Ray queue 调度。<strong>wait_ratio 16.7% 是当前最大单点优化空间</strong>(rollout 异步化候选,P0)。</p>
+
+<h3>4.3 Throughput</h3>
+<table>
+<thead><tr><th>指标</th><th>值</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>actor_train_tok_per_s</td><td><strong>24,748</strong></td><td>全 step 平均吞吐</td></tr>
+<tr><td>tokens_per_gpu_per_sec</td><td>352</td><td>除 128 GPU 后单卡值</td></tr>
+<tr><td>effective_tokens_per_gpu_per_sec</td><td>89</td><td>仅 loss-mask=1 的 response 部分</td></tr>
+<tr><td>longest_sample_tokens_per_sec</td><td>2,737</td><td>单 step 最长样本(rollout)</td></tr>
+<tr><td>longest_effective_tokens_per_sec</td><td>491</td><td>单 step 最长样本中 response 部分</td></tr>
+<tr><td>response_len mean</td><td>2,250 tokens</td><td>rollout 平均长度</td></tr>
+<tr><td>response_len max(全程)</td><td><strong>51,225</strong></td><td>最长 51K rollout,接近 64K 上限</td></tr>
+</tbody>
+</table>
+
+<h3>4.4 Loss / grad_norm 收敛(实测关键步)</h3>
+<table>
+<thead><tr><th>step</th><th>loss</th><th>grad_norm</th><th>LR</th><th>备注</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>0.3328</td><td>0.827</td><td>5.0e-7</td><td>warmup 起</td></tr>
+<tr><td>5</td><td>0.3337</td><td>0.602</td><td>3.0e-6</td><td>warmup 中</td></tr>
+<tr><td>20</td><td>0.3616</td><td>0.373</td><td>1.0e-5</td><td>warmup 终,cosine 起</td></tr>
+<tr><td>50</td><td>0.3016</td><td>0.309</td><td>9.84e-6</td><td>cosine 早段</td></tr>
+<tr><td>100</td><td>0.2280</td><td>0.229</td><td>8.92e-6</td><td>cosine 1/4</td></tr>
+<tr><td>200</td><td>0.2616</td><td>0.290</td><td>5.37e-6</td><td>cosine 半</td></tr>
+<tr><td>300</td><td>0.2544</td><td>0.205</td><td>1.58e-6</td><td>cosine 3/4</td></tr>
+<tr><td><strong>399</strong></td><td><strong>0.2349</strong></td><td><strong>0.237</strong></td><td>0.0</td><td>final, LR 收 0</td></tr>
+</tbody>
+</table>
+
+<p>loss 从 0.33 起步,在 step 100 跌到 0.228 局部低点,中段 0.25-0.30 区间稳定波动(GBS=128 + 长 response 方差大,单步 loss 噪声本就高),收尾 step 399 = <strong>0.2349</strong>(全程低点附近)。grad_norm 从 0.83 单调收敛到 0.24,无 NaN、无 spike。</p>
+
+<h3>4.5 长跑稳定性</h3>
+<table>
+<thead><tr><th>指标</th><th>值</th></tr></thead>
+<tbody>
+<tr><td>总步数</td><td>400(state=finished)</td></tr>
+<tr><td>启动时间</td><td>2026-05-25 21:41 UTC+8</td></tr>
+<tr><td>结束时间</td><td>2026-05-26 17:20 UTC+8</td></tr>
+<tr><td>累积 wall time</td><td><strong>19h 39min</strong></td></tr>
+<tr><td>前半 median(step 0-199)</td><td>162.43 s</td></tr>
+<tr><td>后半 median(step 200-399)</td><td>162.60 s</td></tr>
+<tr><td>漂移</td><td><strong>+0.10%</strong>(0.17 s,在噪声内)</td></tr>
+</tbody>
+</table>
+
+<p>400 步全程零漂移,无 NCCL hang、无 step 飙升、无内存碎片化报错,无 NaN。</p>
+
+</section>
+
+<!-- =========================================================
+     §5  代码拆分与使用
+     ========================================================= -->
+<section id="repo">
+<h2 data-kicker="§ 5 · USAGE">代码拆分与使用</h2>
+
+<h3>5.1 两个仓的拆分</h3>
+
+<p>2026-05-22 起 V4-SFT 代码按"框架本体 vs 训练任务"拆成两个仓,通过 CFS 上的 <code class="inline">$V4_WORK</code> 协作。框架代码沉淀到 miles fork,训练任务/集群脚本/数据工具留在本仓 — 后者迭代快、与具体集群强耦合,前者跟上游 RL 主线相对稳定。</p>
+
+<table>
+<thead><tr><th>仓</th><th>路径</th><th>包含</th></tr></thead>
+<tbody>
+<tr><td><strong>kakisong/miles</strong>(fork)</td><td><code class="inline">$V4_WORK/miles/</code></td><td>miles 框架本体 + V4 plugin + tilelang sparse-MLA + Megatron backend(radixark/miles 的 fork,叠 V4 patch)</td></tr>
+<tr><td><strong>kakisong/deepseek-v4-flash-training</strong>(本仓)</td><td><code class="inline">$V4_WORK/deepseek-v4-flash-training/</code></td><td>集群拉起脚本 + 数据 / 权重转换工具 + 三层 env 配置 + 训练任务 runner + 文档</td></tr>
+</tbody>
+</table>
+
+<p><code class="inline">cluster/bring_up_cluster.sh</code> 在 master 上跑时<strong>自动 git clone miles fork</strong> 到 CFS(若未存在)。开发期支持 <code class="inline">V4_MILES_REPO</code> / <code class="inline">V4_TRAINING_REPO</code> 环境变量 override 到本地 editable 路径,免每次重新 clone。</p>
+
+<h3>5.2 本仓目录结构</h3>
+<pre>deepseek-v4-flash-training/
+├── cluster/                            # 集群拉起 + 训练任务提交
+│   ├── bring_up_cluster.sh             # Ray cluster 拉起 + keepalive
+│   ├── bring_up_caddy.sh               # 文档 / Ray dashboard 的统一 web 入口
+│   ├── tear_down.sh                    # 集群关闭
+│   ├── run.sh                          # 训练任务提交(三维分层 env)
+│   ├── convert_hf_to_megatron.sh       # HF FP8 → Megatron torch_dist 转换
+│   ├── base.env                        # 全局基线 env
+│   ├── env.sh                          # env 加载逻辑
+│   ├── fleet/                          # 第 1 维:集群规模(节点 / IP / master)
+│   │   ├── h20_8node.env               # 8 节点 H20 fallback
+│   │   ├── h20_16node.env              # 16 节点 H20 prod
+│   │   └── h200_template.env           # H200 迁移模板
+│   ├── scale/                          # 第 2 维:并行切卡(TP×PP×CP×EP)
+│   │   ├── tp8pp16ep8_layout.env       # 4K winner: TP=8 PP=16 EP=8 + 16-stage layout
+│   │   ├── tp4pp16cp2ep8.env           # 32K: TP=4 PP=16 CP=2 EP=8
+│   │   ├── tp2pp16cp4ep8.env           # 64K: TP=2 PP=16 CP=4 EP=8
+│   │   ├── tp8pp8ep8_layout.env        # 8 节点 fallback
+│   │   └── ...                          # 其他 sweep 用变种(SM=16/24, ZeRO-1)
+│   ├── workload/                       # 第 3 维:任务(数据 / 超参 / preset)
+│   │   ├── sft_smoke.env               # 2-iter dry-run
+│   │   ├── sft_validation.env          # 20-iter SFT
+│   │   ├── sft_cp_smoke.env            # CP=2 + 8K
+│   │   ├── sft_prod.env                # 200-1600 步 prod 默认
+│   │   ├── sft_albaliang.env           # 32K agent SFT
+│   │   ├── sft_64k_pp16.env            # 64K 长 context
+│   │   └── sft_long_context.env        # 256K(需 ≥32 H200 节点)
+│   ├── hw/                             # 硬件 hint(H20 / H200)
+│   ├── caddy/Caddyfile                 # /docs /ray /grafana 路由
+│   └── lib/                            # 共享 shell 函数
+├── tools/                              # 数据 / ckpt 转换工具
+│   ├── jsonl_to_v4_dataset.py          # jsonl → V4 chat-template parquet
+│   ├── megablocks_to_hf_bf16.py        # megablocks 命名 → V3 命名 + FP8 dequant
+│   ├── tilelang_sparse_mla_*.py        # sparse-MLA kernel 诊断 / repro / shapes
+│   ├── verify_v4_mask.py               # loss_mask 边界验证
+│   └── qa_fit_check.py                 # 数据质量检查
+├── prepare_data.py                     # 一次性数据准备入口
+├── prepare_megatron_ckpt.sh            # 一次性权重准备入口
+├── run_stage_a_smoke.sh                # 端到端 stage runner(smoke)
+├── run_stage_b_full.sh                 # 端到端 stage runner(full)
+├── README.md
+├── WRITEUP.html                        # 完整工程实录
+└── v4_training.html                    # 本文档</pre>
+
+<h3>5.3 三层 env 正交分解</h3>
+
+<p>所有训练任务都通过 <code class="inline">cluster/run.sh --fleet X --scale Y --workload Z</code> 三个维度组合启动。三层正交,任意组合都可跑。这套分解是<strong>迁移成本控制的核心</strong>:换硬件只动 fleet,换 shape 只动 scale,换数据只动 workload,三者互不污染。</p>
+
+<table>
+<thead><tr><th>层</th><th>关心什么</th><th>切换示例</th></tr></thead>
+<tbody>
+<tr><td><strong>fleet</strong>(集群)</td><td>节点数 / IP / master / NCCL_SOCKET_IFNAME / docker image / 共享存储</td><td>H20 → H200 = 新建 1 个文件</td></tr>
+<tr><td><strong>scale</strong>(切卡)</td><td>TP / PP / CP / EP / PP layout / VPP / DeepEP SM</td><td>同 shape 不同切卡 = 改一个 flag</td></tr>
+<tr><td><strong>workload</strong>(任务)</td><td>数据 / max_tokens / LR / warmup / save_interval / recompute / chat template</td><td>跨 shape 复用同 scale</td></tr>
+</tbody>
+</table>
+
+<p>加载顺序:<code class="inline">base.env → fleet/X.env → hw/$V4_GPU_MODEL.env → scale/Y.env → workload/Z.env → CLI override</code>。后载入的覆盖前者,CLI 优先级最高。</p>
+
+<h3>5.4 一键启动</h3>
+<pre># 1. 拉集群(master 上跑一次)
+cd cluster/
+bash bring_up_cluster.sh           # 自动 clone miles fork、起 Ray、keepalive
+
+# 2. 4K SFT prod(winner)
+bash run.sh \
+  --fleet h20_16node \
+  --scale tp8pp16ep8_layout \
+  --workload sft_prod
+
+# 3. 8 节点 fallback(集群缩水时)
+bash run.sh \
+  --fleet h20_8node \
+  --scale tp8pp8ep8_layout \
+  --workload sft_prod_8node
+
+# 4. 32K agent SFT
+bash run.sh --fleet h20_16node --scale tp4pp16cp2ep8 --workload sft_albaliang
+
+# 5. 64K 长 context
+bash run.sh --fleet h20_16node --scale tp2pp16cp4ep8 --workload sft_64k_pp16
+
+# 6. 一键 profile(任意 preset 加 --profile 即可)
+bash run.sh --fleet h20_16node --scale tp8pp16ep8_layout \
+  --workload sft_smoke --profile --num-rollout 6 --lr-warmup-iters 0
+
+# 7. 关集群
+bash tear_down.sh</pre>
+
+<h3>5.5 开发期 override</h3>
+<pre># 用本地 editable miles / 本仓
+export V4_MILES_REPO=/local/path/to/miles
+export V4_TRAINING_REPO=/local/path/to/deepseek-v4-flash-training
+bash cluster/run.sh --fleet h20_16node --scale tp8pp16ep8_layout --workload sft_smoke
+
+# Profile rank 选择 override
+MILES_PROFILE_RANKS=0,32,56 bash run.sh ... --profile</pre>
+
+<h3>5.6 一次性准备:数据 + 权重</h3>
+<pre># 数据:jsonl → V4 chat-template parquet
+python prepare_data.py \
+  --input /path/to/your_sft_data.jsonl \
+  --output $V4_WORK/data/your_dataset.parquet \
+  --tool-key tools                       # albaliang schema 用 tools,通用 SFT 用 tool_calls
+
+# 权重:HF FP8 → BF16 → Megatron torch_dist
+bash prepare_megatron_ckpt.sh
+# 内部三步:
+#   ① tools/megablocks_to_hf_bf16.py  (megablocks → V3 命名 + FP8 dequant,~30 min)
+#   ② cluster/convert_hf_to_megatron.sh  (HF BF16 → torch_dist 分片,~45 min)
+#   ③ 加载冒烟  (TP×PP×EP 全分片各加载 1 次,验证 latest_checkpointed_iteration)</pre>
+
+<h3>5.7 H200 迁移成本</h3>
+<p>三层正交分解最大的回报:迁移到 H200 时 scale / workload / hw/h200.env 全部不动,只新建 <code class="inline">cluster/fleet/h200_16node.env</code>:</p>
+<pre>export V4_CLUSTER_NAME=h200_16node
+export V4_GPU_MODEL=h200            # 自动选 hw/h200.env
+export V4_NUM_NODES=16
+export V4_MASTER_IP=&lt;H200 master IP&gt;
+export V4_WORKER_IPS="&lt;IP2&gt; ... &lt;IP16&gt;"
+export V4_WORK=/path/to/shared/storage/v4-sft
+export V4_IMAGE=radixark/miles:dev
+export V4_DOCKER_MOUNTS=(
+  "/path/to/shared:/path/to/shared"
+  "/dev/infiniband:/dev/infiniband"
+)</pre>
+
+<p>之后 <code class="inline">--fleet h200_16node</code> 即可,所有 scale / workload preset 100% 复用。</p>
+
+<h3>5.8 集群类型 vs preset 适用性</h3>
+<table>
+<thead><tr><th>fleet</th><th>smoke / validation / cp_smoke / prod</th><th>32K albaliang</th><th>64K</th><th>long_context (256K)</th></tr></thead>
+<tbody>
+<tr><td>H20 × 8 节点</td><td>✓</td><td>✓ 老路径(慢)</td><td>✓ 老路径(慢)</td><td>✗ 数学不允许</td></tr>
+<tr><td>H20 × 16 节点</td><td>✓ <strong>winner</strong></td><td>✓ <strong>winner</strong></td><td>✓ <strong>winner</strong></td><td>✗ 节点不够</td></tr>
+<tr><td>H200 × 16 节点</td><td>✓ 更舒服</td><td>✓</td><td>✓</td><td>✗ 节点不够</td></tr>
+<tr><td>H200 × 32 节点</td><td>✓</td><td>✓</td><td>✓</td><td>✓ 刚好(TP×PP×CP = 8×4×8 = 256 ranks)</td></tr>
+</tbody>
+</table>
+
+<div class="callout callout-success">
+<p><strong>当前生产长跑路径</strong>:三档 shape(4K / 32K / 64K)在 16 节点 PP=16 上全部 200 步级零漂移。新 prod 默认即 <code class="inline">--fleet h20_16node --scale tp8pp16ep8_layout --workload sft_prod</code>;长 context 任务用 <code class="inline">tp4pp16cp2ep8 + sft_albaliang</code> 或 <code class="inline">tp2pp16cp4ep8 + sft_64k_pp16</code>;8 节点旧路径仅作 fallback。</p>
+</div>
+
+</section>
+
+<footer style="margin-top:5rem; padding-top:2rem; border-top:1px solid var(--border); color:var(--ink-low); font-size:12.5px;">
+<p>完整工程实录(5 模块 + issue postmortem + 18 节 perf 详解 + 附录)见 <a href="WRITEUP.html">WRITEUP.html</a>。</p>
+</footer>
+
+</main>
+</body>
+</html>
