@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>DeepSeek-V4-Flash SFT 效果评测方案（Infra × 优图）</title>
+<style>
+  body { font-family: -apple-system, "Helvetica Neue", "Segoe UI", "PingFang SC", sans-serif;
+         max-width: 1000px; margin: 32px auto; padding: 0 24px; color: #1f2328; line-height: 1.55; }
+  h1 { border-bottom: 2px solid #d0d7de; padding-bottom: 8px; }
+  h2 { border-bottom: 1px solid #d0d7de; padding-bottom: 6px; margin-top: 36px; }
+  h3 { margin-top: 24px; }
+  code { background: #f6f8fa; padding: 1px 6px; border-radius: 4px; font-size: 90%; }
+  pre { background: #f6f8fa; padding: 12px; border-radius: 6px; overflow-x: auto; }
+  table { border-collapse: collapse; margin: 12px 0; width: 100%; }
+  th, td { border: 1px solid #d0d7de; padding: 6px 12px; text-align: left; vertical-align: top; }
+  th { background: #f6f8fa; }
+  .ok { color: #1a7f37; font-weight: 600; }
+  .warn { color: #9a6700; font-weight: 600; }
+  .bad { color: #cf222e; font-weight: 600; }
+  .meta { color: #656d76; font-size: 14px; }
+  .infra { background: #e7f0ff; }
+  .model { background: #fff5e6; }
+  .both { background: #e7fbef; }
+  ul li, ol li { margin: 4px 0; }
+  blockquote { border-left: 4px solid #d0d7de; color: #57606a; margin: 12px 0; padding: 4px 16px; }
+</style>
+</head>
+<body>
+
+<h1>DeepSeek-V4-Flash SFT 效果评测方案</h1>
+<p class="meta">
+Infra 团队 × 优图同学 &nbsp;|&nbsp; 起草日期: 2026-05-27 &nbsp;|&nbsp;
+对象: <code>DeepSeek-V4-Flash</code> albaliang agent SFT（<code>hf_iter400</code>）&nbsp;|&nbsp;
+服务: 16×TP8 sglang + router
+</p>
+
+<blockquote>
+现状：已从 <b>pipeline / 似然视角</b>证明"训练生效"（teacher-forcing 留出数据 NLL −28.5%、20/20 无退化，见 QA 报告）。
+本方案把它升级为<b>产品级"效果"评测</b>——拆成两条腿：<b>① 评测基础设施精度</b>（尺子准不准，Infra 主责）、
+<b>② 训练质量</b>（模型好不好，优图主责、Infra 提供管线）。第一条腿是第二条腿可信的前提。
+</blockquote>
+
+<h2>1. 总体框架</h2>
+<table>
+<tr><th>条腿</th><th>回答的问题</th><th>主责</th><th>关系</th></tr>
+<tr class="infra"><td><b>① 评测基础设施精度</b></td><td>测出来的分，是否反映模型真实能力（而非管线 bug）？</td><td>Infra</td><td>② 的前置；不过关则所有分数不可信</td></tr>
+<tr class="model"><td><b>② 训练质量</b></td><td>模型到底好不好？领域增益多少、通用是否退化？</td><td>优图（建模）</td><td>依赖 ① 提供的可信尺子与管线</td></tr>
+</table>
+<p class="meta">颜色约定：<span class="infra">蓝=Infra</span>、<span class="model">橙=优图</span>、<span class="both">绿=联合</span>。
+每个任务给出<b>做法 / 验收标准 / Owner / 依赖·交付物</b>，便于排期与验收。</p>
+
+<h2>2. 第一条腿：评测基础设施精度（Infra）</h2>
+<p>目标：消除"把好模型测差 / 测出假象"的所有管线性误差。按优先级排列，前三项是上线评测前的硬 gate。</p>
+<table>
+<tr><th>#</th><th>任务</th><th>做法</th><th>验收标准</th><th>Owner</th><th>依赖 / 交付物</th></tr>
+
+<tr class="infra"><td>1.1</td><td><b>训练-推理拼接一致（chat_template gate）</b></td>
+<td>V4 的 <code>tokenizer_config.json</code> 无 jinja chat_template，sglang 默认模板 ≠ 训练的 <code>encoding_dsv4</code>。把 encoding_dsv4 的渲染逻辑写进 <code>chat_template</code>（含 system / 多轮 / tool 序列化 / thinking 模式），使 chat-API 的拼接逐 token 等同训练。</td>
+<td>同一批样本：chat-API 渲染的 token-ids == 训练 <code>MultiTurnLossMaskGenerator</code> 渲染（逐 token 对齐，diff=0）。</td>
+<td>Infra</td><td>已有 <code>qa_fit_check_v3.py</code> 作对照；交付 chat_template + 校验脚本</td></tr>
+
+<tr class="infra"><td>1.2</td><td><b>数值保真</b></td>
+<td>核对服务端（sglang BF16 / KV fp8 / MoE 路由 / cuda graph）与参考前向的 logprob 偏差；评测统一 <b>greedy(temp=0)</b>，采样类固定 seed。</td>
+<td>抽样 prompt 的 per-token logprob 与参考（训练框架或 HF 前向）平均 KL / NLL 偏差 &lt; 设定阈值；greedy 输出可复现。</td>
+<td>Infra</td><td>复用 <code>qa_teacher_forcing.py</code>（已有 <code>return_logprob</code>）</td></tr>
+
+<tr class="infra"><td>1.3</td><td><b>解码 / 解析口径统一</b></td>
+<td>固定 max_tokens、stop/EOS（V4 <code>&lt;｜DSML｜…&gt;</code> 特殊 token）、答案抽取（正则 / JSON）；agent 任务正确解析 <code>&lt;｜DSML｜tool_calls｜&gt;</code>。</td>
+<td>解析失败率 ≈ 0（人工抽检 N 条，无因解析导致的假阴性）；解码参数固化在 harness config。</td>
+<td>Infra</td><td>统一 harness 适配层（V4 输出格式解析器）</td></tr>
+
+<tr class="infra"><td>1.4</td><td><b>可复现 + 防污染</b></td>
+<td>钉死 ckpt / 镜像 / harness commit / 数据版本，全部入日志；跑 N 次报 mean±std。对 albaliang 训练集与 benchmark 做 n-gram / 近重去重。</td>
+<td>同配置两次结果在方差内一致；benchmark 与训练集重叠率低于阈值并出报告。</td>
+<td>Infra</td><td>交付污染检测脚本 + run 元数据记录</td></tr>
+
+<tr class="infra"><td>1.5</td><td><b>golden-set 回归</b></td>
+<td>维护一小批固定输入 + 期望输出，每次部署 / 改配置自动跑，专抓"模板或精度悄悄改导致质量塌"。</td>
+<td>golden-set 通过率 100%，任何回归在部署门禁拦截。</td>
+<td>Infra</td><td>golden_set.jsonl + CI/门禁脚本</td></tr>
+
+<tr class="infra"><td>1.6</td><td><b>批无关性</b></td>
+<td>验证同 prompt 在不同并发 / 批组成下输出一致（MoE 路由对 batch 敏感）；评测建议 batch=1 或先证不变性。</td>
+<td>同 prompt 跨 batch 大小输出一致（或偏差在阈值内并记录）。</td>
+<td>Infra</td><td>批不变性校验用例</td></tr>
+</table>
+
+<h2>3. 第二条腿：训练质量（优图主责 · Infra 提供管线）</h2>
+<table>
+<tr><th>#</th><th>任务</th><th>做法</th><th>验收标准</th><th>Owner</th><th>依赖 / 交付物</th></tr>
+
+<tr class="model"><td>2.1</td><td><b>benchmark 选型</b></td>
+<td><u>领域</u>：从同分布留出集构造 agent eval（端到端任务完成、工具选择/参数正确、schema/格式合法）。<u>通用回归护栏</u>：MMLU / GSM8K / HumanEval / IFEval 等，防灾难性遗忘。</td>
+<td>领域 + 通用两套 benchmark 冻结成版本化数据集，含评分脚本。</td>
+<td>优图</td><td>依赖 1.1–1.4 的可信管线</td></tr>
+
+<tr class="both"><td>2.2</td><td><b>base vs SFT 同 harness 对照</b></td>
+<td>对照组 = 训练起点 <code>DeepSeek-V4-Flash-bf16-unpacked</code>，实验组 = <code>hf_iter400</code>，同一 harness 全跑；有 prod / 参考模型一并比。</td>
+<td>每个指标都有 base / SFT / Δ 三列，并标注是否显著。</td>
+<td>联合</td><td>已有 teacher-forcing base-vs-SFT 范式，扩到任务指标</td></tr>
+
+<tr class="model"><td>2.3</td><td><b>指标分层</b></td>
+<td>任务成功率 / pass@k、工具调用准确率、格式合法率、留出 NLL/ppl（连续低方差、适合追踪）、开放题 LLM-judge 或人评。</td>
+<td>每层至少一个主指标 + 置信区间；judge 标注偏置已校准。</td>
+<td>优图</td><td>—</td></tr>
+
+<tr class="both"><td>2.4</td><td><b>checkpoint 扫描</b></td>
+<td>每个存档点都评，看质量曲线、抓过拟合、选最优 ckpt。<span class="warn">前置缺口</span>：当前 save-retain off-by-one 导致中途 ckpt 被删、<b>只剩 iter400</b>，需先修复才能多点扫描。</td>
+<td>修复后训练产出 ≥3 个可评 ckpt；质量-步数曲线产出，最优 ckpt 有据可选。</td>
+<td>联合</td><td><b>阻塞于</b>修 save-retain（见 §5）</td></tr>
+
+<tr class="model"><td>2.5</td><td><b>统计严谨 + 人工抽检</b></td>
+<td>样本量保证置信区间够窄；采样类多 seed；agent 轨迹人工抽检（自动指标抓不到的质量问题）。</td>
+<td>主指标 95% CI 报出；人工抽检报告（每类 N 条）。</td>
+<td>优图</td><td>—</td></tr>
+</table>
+
+<h2>4. 落地顺序 / 里程碑</h2>
+<ol>
+  <li><b>Phase 0 — Infra gate（先做）</b>：1.1 chat_template → 1.2 logprob 保真 → 1.4 防污染 + 1.5 golden-set。完成后"分数可信"成立。</li>
+  <li><b>Phase 1 — 质量基线</b>：2.1 选型 + 2.2 base vs SFT 全跑（领域 agent eval + 通用回归），出第一版 base/SFT/Δ 报告。</li>
+  <li><b>Phase 2 — 迭代</b>：修 save-retain → 2.4 checkpoint 扫描选最优 ckpt → 2.5 人评 + 统计收口；按结果决定是否再训 / 调数据。</li>
+</ol>
+
+<h2>5. 复用资产与缺口</h2>
+<table>
+<tr><th>已有（可直接复用）</th><th>缺口（需补）</th></tr>
+<tr><td>
+<ul>
+  <li><code>qa_teacher_forcing.py</code>：留出逐 token 似然，base-vs-SFT 对照范式</li>
+  <li><code>qa_fit_check_v3.py</code> + <code>encoding_dsv4</code> + <code>MultiTurnLossMaskGenerator</code>：训练精确拼接对照</li>
+  <li>16×TP8 sglang + router 服务、留出样本</li>
+</ul>
+</td><td>
+<ul>
+  <li><b>chat_template</b>（把 encoding_dsv4 写进 tokenizer_config，chat-API 评测前必做）</li>
+  <li><b>修 save-retain off-by-one</b>（否则只有 iter400，无法做 ckpt 扫描）</li>
+  <li>领域 agent 留出 eval 集 + 评分脚本；通用回归套件接入</li>
+  <li>污染检测 / golden-set / 解析适配层脚本</li>
+</ul>
+</td></tr>
+</table>
+
+<h2>6. 主要风险</h2>
+<ul>
+  <li><b>低估</b>：chat_template 不补 → chat-API 评测系统性偏低（已知，列为 Phase 0 第一项）。</li>
+  <li><b>高估</b>：benchmark 与 albaliang 训练集泄漏 → 虚高（1.4 防污染兜底）。</li>
+  <li><b>选点受限</b>：只有 iter400，无法判断是否已过最优点（2.4 阻塞于 save-retain 修复）。</li>
+  <li><b>不确定性</b>：MoE 路由对 batch 敏感、LLM-judge 偏置 → 用 batch 不变性校验与 judge 校准缓解。</li>
+</ul>
+
+</body>
+</html>

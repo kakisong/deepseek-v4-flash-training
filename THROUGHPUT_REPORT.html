@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>V4-Flash 推理吞吐扩展报告（16 节点 H20）</title>
+<style>
+  body { font-family: -apple-system, "Helvetica Neue", "Segoe UI", "PingFang SC", sans-serif;
+         max-width: 1000px; margin: 32px auto; padding: 0 24px; color: #1f2328; line-height: 1.55; }
+  h1 { border-bottom: 2px solid #d0d7de; padding-bottom: 8px; }
+  h2 { border-bottom: 1px solid #d0d7de; padding-bottom: 6px; margin-top: 36px; }
+  h3 { margin-top: 22px; }
+  code { background: #f6f8fa; padding: 1px 6px; border-radius: 4px; font-size: 90%; }
+  pre { background: #f6f8fa; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 88%; }
+  table { border-collapse: collapse; margin: 12px 0; width: 100%; }
+  th, td { border: 1px solid #d0d7de; padding: 6px 12px; text-align: left; }
+  th { background: #f6f8fa; }
+  .ok { color: #1a7f37; font-weight: 600; }
+  .warn { color: #9a6700; font-weight: 600; }
+  .bad { color: #cf222e; font-weight: 600; }
+  .num { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .meta { color: #656d76; font-size: 14px; }
+  ul li, ol li { margin: 4px 0; }
+  blockquote { border-left: 4px solid #d0d7de; color: #57606a; margin: 12px 0; padding: 4px 16px; }
+  .big { font-size: 22px; }
+</style>
+</head>
+<body>
+
+<h1>V4-Flash 推理吞吐扩展报告（16 节点 H20）</h1>
+<p class="meta">
+报告日期: 2026-05-27 &nbsp;|&nbsp;
+模型: <code>DeepSeek-V4-Flash</code> (285B 总 / 13B active MoE)，权重 <code>hf_iter400</code> BF16 531GB &nbsp;|&nbsp;
+集群: 16 × H20(8×96GB) = 128 GPU &nbsp;|&nbsp;
+镜像: <code>lmsysorg/sglang:latest</code> (0.5.12.post1)
+</p>
+
+<blockquote>
+目标：在现有 16 节点 128 卡上把推理<b>吞吐和并发拉到最高</b>。
+结论：横向 16 副本 + router + <b>cuda graph</b> 方案落地（16/16 在线），聚合峰值 <b>~42,000 输出 tok/s @ 并发 2,048</b>、<b>0 失败</b>、活跃节点 GPU 利用率 <b>~100%</b>。
+大规模单端点 EP 路线因 sglang 镜像 NVSHMEM-over-RoCE bootstrap 缺陷受阻（见 §5）。
+</blockquote>
+
+<h2>1. 最终部署架构</h2>
+<table>
+<tr><th>层</th><th>配置</th></tr>
+<tr><td>副本</td><td>16 × 单机 <code>sglang TP=8</code> 独立实例（各节点 :30000），无跨节点通信</td></tr>
+<tr><td>负载均衡</td><td><code>sglang_router 0.3.2</code> @ <code>10.0.8.17:31000</code>，cache-aware 轮询 16 副本</td></tr>
+<tr><td>公网入口</td><td>caddy <code>:8202</code> 与 <code>/sglang/*</code> → router；外部 <code>https://kaynzhang.woa.com:8202/v1</code></td></tr>
+<tr><td>每副本</td><td><code>mem-fraction-static=0.85</code>, ctx=32K, KV=fp8_e4m3, <code>max-running-requests=256</code>, <b>cuda graph 开</b>(<code>--cuda-graph-max-bs 256</code>)</td></tr>
+<tr><td>当前健康度</td><td><span class="ok">16/16 副本在线</span>（10.0.8.5 / 10.0.8.6 经多次重启已恢复纳入；router 只路由健康副本）</td></tr>
+</table>
+
+<h3>架构拓扑</h3>
+<svg viewBox="0 140 980 460" width="100%" font-family="-apple-system,Segoe UI,PingFang SC,sans-serif" font-size="12">
+  <defs>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <!-- top chain -->
+  <rect x="370" y="160" width="240" height="40" rx="6" fill="#eef2f6" stroke="#aab"/>
+  <text x="490" y="180" text-anchor="middle">外部用户 / 客户端</text>
+  <text x="490" y="195" text-anchor="middle" fill="#656d76">OpenAI 兼容 API（公网入口 → router）</text>
+
+  <rect x="330" y="242" width="320" height="52" rx="6" fill="#e7fbef" stroke="#3fa45f"/>
+  <text x="490" y="262" text-anchor="middle" font-weight="600">sglang_router 0.3.2</text>
+  <text x="490" y="278" text-anchor="middle" fill="#656d76">10.0.8.17:31000 · cache-aware 负载均衡</text>
+
+  <!-- arrows -->
+  <line x1="490" y1="200" x2="490" y2="241" stroke="#57606a" marker-end="url(#arr)"/>
+  <line x1="490" y1="294" x2="490" y2="322" stroke="#57606a" marker-end="url(#arr)"/>
+  <text x="660" y="338" fill="#656d76">16 副本 · 各 TP=8 · 无跨节点通信</text>
+
+  <!-- replica grid: 8 per row -->
+  <!-- row1 -->
+  <g>
+    <rect x="20"  y="346" width="110" height="52" rx="5" fill="#e7fbef" stroke="#3fa45f"/><text x="75"  y="366" text-anchor="middle" font-weight="600">10.0.8.17★</text><text x="75"  y="384" text-anchor="middle" fill="#656d76">:30000 TP8</text>
+    <rect x="138" y="346" width="110" height="52" rx="5" fill="#e7fbef" stroke="#3fa45f"/><text x="193" y="366" text-anchor="middle" font-weight="600">10.0.8.10</text><text x="193" y="384" text-anchor="middle" fill="#656d76">:30000 TP8</text>
+    <rect x="256" y="346" width="110" height="52" rx="5" fill="#e7fbef" stroke="#3fa45f"/><text x="311" y="366" text-anchor="middle" font-weight="600">10.0.8.11</text><text x="311" y="384" text-anchor="middle" fill="#656d76">:30000 TP8</text>
+    <rect x="374" y="346" width="110" height="52" rx="5" fill="#e7fbef" stroke="#3fa45f"/><text x="429" y="366" text-anchor="middle" font-weight="600">10.0.8.12</text><text x="429" y="384" text-anchor="middle" fill="#656d76">:30000 TP8</text>
+    <rect x="492" y="346" width="110" height="52" rx="5" fill="#e7fbef" stroke="#3fa45f"/><text x="547" y="366" text-anchor="middle" font-weight="600">10.0.8.13</text><text x="547" y="384" text-anchor="middle" fill="#656d76">:30000 TP8</text>
+    <rect x="610" y="346" width="110" height="52" rx="5" fill="#e7fbef" stroke="#3fa45f"/><text x="665" y="366" text-anchor="middle" font-weight="600">10.0.8.14</text><text x="665" y="384" text-anchor="middle" fill="#656d76">:30000 TP8</text>
+    <rect x="728" y="346" width="110" height="52" rx="5" fill="#e7fbef" stroke="#3fa45f"/><text x="783" y="366" text-anchor="middle" font-weight="600">10.0.8.15</text><text x="783" y="384" text-anchor="middle" fill="#656d76">:30000 TP8</text>
+    <rect x="846" y="346" width="110" height="52" rx="5" fill="#e7fbef" stroke="#3fa45f"/><text x="901" y="366" text-anchor="middle" font-weight="600">10.0.8.16</text><text x="901" y="384" text-anchor="middle" fill="#656d76">:30000 TP8</text>
+  </g>
+  <!-- row2 -->
+  <g>
+    <rect x="20"  y="410" width="110" height="52" rx="5" fill="#e7fbef" stroke="#3fa45f"/><text x="75"  y="430" text-anchor="middle" font-weight="600">10.0.8.2</text><text x="75"  y="448" text-anchor="middle" fill="#656d76">:30000 TP8</text>
+    <rect x="138" y="410" width="110" height="52" rx="5" fill="#e7fbef" stroke="#3fa45f"/><text x="193" y="430" text-anchor="middle" font-weight="600">10.0.8.3</text><text x="193" y="448" text-anchor="middle" fill="#656d76">:30000 TP8</text>
+    <rect x="256" y="410" width="110" height="52" rx="5" fill="#e7fbef" stroke="#3fa45f"/><text x="311" y="430" text-anchor="middle" font-weight="600">10.0.8.4</text><text x="311" y="448" text-anchor="middle" fill="#656d76">:30000 TP8</text>
+    <rect x="374" y="410" width="110" height="52" rx="5" fill="#e7fbef" stroke="#3fa45f"/><text x="429" y="430" text-anchor="middle" font-weight="600">10.0.8.5</text><text x="429" y="448" text-anchor="middle" fill="#656d76">:30000 TP8</text>
+    <rect x="492" y="410" width="110" height="52" rx="5" fill="#e7fbef" stroke="#3fa45f"/><text x="547" y="430" text-anchor="middle" font-weight="600">10.0.8.6</text><text x="547" y="448" text-anchor="middle" fill="#656d76">:30000 TP8</text>
+    <rect x="610" y="410" width="110" height="52" rx="5" fill="#e7fbef" stroke="#3fa45f"/><text x="665" y="430" text-anchor="middle" font-weight="600">10.0.8.7</text><text x="665" y="448" text-anchor="middle" fill="#656d76">:30000 TP8</text>
+    <rect x="728" y="410" width="110" height="52" rx="5" fill="#e7fbef" stroke="#3fa45f"/><text x="783" y="430" text-anchor="middle" font-weight="600">10.0.8.8</text><text x="783" y="448" text-anchor="middle" fill="#656d76">:30000 TP8</text>
+    <rect x="846" y="410" width="110" height="52" rx="5" fill="#e7fbef" stroke="#3fa45f"/><text x="901" y="430" text-anchor="middle" font-weight="600">10.0.8.9</text><text x="901" y="448" text-anchor="middle" fill="#656d76">:30000 TP8</text>
+  </g>
+  <!-- fan arrows from router to a few grid columns -->
+  <line x1="430" y1="294" x2="120" y2="345" stroke="#9aa" stroke-dasharray="3,3"/>
+  <line x1="470" y1="294" x2="430" y2="345" stroke="#9aa" stroke-dasharray="3,3"/>
+  <line x1="510" y1="294" x2="665" y2="345" stroke="#9aa" stroke-dasharray="3,3"/>
+  <line x1="550" y1="294" x2="901" y2="345" stroke="#9aa" stroke-dasharray="3,3"/>
+
+  <!-- legend -->
+  <rect x="20" y="500" width="14" height="14" fill="#e7fbef" stroke="#3fa45f"/><text x="40" y="512">在线服务 16/16</text>
+  <text x="200" y="512" fill="#656d76">★ = master，兼跑 router</text>
+  <text x="20" y="540" fill="#656d76">每节点：1 个 sglang 实例，TP=8 跨本机 8×H20（NVLink），实例之间互不通信；router 按健康度路由。</text>
+  <text x="20" y="562" fill="#656d76">峰值 ~42,200 输出 tok/s @ 并发 2,048（16 副本，0 失败）；活跃节点 GPU ~100%。</text>
+</svg>
+
+<h2>2. 吞吐 / 并发基准（核心结果）</h2>
+<p class="meta">合成负载：输入 1024 tok、输出 256 tok、<code>ignore_eos</code> 强制定长、stream，自研客户端 <code>mybench.py</code>。</p>
+
+<h3>聚合（router 多副本）</h3>
+<table>
+<tr><th>配置</th><th>并发</th><th>输出 tok/s</th><th>请求/s</th><th>TTFT 中位</th><th>E2E 中位</th><th>失败</th></tr>
+<tr><td>cuda graph 关 · 16 副本</td><td>1024</td><td class="num">9,695</td><td>43.9</td><td>1.68s</td><td>19.5s</td><td>0</td></tr>
+<tr><td>cuda graph 关 · 16 副本</td><td>2048</td><td class="num">14,890</td><td>66.9</td><td>1.07s</td><td>19.6s</td><td>0</td></tr>
+<tr><td>cuda graph 关 · 16 副本</td><td>4096</td><td class="num">21,006</td><td>93.0</td><td>2.79s</td><td>23.3s</td><td>0</td></tr>
+<tr><td><b>cuda graph 开 · 16 副本</b></td><td>2048</td><td class="num ok">42,171</td><td>201.7</td><td>1.25s</td><td>8.0s</td><td>0</td></tr>
+<tr><td><b>cuda graph 开 · 16 副本</b></td><td>4096</td><td class="num">37,022</td><td>175.9</td><td>2.69s</td><td>13.3s</td><td>0</td></tr>
+</table>
+<p class="big ok">峰值 ≈ 42,200 输出 tok/s @ 并发 2,048（16 副本，0 失败）。</p>
+<p>注：16 副本聚合峰值落在并发 2,048（=128/副本，单副本甜点区）；并发 4,096（256/副本）因 SWA KV 满、排队上升回落到 37k，与单副本 conc128&gt;256 的现象一致。</p>
+
+<h3>单副本（8×H20）——cuda graph 的决定性增益</h3>
+<table>
+<tr><th>并发</th><th>cuda graph 关</th><th>cuda graph 开</th><th>加速比</th></tr>
+<tr><td>32</td><td>259 tok/s</td><td class="num">1,651 tok/s</td><td class="ok">6.4×</td></tr>
+<tr><td>128</td><td>954 tok/s</td><td class="num">3,705 tok/s</td><td class="ok">3.9×</td></tr>
+<tr><td>256</td><td>1,189 tok/s</td><td class="num">3,169 tok/s</td><td class="ok">2.7×</td></tr>
+</table>
+<p>单副本吞吐峰值在并发 ~128 处（3,705 tok/s）。这是本次调优<b>最大的单一杠杆</b>：原始“安全”配置默认 <code>--disable-cuda-graph</code>，开启后单副本提升 3–4×。</p>
+
+<h2>3. 资源利用率</h2>
+<ul>
+  <li>持续负载下，<b>活跃副本节点 GPU 利用率全部 ~100%</b>（均值 ≈ <span class="ok">99.8%</span>）。</li>
+  <li>每卡显存：权重 ~66GB + KV/cuda-graph ~5GB，常驻 ~71GB / 96GB。</li>
+</ul>
+
+<h3>decode batch 与瓶颈：SWA KV 池</h3>
+<p>实测单副本 conc=256 时 <code>#running-req ≈ 150–220</code>（cuda graph: True，配置上限 256），但
+<b><code>swa token usage = 1.00</code></b>（满）而 <code>full token usage 仅 0.10</code>。
+V4-Flash 是 hybrid SWA 模型（<code>swa_full_tokens_ratio=0.1</code>），<b>实际 decode 批被 SWA(滑窗注意力) KV 池卡住，而非 <code>max_running_requests</code></b>。
+这解释了单副本 conc 128→256 吞吐略降（cuda graph 下 3,705→3,169 tok/s）：到 256 时 SWA 池满、请求开始排队。</p>
+<table>
+<tr><th>mem-fraction-static</th><th>max_total KV</th><th>空闲显存</th><th>单副本 conc256 输出 tok/s</th></tr>
+<tr><td>0.85（基线）</td><td>—</td><td>~14 GB</td><td>3,169</td></tr>
+<tr><td><b>0.92</b></td><td>1,203,968 tok</td><td>6.2 GB</td><td class="num ok">3,816（+20%）</td></tr>
+</table>
+<p>提高 <code>mem-fraction-static</code> 把更多显存给 SWA KV 池 → 单副本 +20%。已将 <code>run_sglang_replica.sh</code> 默认改 0.92。
+<span class="warn">注意：</span>全量 16 副本统一切 0.92 需逐副本重载，而本集群 CFS 冷读在并发重载下极慢（~30 MiB/s，单波 5 节点需 15–20 min），
+故<b>全量统一 0.92 留到维护窗口分批滚动</b>（避免同时拉崩服务）；当前为 0.85/0.92 混合，router 无差别负载均衡，功能不受影响。</p>
+
+<h2>4. 调优收敛路径（自动迭代）</h2>
+<ol>
+  <li>验证 16 副本 + router 基线（cuda graph 关）：聚合 21,006 tok/s @ 并发 4096。</li>
+  <li>单副本试开 cuda graph → 3.9× 增益（954→3,705 tok/s @ 并发128），V4 + dsv4 attention 后端兼容。</li>
+  <li>全量 16 副本切到 cuda graph（页缓存热，重载 ~60s + capture）→ 聚合峰值 <b>42,171 tok/s @ 并发 2,048</b>。</li>
+  <li>确认并发拐点：单副本 ~128、16 副本聚合甜点在 ~2,048（128/副本），并发 4,096 仍 0 失败（吞吐回落到 37k）。</li>
+</ol>
+
+<h2>5. 为什么不是“大规模 EP 单端点”</h2>
+<p>首选方案是 DeepSeek 官方推荐的大规模专家并行（DP-attention + DeepEP，128 卡单实例，KV 池暴涨 → batch 拉满）。
+软件与形状全部就绪并正确：</p>
+<ul>
+  <li>sglang 0.5.12.post1，<code>--enable-dp-attention --moe-a2a-backend deepep --ep-size 128 --dp-size 128 --nnodes 16</code> 全部接受；</li>
+  <li>128 卡分布式组建成功（<code>DP0..127</code>）、权重加载完成、DeepEP buffer 构造（“20 SMs”）通过。</li>
+</ul>
+<p><span class="bad">受阻点：内网是 RoCE（以太，8×200Gb <code>mlx5_bond</code>），DeepEP 跨节点 all-to-all 依赖 NVSHMEM；
+该镜像 NVSHMEM UID bootstrap 的 allgather 读到错乱数据</span>（<code>Message truncated: received N bytes instead of 40 → nvshmem init failed</code>），
+导致首个 forward 卡在 all-to-all（GPU 0% 死等）。这属于上游已知未决问题
+（DeepEP #139、sglang #7888 / #12533），与 H20+RoCE 下缺 <code>gdrdrv</code> / <code>nvidia_peermem</code> 内核模块及 IBGDA 驱动配置相关，
+非应用层参数可快速绕过。横向副本方案<b>完全规避跨节点通信</b>，故作为交付路线。</p>
+
+<h3>EP vs 横向副本（取舍）</h3>
+<table>
+<tr><th></th><th>大规模 EP 单端点</th><th>横向 16 副本（已采用）</th></tr>
+<tr><td>跨节点通信</td><td>每 MoE 层 all-to-all（依赖 NVSHMEM/RoCE）</td><td class="ok">无</td></tr>
+<tr><td>KV 池 / 单请求长上下文</td><td>更大（专家摊薄）</td><td>每副本受限（~权重占 66GB/卡）</td></tr>
+<tr><td>聚合吞吐</td><td>理论上限更高</td><td class="ok">近线性 ~16×，实测稳</td></tr>
+<tr><td>稳健性 / 故障隔离</td><td>单点、调参重</td><td class="ok">副本独立，挂一个不影响其余</td></tr>
+<tr><td>本集群可用性</td><td><span class="bad">受 NVSHMEM-RoCE 阻塞</span></td><td class="ok">已上线</td></tr>
+</table>
+
+<h2>6. 运维 / 交付物</h2>
+<table>
+<tr><th>路径（CFS <code>/data_fast_v3/kaynzhang/v4-sft/</code>）</th><th>说明</th></tr>
+<tr><td><code>run_sglang_replica.sh</code></td><td>单机 TP=8 副本启动脚本（<code>CG=1</code> 开 cuda graph）</td></tr>
+<tr><td><code>ep_ctl.sh</code> / <code>run_sglang_ep.sh</code></td><td>16 节点 EP 启停（保留备查，待 NVSHMEM 修复后可复用）</td></tr>
+<tr><td><code>mybench.py</code> / <code>bench_ep.sh</code></td><td>无网络依赖的吞吐/并发压测客户端</td></tr>
+<tr><td><code>images/sglang_latest.tar</code></td><td>已分发到全 16 节点的 sglang 镜像（id b9079f568489）</td></tr>
+<tr><td><code>logs/replica_*.log, bench_*.txt</code></td><td>各副本启动日志与压测结果</td></tr>
+</table>
+<p>公网推理入口（不变）：<code>https://kaynzhang.woa.com:8202/v1</code>（caddy → sglang_router → 16 副本）。</p>
+
+<h3>重启某副本（例）</h3>
+<pre>ssh root@&lt;node&gt; "docker exec -d sglang-ep bash -lc \
+  'cd /data_fast_v3/kaynzhang/v4-sft &amp;&amp; CG=1 nohup bash run_sglang_replica.sh &gt; logs/replica_&lt;node&gt;.log 2>&1 &amp;'"</pre>
+
+<h2>7. 后续可提升项</h2>
+<ul>
+  <li><b>更高单请求并发</b>：每副本 <code>max-running-requests</code> 受 V4 默认 256；KV 池足够时可上调（注意 cuda graph bs 上限）。</li>
+  <li><b>解锁 EP</b>：在 sglang 镜像内装 <code>gdrdrv</code>/<code>nvidia_peermem</code> + 配置 NVSHMEM IBGDA-over-RoCE（GID idx 3），跑通 2 节点烟雾测试后再上 128 卡。</li>
+  <li><b>服务常驻</b>：当前为手动部署（nohup in container）；长期对外建议加进程守护 / health 自愈。</li>
+</ul>
+
+</body>
+</html>

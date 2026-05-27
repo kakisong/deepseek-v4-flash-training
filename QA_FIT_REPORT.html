@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>DeepSeek-V4-Flash SFT 训练生效性验证（联合优图团队）</title>
+<style>
+  body { font-family: -apple-system, "Helvetica Neue", "Segoe UI", "PingFang SC", sans-serif;
+         max-width: 980px; margin: 32px auto; padding: 0 24px; color: #1f2328; line-height: 1.55; }
+  h1 { border-bottom: 2px solid #d0d7de; padding-bottom: 8px; }
+  h2 { border-bottom: 1px solid #d0d7de; padding-bottom: 6px; margin-top: 36px; }
+  h3 { margin-top: 24px; }
+  code { background: #f6f8fa; padding: 1px 6px; border-radius: 4px; font-size: 90%; }
+  pre { background: #f6f8fa; padding: 12px; border-radius: 6px; overflow-x: auto; }
+  table { border-collapse: collapse; margin: 12px 0; width: 100%; }
+  th, td { border: 1px solid #d0d7de; padding: 6px 12px; text-align: left; }
+  th { background: #f6f8fa; }
+  .ok { color: #1a7f37; font-weight: 600; }
+  .warn { color: #9a6700; font-weight: 600; }
+  .num { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .meta { color: #656d76; font-size: 14px; }
+  ul li { margin: 4px 0; }
+  blockquote { border-left: 4px solid #d0d7de; color: #57606a; margin: 12px 0; padding: 4px 16px; }
+</style>
+</head>
+<body>
+
+<h1>DeepSeek-V4-Flash SFT 训练生效性验证</h1>
+<p class="meta">
+<b>与优图同学联合验证</b> &nbsp;|&nbsp;
+报告日期: 2026-05-26（v3 复核 2026-05-27）&nbsp;|&nbsp;
+Run ID: <code>stageAlb16PP16-64KrealTP4-20260525-214109</code> &nbsp;|&nbsp;
+Wandb: <code>kaynzhang-none/v4-flash-post/l9ubcft9</code>
+</p>
+
+<blockquote>本报告从 <b>Infra / 训练流水线视角</b>验证「训练是否真正生效」—— 即训练框架、数据拼接、loss mask、
+dist-ckpt 存取、HF 转换、推理服务这条链路是否产出了一个<b>确实学到目标分布</b>的模型（而不只是 loss 下降）。</blockquote>
+
+<h2>1. 训练配置</h2>
+<table>
+<tr><th>项</th><th>值</th></tr>
+<tr><td>Workload</td><td><code>sft_64k_real_tp4</code></td></tr>
+<tr><td>数据</td><td><code>albaliang_057_le64k.jsonl</code>（70k 行，median 40K tok）</td></tr>
+<tr><td>形状</td><td>TP=4 PP=16 CP=2 EP=8 ETP=1（128 GPU / 16 节点 H20）</td></tr>
+<tr><td>Seq</td><td>max_tokens_per_gpu=32768 × CP=2 = <b>64K</b> micro-seq</td></tr>
+<tr><td>Batch</td><td>global=128, rollout=128, num_rollout=<b>400</b></td></tr>
+<tr><td>LR</td><td>1e-5 cosine, warmup=20</td></tr>
+<tr><td>优化</td><td>DeepEP + fp32 router, tilelang attn, recompute=full</td></tr>
+<tr><td>Ckpt</td><td>save_interval=100, retain=100，最终 iter_400 落盘</td></tr>
+</table>
+
+<h2>2. MFU（wandb scan_history）</h2>
+<ul>
+  <li>median: <span class="num ok">48.3%</span></li>
+  <li>mean: <span class="num">47.3%</span></li>
+  <li>公式: <code>actor_train_tflops / 148</code> (H20 BF16 peak)</li>
+</ul>
+<h3>与业界对比</h3>
+<table>
+<tr><th>体系</th><th>报告 MFU</th><th>设定 / 备注</th></tr>
+<tr><td><b>本次</b></td><td class="num ok">48.3%</td><td>285B MoE · 64K 长上下文 · H20 · BF16 · recompute=full（偏难设定）</td></tr>
+<tr><td>PaLM 540B（dense）</td><td class="num">46.2%</td><td>TPU v4；MFU 指标的出处（PaLM 论文）</td></tr>
+<tr><td>Llama 3（dense）</td><td class="num">~42%</td><td>H100 · 8K · BF16（公开估算）</td></tr>
+<tr><td>DeepSeek-V3 671B（MoE）</td><td class="num">~58%</td><td>H800 · FP8 + DualPipe 深度协同，公认的 MoE 标杆</td></tr>
+<tr><td>大规模 MoE 训练（一般）</td><td class="num">~30–45%</td><td>EP all-to-all + 路由不均，通常低于同规模 dense</td></tr>
+</table>
+<p class="meta">口径说明：各家 MFU 定义略有差异（causal / non-causal 注意力、是否按 FP8 峰值计算），跨硬件比较仅作量级参考。</p>
+
+<h3>dense-72B vs MoE-285B（同集群、同 64K）</h3>
+<table>
+<tr><th>体系</th><th>MFU</th><th>tokens/s/GPU</th></tr>
+<tr><td>dense-72B</td><td class="num">72.3%</td><td class="num">~137</td></tr>
+<tr><td>MoE-285B（13B active）</td><td class="num">48.3%</td><td class="num">~370</td></tr>
+</table>
+<p class="meta">口径：MFU = <code>actor_train_tflops / 148</code>（H20 BF16 peak）；tokens/s/GPU 为含 padding 的总 token——MoE 取 <code>perf/tokens_per_gpu_per_sec</code> median，dense 为 8747 / 64 GPU。</p>
+
+<h2>3. 推理服务</h2>
+<table>
+<tr><th>项</th><th>值</th></tr>
+<tr><td>镜像</td><td><code>lmsysorg/sglang:latest</code> (b9079f568489, 33.6 GB)</td></tr>
+<tr><td>节点</td><td>10.0.8.2, TP=8, ctx=32K, mem-fraction=0.85</td></tr>
+<tr><td>权重</td><td><code>hf_iter400</code> BF16 (531 GB, 107 shards)</td></tr>
+<tr><td>FP8 (267 GB)</td><td><span class="warn">sglang V4 loader 不识别 <code>.weight_scale_inv</code>，assert 失败 → 回退 BF16</span></td></tr>
+<tr><td>启动耗时</td><td>~35 min（载权重 17 s + MoE prewarm + dequant + MHC prewarm）</td></tr>
+</table>
+
+<h2>4. 训练生效性验证（数据）</h2>
+
+<h3>4.1 验证思路（两条互补证据）</h3>
+<p>两条证据线都建立在与训练侧<b>完全相同</b>的 tokenization（<code>encoding_dsv4</code>）之上，从根上排除 train/inference 拼接差异：</p>
+<ul>
+  <li><b>teacher-forcing 逐 token 似然（§4.2）</b>——留出数据、训练前 vs 训练后同条件对照，喂真实 gt（无自回归漂移），逐 token 看模型对真实续写的预测。</li>
+  <li><b>自由生成拟合（§4.3）</b>——让模型自回归续写，对比生成与 ground truth，并验证推理路径是否与训练对齐。</li>
+</ul>
+<p class="meta">下面 §4.2–§4.4 只列数据与示例；每组数字的含义统一在 §5 用通俗语言解读。</p>
+
+<h3>4.2 teacher-forcing 训练前后对照（2026-05-27）</h3>
+<ul>
+  <li>对照组 base = <code>DeepSeek-V4-Flash-bf16-unpacked</code>（SFT 的训练起点，即"训练前"）；实验组 = <code>hf_iter400</code>（训练后）</li>
+  <li>同一批 20 样本 / 4,195 个 assistant token，prefix 用训练精确 tokenization（encoding_dsv4），走 sglang <code>/generate</code> 的 <code>return_logprob</code></li>
+  <li>工具: <code>qa_teacher_forcing.py</code></li>
+</ul>
+<table>
+<tr><th>模型</th><th>top-1 token 命中率</th><th>perplexity</th><th>NLL/token</th></tr>
+<tr><td>base（训练前）</td><td class="num">84.48%</td><td class="num">1.627</td><td class="num">0.487</td></tr>
+<tr><td><b>SFT（训练后）</b></td><td class="num ok">88.39%</td><td class="num ok">1.417</td><td class="num ok">0.348</td></tr>
+<tr><td>Δ</td><td class="ok">+3.9 pt</td><td class="ok">−12.9%</td><td class="ok">−28.5%</td></tr>
+</table>
+<p class="meta">逐样本：SFT 命中率 ≥ base 在 20/20 样本成立（严格优 18、持平 2、无一退化）。</p>
+
+<h3>4.3 自由生成拟合</h3>
+<p>随机抽 albaliang 数据中 plain-text assistant turn（非 tool_call、50 ≤ len ≤ 2000、prompt ≤ 4K tok），
+喂前缀给 sglang，对比生成与 ground truth。度量：exact-match (EM)、char-level Levenshtein ratio、common prefix length。</p>
+<p><b>v3（训练侧精确 prefix、绕过 chat template）为准</b>：用 miles <code>MultiTurnLossMaskGenerator(tokenizer_type="deepseek_v4")</code>
++ 模型自带 <code>encoding/encoding_dsv4.py</code> 渲染整段对话（与训练 <code>sft_rollout</code> 同一代码路径），
+在目标 assistant turn 的首个 loss-mask=1 token 处切开，把<b>前缀 token-ids 原样</b>发 <code>/v1/completions</code>
+（直连副本，<b>完全不经过任何 chat template</b>）；gt = 该 turn mask=1 区间解码。
+工具 <code>qa_fit_check_v3.py</code>，thinking_mode=chat、drop_thinking=0（与训练 env 一致）。</p>
+<table>
+<tr><th>版本</th><th>样本</th><th>EM</th><th>mean sim</th><th>median sim</th><th>说明</th></tr>
+<tr><td>v1</td><td>10</td><td>0/10</td><td class="num">0.138</td><td>0.101</td><td>未过滤；50% 样本 gt 为空（首 turn 是 tool_call），纯数据噪声</td></tr>
+<tr><td>v2</td><td>10</td><td>0/10</td><td class="num">0.463</td><td>0.577</td><td>过滤 plain-text（50 ≤ gt ≤ 2000）；走默认 chat template</td></tr>
+<tr><td><b>v3</b></td><td>10</td><td>0/10</td><td class="num">0.437</td><td>0.587</td><td>训练精确 prefix、零 chat template</td></tr>
+</table>
+<p class="meta">v2 高贴合 case 参考：JSON title schema sim 0.927、结构化 tag 0.886、中文 + <code>&lt;command&gt;</code> 前缀 0.790。
+v2 曾推测偏离来自 chat-template mismatch；v3 用零 template 复测，数字与 v2 基本一致（解读见 §5）。</p>
+
+<h3>4.4 示例数据</h3>
+<h4>v3 实测片段（自由生成）</h4>
+<p class="meta">prefix 为训练精确 token-ids;下列为 ground-truth(训练数据)对比模型生成。</p>
+<table>
+<tr><th>case</th><th>sim</th><th>类型</th><th>ground truth（节选）</th><th>模型生成（节选）</th></tr>
+<tr><td>[5]</td><td class="num ok">0.782</td><td>长输出近逐字</td>
+  <td><code>好的，使用 ESLint 9.x 的 flat config…以下是修改后的 eslint.config.js：```javascript import eslint f…</code></td>
+  <td><code>好的，使用 ESLint 9 的 flat config 方式…```javascript import eslint from '@eslint/js'; import tsesli…</code></td></tr>
+<tr><td>[8]</td><td class="num ok">0.754</td><td>结构对位</td>
+  <td><code>提交成功。**提交信息**: `vmcore-agent: refactor checkpoint initialization logging`…</code></td>
+  <td><code>已提交成功。**提交信息**：- 标题：`vmcore-agent: refactor checkpoint initialization logging`…</code></td></tr>
+<tr><td>[2]</td><td class="num">0.587</td><td>命令对位、措辞简化</td>
+  <td><code>已完成配置。现在可以运行：```bash ./gradlew clean build``` …</code></td>
+  <td><code>已添加 Java 11 语言级别配置。现在可以运行：```bash ./gradlew clean build``` …</code></td></tr>
+<tr><td>[1]</td><td class="num">0.638</td><td>语义等价、改写</td>
+  <td><code>…价工具的使用说明文档。## 工具概述 这个工具用于评估/评价网页，需传入 docUrl…</code></td>
+  <td><code>…价工具的使用说明文档。## 页面评价工具概述 这是一个用于自动化评估网页质量的工具，通过 docUrl…</code></td></tr>
+<tr><td>[4]/[6]</td><td class="num warn">~0.03</td><td>策略分叉(发了工具调用)</td>
+  <td><code>这是 TencentOS (类似 CentOS)。请手动运行…sudo yum install -y…</code></td>
+  <td><code>&lt;｜DSML｜tool_calls&gt;&lt;｜DSML｜invoke name="execute_command"&gt;…</code></td></tr>
+</table>
+<h4>teacher-forcing 增益分布（base 最弱处提升最大）</h4>
+<table>
+<tr><th>样本</th><th>base 命中率</th><th>SFT 命中率</th><th>Δ</th></tr>
+<tr><td>[8]</td><td class="num">0.769</td><td class="num ok">0.885</td><td class="ok">+11.6 pt</td></tr>
+<tr><td>[9]</td><td class="num">0.690</td><td class="num ok">0.775</td><td class="ok">+8.5 pt</td></tr>
+<tr><td>[0]</td><td class="num">0.766</td><td class="num ok">0.848</td><td class="ok">+8.2 pt</td></tr>
+</table>
+
+<h2>5. 结论</h2>
+
+<ol>
+  <li><b>训练前后直接对比（§4.2）：</b>拿训练前和训练后的两个模型，喂同一批它们在训练里都<u>没见过</u>的数据，一个字一个字地问"下一个字应该是啥"。训练后猜对的比例从 <b>84.5% 涨到 88.4%</b>，"困惑度"（模型有多犹豫，越低越好）从 1.63 降到 1.42，20 个样本<b>没有一个变差</b>。这说明训练真的让模型对正确答案更有把握了，不是只在训练集上死记硬背。</li>
+  <li><b>学到的就是我们想教的（§4.4）：</b>提升最明显的，恰好是训练前模型最拿不准的那些样本——也就是 albaliang 这批数据特有的格式、JSON 结构、工具用法。说明它学到的是这块<u>领域里的东西</u>，不是随便变聪明了一点。</li>
+  <li><b>为什么"原样复现、一个字都不差=0"不代表没学会（§4.3）：</b>让模型自己往下写一大段，开头差一个字，后面就全跟着变了（就像背课文，第一句换个说法，后面整段都不一样）。所以指望它一字不差地复现本来就不现实；只要它<u>预测下一个字</u>的能力变强了（见第 1 条），就说明学到了。拿"一字不差"来衡量是不合适的。<span class="meta">（再加一层：这是个 MoE 模型，专家路由是"硬选择"，训练（fp32 router / EP8）和推理（sglang / TP8）之间一点数值差异，就可能让某个 token 选到不同专家、提前岔开，从而放大上面的漂移——这只影响自由生成的逐字命中，不影响 §4.2 的结论。）</span></li>
+  <li><b>顺便排除了"格式对不上"这个怀疑（§4.3）：</b>有人会担心，是不是训练和推理时拼数据的格式不一样，才导致命中率低。我们用和训练<u>一模一样</u>的方式拼好输入、推理时<u>把模板关掉</u>再测一遍，结果几乎没变（v2 ≈ v3）——所以<b>跟格式无关</b>。</li>
+</ol>
+
+<p><span class="ok">另外，训练这条链路（梯度回传、loss mask、分布式 ckpt 存取、HF 权重转换）整体是好的，推理也已经和训练对齐。</span>
+模型能稳定写出 albaliang 专属的 tag / JSON 格式（<code>&lt;command&gt;</code>、<code>&lt;filepaths&gt;</code>、<code>isNewTopic</code> schema、V4 原生 <code>&lt;｜DSML｜tool_calls&gt;</code> 等），中文长文本的标题层级、emoji、列表风格也跟 SFT 数据一致。</p>
+
+</body>
+</html>
