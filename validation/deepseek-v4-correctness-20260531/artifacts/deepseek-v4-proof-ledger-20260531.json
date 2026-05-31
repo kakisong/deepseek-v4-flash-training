@@ -1,6 +1,6 @@
 {
   "artifacts_dir_name": "artifacts",
-  "conclusion": "Recorded artifacts consistently prove the covered HC/QAT/attention/MLP/MoE/training-step gates, validate the non-compressed, c4 indexer, and deterministic compressed external training-reference gates, validate the SFT loss explicit reference and mini-checkpoint correctness gate, and the official forward BF16 tolerance gate, and localize the remaining real-forward strict parity failure to BF16 attention forward-value drift amplified by the full model.",
+  "conclusion": "Recorded artifacts consistently prove the covered HC/QAT/attention/MLP/MoE/training-step gates, validate the non-compressed, c4 indexer, and deterministic compressed external training-reference gates, validate the score-routed MoE external reference, validate the SFT loss explicit reference and mini-checkpoint correctness gate, and the official forward BF16 tolerance gate, and localize the remaining real-forward strict parity failure to BF16 attention forward-value drift amplified by the full model.",
   "date": "2026-05-31",
   "failures": [],
   "gates": {
@@ -83,6 +83,21 @@
       "output_max_abs": 0.03125,
       "state_after_step_max_abs": 4.656612873077393e-10
     },
+    "external_training_reference_1layer_moe": {
+      "artifact": "deepseek-v4-external-training-reference-1layer-moe-20260531.json",
+      "status": "PASS"
+    },
+    "external_training_reference_1layer_moe_bounds": {
+      "artifact": "deepseek-v4-external-training-reference-1layer-moe-20260531.json",
+      "boundary": "This closes an external training-reference gate for a one-layer DeepSeek-V4 training block. Loaded mini-checkpoint SFT remains a follow-up extension; for mlp_type=moe this also closes a score-routed MoE/shared-expert block-level reference gate.",
+      "compress_ratio": 0,
+      "grad_max_abs": 7.62939453125e-06,
+      "input_grad_max_abs": 1.9073486328125e-06,
+      "loss_abs": 2.6352936401963234e-05,
+      "num_common_grad_tensors": 30,
+      "output_max_abs": 0.03125,
+      "state_after_step_max_abs": 1.4901161193847656e-08
+    },
     "fix_regression_guards": {
       "artifact": "deepseek-v4-fix-regression-guards-20260531.json",
       "status": "PASS"
@@ -110,6 +125,23 @@
         "max_state_after_step_abs": 0.0
       },
       "moe_evidence": {
+        "external_moe_block_reference": {
+          "artifact_status": "PASS",
+          "compress_ratio": 0,
+          "grad_max_abs": 7.62939453125e-06,
+          "input_grad_max_abs": 1.9073486328125e-06,
+          "loss_abs": 2.6352936401963234e-05,
+          "num_common_grad_tensors": 30,
+          "output_max_abs": 0.03125,
+          "state_after_step_max_abs": 1.4901161193847656e-08,
+          "thresholds": {
+            "max_grad_abs": 0.0002,
+            "max_input_grad_abs": 2e-05,
+            "max_loss_abs": 5e-05,
+            "max_output_abs": 0.04,
+            "max_state_abs": 1e-07
+          }
+        },
         "grouped_mlp_math_status": "PASS",
         "mlp_expert_replay_key_checks": {
           "megatron_bf16_formula_is_closer_to_miles_than_official_formula": true,

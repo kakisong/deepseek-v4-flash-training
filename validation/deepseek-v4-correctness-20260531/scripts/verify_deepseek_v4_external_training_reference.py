@@ -13,14 +13,15 @@ training-time math:
 * non-compressed or deterministic compressed DeepSeek-V4 attention with dense
   masked reference attention
 * Q/KV LoRA projections, RoPE, KV QAT, output projection
-* standard GELU MLP
+* standard GELU MLP, or a score-routed MoE MLP with shared expert
 * backward gradients and one manual SGD update
 
 The reference currently covers ``compress_ratio=0``, ``compress_ratio=4`` with
 the V4 indexer path, and a deterministic ``compress_ratio=128`` compressed-KV
-path with a non-MoE MLP so that each gate is mathematically tight. Routed MoE
-and loaded mini-checkpoint SFT are separate extensions after these gates are
-stable.
+path with a non-MoE MLP so that each attention gate is mathematically tight. It
+also covers a ``compress_ratio=0`` one-layer score-routed MoE block as the next
+step toward the complete mini-checkpoint external reference. Loaded
+mini-checkpoint SFT is still a separate extension.
 """
 
 from __future__ import annotations
@@ -90,14 +91,19 @@ def _init_method(tensor: torch.Tensor) -> torch.Tensor:
     return torch.nn.init.normal_(tensor, mean=0.0, std=0.02)
 
 
-def _build_config(compress_ratio: int) -> TransformerConfig:
+def _build_config(compress_ratio: int, mlp_type: str) -> TransformerConfig:
     if compress_ratio not in (0, 4, 128):
         raise ValueError(f"supported external-reference compress ratios are 0, 4, and 128, got {compress_ratio}")
+    if mlp_type not in ("dense", "moe"):
+        raise ValueError(f"supported mlp types are dense and moe, got {mlp_type}")
+    if mlp_type == "moe" and compress_ratio != 0:
+        raise ValueError("the MoE external-reference gate currently covers compress_ratio=0 only")
     config = TransformerConfig(
         tensor_model_parallel_size=1,
         pipeline_model_parallel_size=1,
         context_parallel_size=1,
         expert_model_parallel_size=1,
+        expert_tensor_parallel_size=1,
         sequence_parallel=False,
         perform_initialization=True,
         bf16=True,
@@ -126,6 +132,28 @@ def _build_config(compress_ratio: int) -> TransformerConfig:
         dsa_indexer_head_dim=128,
         dsa_indexer_topk=512,
     )
+    if mlp_type == "moe":
+        config.num_moe_experts = 8
+        config.moe_ffn_hidden_size = 2048
+        config.moe_router_topk = 6
+        config.moe_router_pre_softmax = True
+        config.moe_router_score_function = "sqrtsoftplus"
+        config.moe_router_topk_scaling_factor = 1.5
+        config.moe_router_enable_expert_bias = True
+        config.moe_router_load_balancing_type = "none"
+        config.moe_token_dispatcher_type = "alltoall"
+        config.moe_grouped_gemm = True
+        config.moe_use_legacy_grouped_gemm = False
+        config.moe_shared_expert_intermediate_size = 2048
+        config.moe_shared_expert_overlap = False
+        config.moe_shared_expert_gate = False
+        config.gated_linear_unit = True
+        config.activation_func = F.silu
+        config.activation_func_clamp_value = 10.0
+        config.activation_func_clamp_shared_expert = False
+        config.bias_activation_fusion = False
+        config.use_te_activation_func = False
+        config.dsv4_n_hash_layers = 0
     for key, value in {
         "q_lora_rank": 1024,
         "kv_lora_rank": 512,
@@ -141,7 +169,10 @@ def _build_config(compress_ratio: int) -> TransformerConfig:
 
 
 def _build_block(config: TransformerConfig) -> TransformerBlock:
-    pg_collection = ProcessGroupCollection.use_mpu_process_groups(required_pgs=["tp", "cp", "pp"])
+    required_pgs = ["tp", "cp", "pp"]
+    if config.num_moe_experts:
+        required_pgs = ["tp", "cp", "tp_cp", "tp_dp_cp", "pp", "ep", "expt_tp", "expt_dp", "tp_ep"]
+    pg_collection = ProcessGroupCollection.use_mpu_process_groups(required_pgs=required_pgs)
     spec = get_dsv4_spec(None, config, None)
     return TransformerBlock(
         config,
@@ -161,12 +192,23 @@ def _initialize_synthetic_state(block: TransformerBlock) -> None:
                 param.fill_(1.0)
             else:
                 torch.nn.init.normal_(param, mean=0.0, std=0.02)
+        for name, buffer in block.named_buffers():
+            if name.endswith("router.expert_bias"):
+                values = torch.linspace(-0.03, 0.04, buffer.numel(), device=buffer.device, dtype=torch.float32)
+                buffer.copy_(values.view_as(buffer))
 
 
 def _clone_param_dict(block: TransformerBlock) -> dict[str, torch.Tensor]:
     return {
         name: param.detach().clone().requires_grad_(True)
         for name, param in block.named_parameters()
+    }
+
+
+def _clone_buffer_dict(block: TransformerBlock) -> dict[str, torch.Tensor]:
+    return {
+        name: buffer.detach().clone()
+        for name, buffer in block.named_buffers()
     }
 
 
@@ -455,9 +497,77 @@ def _mlp_reference(x_sbd: torch.Tensor, params: dict[str, torch.Tensor], *, conf
     return F.linear(x, params["layers.0.mlp.linear_fc2.weight"])
 
 
+def _swiglu_reference(x: torch.Tensor, *, clamp: float | None) -> torch.Tensor:
+    gate, up = x.chunk(2, dim=-1)
+    if clamp is not None:
+        gate = gate.clamp(max=clamp)
+        up = up.clamp(min=-clamp, max=clamp)
+    return F.silu(gate) * up
+
+
+def _moe_topk_reference(
+    x_flat: torch.Tensor,
+    params: dict[str, torch.Tensor],
+    buffers: dict[str, torch.Tensor],
+    *,
+    config: TransformerConfig,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    router_weight = params["layers.0.mlp.router.weight"]
+    router_dtype = x_flat.dtype
+    if config.moe_router_dtype == "fp32":
+        router_dtype = torch.float32
+    elif config.moe_router_dtype == "fp64":
+        router_dtype = torch.float64
+    logits = F.linear(x_flat.to(router_dtype), router_weight.to(router_dtype))
+    if config.moe_router_score_function != "sqrtsoftplus":
+        raise ValueError("MoE external reference currently expects sqrtsoftplus routing")
+    scores = F.softplus(logits.float()).sqrt().to(logits.dtype)
+    expert_bias = buffers.get("layers.0.mlp.router.expert_bias")
+    if expert_bias is None:
+        expert_bias = torch.zeros(config.num_moe_experts, device=x_flat.device, dtype=torch.float32)
+    _, top_indices = torch.topk(scores + expert_bias.to(scores.dtype), k=config.moe_router_topk, dim=1)
+    top_scores = torch.gather(scores, dim=1, index=top_indices).type_as(logits)
+    top_probs = top_scores / (top_scores.sum(dim=-1, keepdim=True) + 1e-20)
+    if config.moe_router_topk_scaling_factor:
+        top_probs = top_probs * config.moe_router_topk_scaling_factor
+    routing_probs = torch.zeros_like(logits).scatter(1, top_indices, top_probs)
+    routing_map = torch.zeros_like(logits).int().scatter(1, top_indices, 1).bool()
+    return routing_probs, routing_map, top_indices
+
+
+def _moe_reference(
+    x_sbd: torch.Tensor,
+    params: dict[str, torch.Tensor],
+    buffers: dict[str, torch.Tensor],
+    *,
+    config: TransformerConfig,
+) -> torch.Tensor:
+    x_flat = x_sbd.contiguous().view(-1, x_sbd.shape[-1])
+    routing_probs, routing_map, _ = _moe_topk_reference(x_flat, params, buffers, config=config)
+    routed_output = torch.zeros_like(x_flat)
+    clamp = float(config.activation_func_clamp_value) if config.activation_func_clamp_value is not None else None
+    for expert_id in range(config.num_moe_experts):
+        selected = routing_map[:, expert_id]
+        if not bool(selected.any().item()):
+            continue
+        expert_input = x_flat[selected]
+        probs = routing_probs[selected, expert_id].unsqueeze(-1)
+        fc1 = F.linear(expert_input, params[f"layers.0.mlp.experts.linear_fc1.weight{expert_id}"])
+        intermediate = _swiglu_reference(fc1, clamp=clamp)
+        intermediate = intermediate * probs.to(intermediate.dtype)
+        expert_output = F.linear(intermediate, params[f"layers.0.mlp.experts.linear_fc2.weight{expert_id}"])
+        routed_output[selected] = routed_output[selected] + expert_output
+
+    shared_fc1 = F.linear(x_flat, params["layers.0.mlp.shared_experts.linear_fc1.weight"])
+    shared = _swiglu_reference(shared_fc1, clamp=None)
+    shared = F.linear(shared, params["layers.0.mlp.shared_experts.linear_fc2.weight"])
+    return (routed_output + shared).view_as(x_sbd)
+
+
 def _block_reference(
     hidden_states: torch.Tensor,
     params: dict[str, torch.Tensor],
+    buffers: dict[str, torch.Tensor],
     attention_freqs_cis: torch.Tensor,
     compressor_freqs_cis: torch.Tensor | None,
     indexer_freqs_cis: torch.Tensor | None,
@@ -502,7 +612,11 @@ def _block_reference(
         eps=config.dsv4_hc_eps,
         norm_eps=config.layernorm_epsilon,
     )
-    mlp_out = _mlp_reference(x_mlp, params, config=config)
+    if config.num_moe_experts:
+        x_mlp = _rmsnorm(x_mlp, params["layers.0.pre_mlp_layernorm.weight"], config.layernorm_epsilon)
+        mlp_out = _moe_reference(x_mlp, params, buffers, config=config)
+    else:
+        mlp_out = _mlp_reference(x_mlp, params, config=config)
     x = _hc_post(mlp_out, residual, ffn_post, ffn_comb)
 
     x = _hc_head(
@@ -587,6 +701,7 @@ def _run_megatron(
 
 def _run_reference(
     params: dict[str, torch.Tensor],
+    buffers: dict[str, torch.Tensor],
     attention_freqs_cis: torch.Tensor,
     compressor_freqs_cis: torch.Tensor | None,
     indexer_freqs_cis: torch.Tensor | None,
@@ -601,6 +716,7 @@ def _run_reference(
     output = _block_reference(
         x,
         params,
+        buffers,
         attention_freqs_cis,
         compressor_freqs_cis,
         indexer_freqs_cis,
@@ -666,6 +782,7 @@ def main() -> int:
     parser.add_argument("--seqlen", type=int, default=8)
     parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--compress-ratio", type=int, choices=[0, 4, 128], default=0)
+    parser.add_argument("--mlp-type", choices=["dense", "moe"], default="dense")
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--max-loss-abs", type=float, default=None)
     parser.add_argument("--max-output-abs", type=float, default=None)
@@ -675,15 +792,17 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.max_loss_abs is None:
-        args.max_loss_abs = 1e-6 if args.compress_ratio == 4 else 0.0
+        args.max_loss_abs = 5e-5 if args.mlp_type == "moe" else 1e-6 if args.compress_ratio == 4 else 0.0
     if args.max_output_abs is None:
-        args.max_output_abs = 0.04 if args.compress_ratio == 4 else 0.0
+        args.max_output_abs = 0.04 if args.compress_ratio == 4 or args.mlp_type == "moe" else 0.0
     if args.max_input_grad_abs is None:
-        args.max_input_grad_abs = 0.0 if args.compress_ratio == 0 else 2e-7 if args.compress_ratio == 4 else 1e-7
+        args.max_input_grad_abs = (
+            2e-5 if args.mlp_type == "moe" else 0.0 if args.compress_ratio == 0 else 2e-7 if args.compress_ratio == 4 else 1e-7
+        )
     if args.max_grad_abs is None:
-        args.max_grad_abs = 1e-7 if args.compress_ratio == 0 else 1e-6 if args.compress_ratio == 4 else 5e-7
+        args.max_grad_abs = 2e-4 if args.mlp_type == "moe" else 1e-7 if args.compress_ratio == 0 else 1e-6 if args.compress_ratio == 4 else 5e-7
     if args.max_state_abs is None:
-        args.max_state_abs = 0.0 if args.compress_ratio == 0 else 1e-8 if args.compress_ratio == 4 else 1e-9
+        args.max_state_abs = 1e-7 if args.mlp_type == "moe" else 0.0 if args.compress_ratio == 0 else 1e-8 if args.compress_ratio == 4 else 1e-9
 
     _init_distributed()
     try:
@@ -695,10 +814,11 @@ def main() -> int:
                 f"--seqlen must be >= --compress-ratio and divisible by it: "
                 f"seqlen={args.seqlen} compress_ratio={args.compress_ratio}"
             )
-        config = _build_config(args.compress_ratio)
+        config = _build_config(args.compress_ratio, args.mlp_type)
         block = _build_block(config)
         _initialize_synthetic_state(block)
         reference_params = _clone_param_dict(block)
+        reference_buffers = _clone_buffer_dict(block)
         attention_freqs_cis = block.layers[0].self_attention.freqs_cis.detach()
         compressor_freqs_cis = (
             block.layers[0].self_attention.compressor.freqs_cis.detach()
@@ -724,6 +844,7 @@ def main() -> int:
         megatron = _run_megatron(block, hidden_states, upstream_grad, lr=args.lr)
         reference = _run_reference(
             reference_params,
+            reference_buffers,
             attention_freqs_cis,
             compressor_freqs_cis,
             indexer_freqs_cis,
@@ -768,7 +889,16 @@ def main() -> int:
                 "dsv4_hc_mult": config.dsv4_hc_mult,
                 "dsv4_hc_sinkhorn_iters": config.dsv4_hc_sinkhorn_iters,
                 "normalization": config.normalization,
-                "mlp": "standard GELU MLP",
+                "mlp": (
+                    "score-routed MoE with shared expert"
+                    if args.mlp_type == "moe"
+                    else "standard GELU MLP"
+                ),
+                "num_moe_experts": config.num_moe_experts,
+                "moe_router_topk": config.moe_router_topk,
+                "moe_router_score_function": config.moe_router_score_function,
+                "moe_router_topk_scaling_factor": config.moe_router_topk_scaling_factor,
+                "moe_shared_expert_intermediate_size": config.moe_shared_expert_intermediate_size,
             },
             "seqlen": args.seqlen,
             "batch_size": args.batch_size,
@@ -786,8 +916,9 @@ def main() -> int:
             "failures": failures,
             "boundary": (
                 "This closes an external training-reference gate for a one-layer "
-                "DeepSeek-V4 training block. Routed MoE and loaded mini-checkpoint SFT "
-                "are intentionally left as follow-up extensions."
+                "DeepSeek-V4 training block. Loaded mini-checkpoint SFT remains a "
+                "follow-up extension; for mlp_type=moe this also closes a score-routed "
+                "MoE/shared-expert block-level reference gate."
             ),
             "numerical_note": (
                 "compress_ratio=4 exercises the V4 indexer top-k path. When compressed_kv_groups "
@@ -796,7 +927,14 @@ def main() -> int:
                 "BF16/indexer-selection forward tolerance while still requiring gradient and "
                 "one-step update bounds."
                 if args.compress_ratio == 4
-                else ""
+                else (
+                    "mlp_type=moe exercises Megatron/TE grouped routed experts, shared experts, "
+                    "sqrtsoftplus top-k routing, and all-to-all dispatcher plumbing in a one-rank "
+                    "block. The gate uses a BF16 MoE GEMM/combine forward tolerance while still "
+                    "requiring tight loss, input-gradient, parameter-gradient, and one-step update bounds."
+                    if args.mlp_type == "moe"
+                    else ""
+                )
             ),
         }
         print(json.dumps(payload, indent=2, sort_keys=True))

@@ -1,0 +1,84 @@
+{
+  "batch_size": 1,
+  "boundary": "This closes an external training-reference gate for a one-layer DeepSeek-V4 training block. Loaded mini-checkpoint SFT remains a follow-up extension; for mlp_type=moe this also closes a score-routed MoE/shared-expert block-level reference gate.",
+  "checks": {
+    "grad_max_abs": true,
+    "grad_tensor_sets_match": true,
+    "input_grad_max_abs": true,
+    "loss_abs": true,
+    "output_max_abs": true,
+    "state_after_step_max_abs": true
+  },
+  "comparison": {
+    "extra_reference_grad_tensors": [],
+    "grad": {
+      "max_abs": 7.62939453125e-06,
+      "name": "layers.0.mlp.shared_experts.linear_fc1.weight",
+      "relative_l2_gap": 1.7787819143189054e-06
+    },
+    "input_grad": {
+      "exact_equal": false,
+      "max_abs": 1.9073486328125e-06,
+      "mean_abs": 1.7193997337017208e-07,
+      "p99_abs": 9.5367431640625e-07,
+      "relative_l2_gap": 1.9903033526391667e-05
+    },
+    "loss_abs": 2.6352936401963234e-05,
+    "missing_reference_grad_tensors": [],
+    "num_common_grad_tensors": 30,
+    "num_common_state_tensors": 39,
+    "num_megatron_grad_tensors": 30,
+    "num_reference_grad_tensors": 30,
+    "output": {
+      "exact_equal": false,
+      "max_abs": 0.03125,
+      "mean_abs": 0.0009180129854939878,
+      "p99_abs": 0.01025390625,
+      "relative_l2_gap": 3.3376945876018027e-06
+    },
+    "state_after_step": {
+      "max_abs": 1.4901161193847656e-08,
+      "name": "layers.0.mlp.shared_experts.linear_fc1.weight",
+      "relative_l2_gap": 0.0
+    }
+  },
+  "config": {
+    "compress_ratio": 0,
+    "compressed_kv_groups": 0,
+    "dsv4_hc_mult": 4,
+    "dsv4_hc_sinkhorn_iters": 2,
+    "ffn_hidden_size": 1024,
+    "hidden_size": 4096,
+    "indexer_selection_pressure": false,
+    "indexer_topk": 0,
+    "mlp": "score-routed MoE with shared expert",
+    "moe_router_score_function": "sqrtsoftplus",
+    "moe_router_topk": 6,
+    "moe_router_topk_scaling_factor": 1.5,
+    "moe_shared_expert_intermediate_size": 2048,
+    "normalization": "RMSNorm",
+    "num_attention_heads": 8,
+    "num_layers": 1,
+    "num_moe_experts": 8
+  },
+  "date": "2026-05-31",
+  "failures": [],
+  "manual_update": {
+    "lr": 0.0001,
+    "rule": "sgd"
+  },
+  "num_parameters": 275625539,
+  "numerical_note": "mlp_type=moe exercises Megatron/TE grouped routed experts, shared experts, sqrtsoftplus top-k routing, and all-to-all dispatcher plumbing in a one-rank block. The gate uses a BF16 MoE GEMM/combine forward tolerance while still requiring tight loss, input-gradient, parameter-gradient, and one-step update bounds.",
+  "reference": "explicit PyTorch formula reference outside the Megatron module forward graph",
+  "scope": "external PyTorch training reference vs Megatron/Miles DeepSeek-V4 one-layer compress_ratio=0 TransformerBlock",
+  "seed": 20260531,
+  "seqlen": 8,
+  "status": "PASS",
+  "thresholds": {
+    "max_grad_abs": 0.0002,
+    "max_input_grad_abs": 2e-05,
+    "max_loss_abs": 5e-05,
+    "max_output_abs": 0.04,
+    "max_state_abs": 1e-07
+  }
+}

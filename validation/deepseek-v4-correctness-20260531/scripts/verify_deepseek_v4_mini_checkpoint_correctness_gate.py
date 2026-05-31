@@ -118,6 +118,7 @@ def main() -> int:
         "c0": _load(base, "deepseek-v4-external-training-reference-1layer-20260531.json"),
         "c4": _load(base, "deepseek-v4-external-training-reference-1layer-c4-20260531.json"),
         "c128": _load(base, "deepseek-v4-external-training-reference-1layer-c128-20260531.json"),
+        "moe": _load(base, "deepseek-v4-external-training-reference-1layer-moe-20260531.json"),
     }
 
     _check(_status(e2e_tolerance) == "PASS", failures, "end_to_end_bf16_tolerance.status")
@@ -310,6 +311,16 @@ def main() -> int:
         failures,
         "external_reference_c4.indexer_selection_pressure",
     )
+    _check(
+        external_refs["moe"]["config"].get("mlp") == "score-routed MoE with shared expert",
+        failures,
+        "external_reference_moe.mlp_type",
+    )
+    _check(
+        external_refs["moe"]["config"].get("num_moe_experts") == 8,
+        failures,
+        "external_reference_moe.num_experts",
+    )
 
     payload = {
         "date": "2026-05-31",
@@ -346,6 +357,7 @@ def main() -> int:
             "moe_ep8_dispatch_math_status": _status(moe_dispatch),
             "mlp_expert_replay_status": _status(mlp_replay),
             "mlp_expert_replay_key_checks": mlp_replay["key_checks"],
+            "external_moe_block_reference": external_reference_bounds["moe"],
         },
         "external_attention_training_references": external_reference_bounds,
         "supporting_pass_gates": {

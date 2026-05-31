@@ -59,6 +59,23 @@
         "max_output_abs": 0.04,
         "max_state_abs": 1e-08
       }
+    },
+    "moe": {
+      "artifact_status": "PASS",
+      "compress_ratio": 0,
+      "grad_max_abs": 7.62939453125e-06,
+      "input_grad_max_abs": 1.9073486328125e-06,
+      "loss_abs": 2.6352936401963234e-05,
+      "num_common_grad_tensors": 30,
+      "output_max_abs": 0.03125,
+      "state_after_step_max_abs": 1.4901161193847656e-08,
+      "thresholds": {
+        "max_grad_abs": 0.0002,
+        "max_input_grad_abs": 2e-05,
+        "max_loss_abs": 5e-05,
+        "max_output_abs": 0.04,
+        "max_state_abs": 1e-07
+      }
     }
   },
   "failures": [],
@@ -96,6 +113,23 @@
     "world_size": 8
   },
   "moe_evidence": {
+    "external_moe_block_reference": {
+      "artifact_status": "PASS",
+      "compress_ratio": 0,
+      "grad_max_abs": 7.62939453125e-06,
+      "input_grad_max_abs": 1.9073486328125e-06,
+      "loss_abs": 2.6352936401963234e-05,
+      "num_common_grad_tensors": 30,
+      "output_max_abs": 0.03125,
+      "state_after_step_max_abs": 1.4901161193847656e-08,
+      "thresholds": {
+        "max_grad_abs": 0.0002,
+        "max_input_grad_abs": 2e-05,
+        "max_loss_abs": 5e-05,
+        "max_output_abs": 0.04,
+        "max_state_abs": 1e-07
+      }
+    },
     "grouped_mlp_math_status": "PASS",
     "mlp_expert_replay_key_checks": {
       "megatron_bf16_formula_is_closer_to_miles_than_official_formula": true,

@@ -109,6 +109,10 @@ def _main() -> int:
             "deepseek-v4-external-training-reference-1layer-c128-20260531.json",
             "PASS",
         ),
+        "external_training_reference_1layer_moe": (
+            "deepseek-v4-external-training-reference-1layer-moe-20260531.json",
+            "PASS",
+        ),
         "end_to_end_bf16_tolerance": (
             "deepseek-v4-end-to-end-bf16-tolerance-20260531.json",
             "PASS",
@@ -315,10 +319,10 @@ def _main() -> int:
         "rerun_loss_abs_max": _max_comparison_value(rerun, "loss_abs_global_max"),
         "rerun_selected_grad_rel_gap_max": _max_comparison_value(rerun, "selected_grad_max_rel_gap"),
         "rerun_selected_state_abs_max": _max_comparison_value(rerun, "selected_state_max_abs"),
-        "attention_io_training_step_bounds": mini_correctness["attention_io_training_step_bounds"],
-        "sft_loss_reference": mini_correctness["sft_loss_reference"],
-        "moe_evidence": mini_correctness["moe_evidence"],
-    }
+            "attention_io_training_step_bounds": mini_correctness["attention_io_training_step_bounds"],
+            "sft_loss_reference": mini_correctness["sft_loss_reference"],
+            "moe_evidence": mini_correctness["moe_evidence"],
+        }
     gates["mini_checkpoint_correctness_gate_bounds"] = mini_bounds
     _check(rerun["status"] == "PASS", failures, "mini_checkpoint_correctness.rerun_status")
     _check(rerun["world_size"] == 8, failures, "mini_checkpoint_correctness.rerun_world_size")
@@ -476,6 +480,23 @@ def _main() -> int:
         "deepseek-v4-external-training-reference-1layer-c128-20260531.json",
         128,
     )
+    _record_external_ref_bounds(
+        "external_training_reference_1layer_moe_bounds",
+        "deepseek-v4-external-training-reference-1layer-moe-20260531.json",
+        0,
+    )
+    moe_ref = _load(base, "deepseek-v4-external-training-reference-1layer-moe-20260531.json")
+    _check(
+        moe_ref["config"].get("mlp") == "score-routed MoE with shared expert",
+        failures,
+        "external_training_reference_1layer_moe.mlp_type",
+    )
+    _check(
+        moe_ref["config"].get("num_moe_experts") == 8
+        and moe_ref["config"].get("moe_router_score_function") == "sqrtsoftplus",
+        failures,
+        "external_training_reference_1layer_moe.router_config",
+    )
 
     payload = {
         "date": "2026-05-31",
@@ -487,7 +508,8 @@ def _main() -> int:
         "conclusion": (
             "Recorded artifacts consistently prove the covered HC/QAT/attention/MLP/MoE/"
             "training-step gates, validate the non-compressed, c4 indexer, and deterministic compressed "
-            "external training-reference gates, validate the SFT loss explicit reference and "
+            "external training-reference gates, validate the score-routed MoE external reference, "
+            "validate the SFT loss explicit reference and "
             "mini-checkpoint correctness gate, and "
             "the official forward BF16 tolerance gate, and localize the remaining "
             "real-forward strict parity failure to BF16 attention forward-value drift "
