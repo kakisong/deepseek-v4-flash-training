@@ -1,0 +1,76 @@
+{
+  "date": "2026-06-01",
+  "status": "NOT_RUNNABLE_ON_CURRENT_MILES_DSV4_RUNTIME",
+  "scope": "Attempt to use a true FP32 Miles DeepSeek-V4 runtime to close strict logprob parity and full external selected-gradient diagnostic boundaries",
+  "questions": {
+    "strict_mini_backend_logprob_parity": {
+      "current_gate_status": "FAIL",
+      "would_fp32_help_if_available": true,
+      "required_fp32_test": "Run the same loaded mini checkpoint through dense/sparse/tilelang backend forward parity with the Miles runtime itself instantiated in FP32.",
+      "result": "NOT_CLOSED",
+      "reason": "The current Miles DeepSeek-V4 runtime is BF16-first and cannot instantiate the production DeepSeekV4Attention path with parameters in FP32."
+    },
+    "external_reference_mini_checkpoint_one_step_train_parity": {
+      "current_gate_status": "FAIL_DIAGNOSTIC",
+      "would_fp32_help_if_available": true,
+      "required_fp32_test": "Run the full external reference verifier with the Miles model and the explicit reference both in true FP32, independent routing, and backward enabled.",
+      "result": "NOT_CLOSED",
+      "reason": "The full external FP32 verifier fails during model construction before checkpoint loading because DeepSeekV4Attention asserts BF16 attention projection weights."
+    }
+  },
+  "attempted_runs": [
+    {
+      "name": "full_external_reference_fp32_strict",
+      "script": "scripts/verify_deepseek_v4_mini_external_full_reference_fp32.py",
+      "world_size": 8,
+      "requested_precision": {
+        "bf16": false,
+        "fp16": false,
+        "fp8": null,
+        "MEGATRON_USE_KV_QAT": "0"
+      },
+      "result": "FAILED_BEFORE_CHECKPOINT_LOAD",
+      "root_cause": "DeepSeekV4Attention.__init__ asserts self.wo_a.weight.dtype == torch.bfloat16 when Megatron parameters are created as torch.float32.",
+      "observed_traceback_key_line": "AssertionError: when instantiating DeepSeekV4Attention when instantiating TransformerLayer"
+    },
+    {
+      "name": "mini_forward_backend_parity_without_dtype_override",
+      "script": "scripts/verify_deepseek_v4_mini_forward_parity.py",
+      "world_size": 8,
+      "requested_precision": "no explicit --bf16/--fp16 flag",
+      "result": "NOT_FP32_EVIDENCE",
+      "root_cause": "miles.backends.megatron_utils.arguments.set_default_megatron_args sets args.bf16 = not args.fp16, so the verifier starts the BF16 production path by default."
+    }
+  ],
+  "static_runtime_evidence": [
+    {
+      "file": "miles_plugins/models/deepseek_v4/deepseek_v4.py",
+      "evidence": "DeepSeekV4Attention constructor asserts self.wo_a.weight.dtype == torch.bfloat16."
+    },
+    {
+      "file": "miles_plugins/models/deepseek_v4/ops/utils.py",
+      "evidence": "DeepSeek-V4 helper path asserts BF16 activation input."
+    },
+    {
+      "file": "miles_plugins/models/deepseek_v4/ops/kernel/tilelang_sparse_mla_bwd.py",
+      "evidence": "TileLang sparse MLA backward kernels assert BF16 input dtype with FP32 accumulation."
+    },
+    {
+      "file": "miles/backends/megatron_utils/arguments.py",
+      "evidence": "Miles default Megatron arguments set args.bf16 = not args.fp16."
+    }
+  ],
+  "environment": {
+    "nvidia_driver": "580.126.20",
+    "host_cuda_reported_by_nvidia_smi": "13.0",
+    "torch": "2.9.1+cu129",
+    "torch_cuda": "12.9",
+    "miles_git_head_in_container": "34684df",
+    "megatron_git_head_in_container": "unknown: source directory is not a git worktree"
+  },
+  "conclusion": {
+    "direct_fp32_verification_answer": "No. A true FP32 Miles DeepSeek-V4 run would be the right diagnostic shape, but the current production implementation does not support that runtime. Therefore FP32 cannot be used to close either strict logprob parity or full external selected-gradient diagnostic gates without first implementing and validating a separate FP32 DeepSeek-V4 runtime path.",
+    "why_not_patch_for_proof": "Removing the BF16 assertions or changing kernels only for the verifier would test a different implementation from the BF16 production training path, so it would not prove the current Miles training path correct.",
+    "what_remains_valid": "The correctness claim remains based on BF16 production-path evidence: operator math, trace replay, SFT loss explicit reference, one-layer external training references, real EP=8 MoELayer reference, loaded mini-checkpoint correctness gate, BF16 tolerance envelope, and proof ledger."
+  }
+}

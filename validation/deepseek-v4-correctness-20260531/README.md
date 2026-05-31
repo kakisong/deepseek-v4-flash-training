@@ -26,11 +26,14 @@ This directory archives the DeepSeek-V4 training correctness validation snapshot
 - External training-reference real EP=8 MoELayer parity: PASS within BF16 MoE tolerance; real all-to-all dispatch, shared expert forward, local expert gradients, and one-step local expert updates are covered.
 - Loaded 4-layer full external forward/loss reference: PASS with Miles routing replay under BF16 tolerance. Independent routing localizes the remaining branch discontinuity to the layer-3 score-routed router after hash-routed layers 0/1/2 match exactly.
 - Loaded 4-layer full external one-step train delta: FAIL_DIAGNOSTIC on selected-gradient strict thresholds. This artifact is retained as a boundary; it is not used as a training PASS claim.
+- FP32 strict closure attempt: NOT_RUNNABLE on the current Miles DeepSeek-V4 runtime. A true FP32 run would be the right diagnostic shape for strict logprob parity and full external selected-gradient parity, but the current production implementation is BF16-first and asserts BF16 attention/kernel inputs during model construction. Therefore FP32 does not close either gate.
 - Official-vs-Miles full-forward BF16 tolerance gate: PASS.
 - End-to-end BF16 tolerance envelope: PASS.
 - Proof coverage matrix and proof ledger: PASS.
 
 Strict official/reference logprob parity is still recorded as FAIL. Full mini-checkpoint external reference one-step train parity is no longer `MISSING_INPUT`: it was implemented and run, but remains `FAIL_DIAGNOSTIC` on selected-gradient delta because residual BF16 forward drift is amplified by backward through the complete 4-layer graph. The mini-checkpoint training correctness gate itself is PASS under the declared BF16 tolerance, using the composed SFT loss, attention-output replay, MoE, optimizer, and BF16-envelope proof chain.
+
+The FP32 follow-up is recorded separately in `docs/deepseek-v4-fp32-strict-closure.md` and `artifacts/deepseek-v4-fp32-strict-closure-attempt-20260601.json`. It is a verifier-strategy boundary, not a new numerical PASS.
 
 ## Integrity Check
 

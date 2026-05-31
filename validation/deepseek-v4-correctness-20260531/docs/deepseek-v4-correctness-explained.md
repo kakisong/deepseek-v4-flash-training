@@ -388,6 +388,34 @@ coverage matrix 明确保留的 open strict gates：
 - coverage matrix 证明文档没有把未关闭 strict gate 藏起来。
 - 因此，这份证明是“有边界的训练正确性证明”，不是“所有东西都 strict 完美一致”的证明。
 
+## Step 9：为什么没有用 FP32 直接关闭剩余 FAIL
+
+一个自然问题是：既然剩余差异看起来和 BF16 精度有关，能不能直接把同一套验证切成 FP32，看看 strict gap 是否消失？
+
+这个想法本身是对的，但当前 Miles DeepSeek-V4 runtime 做不到真正的 FP32 生产路径验证。
+
+验证数据来自：
+
+- `artifacts/deepseek-v4-fp32-strict-closure-attempt-20260601.json`
+- `docs/deepseek-v4-fp32-strict-closure.md`
+
+尝试结果：
+
+| 检查项 | 结果 |
+| --- | --- |
+| full external FP32 verifier | `FAILED_BEFORE_CHECKPOINT_LOAD` |
+| 失败位置 | model construction |
+| 根因 | `DeepSeekV4Attention` 要求部分 attention projection 权重是 `torch.bfloat16` |
+| strict logprob parity 是否被 FP32 关闭 | 否 |
+| selected-gradient diagnostic 是否被 FP32 关闭 | 否 |
+
+解释：
+
+- 如果存在真实 FP32 DeepSeek-V4 runtime，FP32 确实可以作为很强的诊断：看 dense/sparse/tilelang backend 差异和 full external selected-gradient 差异是否塌缩。
+- 但当前 Miles DeepSeek-V4 是 BF16 训练实现：attention、helper path、TileLang backward kernel 都有 BF16 输入假设。
+- 强行删断言或替换 kernel 只会测试一个临时 FP32 变体，不再是当前真实训练路径。
+- 因此 FP32 不能用来把这两个 strict gate 改成 PASS。正确做法是保留 strict boundary，并继续依赖 BF16 生产路径上的分层证据。
+
 ## 最终判断
 
 本次验证支持以下判断：
@@ -397,7 +425,8 @@ coverage matrix 明确保留的 open strict gates：
 3. **attention、QAT、MoE、optimizer、训练 block、真实 EP=8 MoELayer 都有独立验证。**
 4. **loaded 4-layer mini checkpoint 的 framework-level correctness gate 在 BF16 训练容差下为 `PASS`。**
 5. **完整 4-layer full external forward/loss 在 routing replay BF16 容差下为 `PASS`。**
-6. **strict logprob parity 和 full external one-step train selected-gradient strict parity 仍未关闭，已作为边界记录。**
+6. **FP32 direct closure 在当前 Miles DeepSeek-V4 runtime 不可执行，不能用来关闭剩余 strict gate。**
+7. **strict logprob parity 和 full external one-step train selected-gradient strict parity 仍未关闭，已作为边界记录。**
 
 所以，面向项目决策可以这样表述：
 
@@ -414,3 +443,4 @@ coverage matrix 明确保留的 open strict gates：
 | mini checkpoint 总 gate | `artifacts/deepseek-v4-mini-checkpoint-correctness-gate-20260531.json` |
 | full external forward/loss | `artifacts/deepseek-v4-mini-external-full-reference-bf16-routing-replay-tolerance-20260531.json` |
 | full external train diagnostic | `artifacts/deepseek-v4-mini-external-full-reference-bf16-routing-replay-train-tolerance-20260531.json` |
+| FP32 strict closure attempt | `artifacts/deepseek-v4-fp32-strict-closure-attempt-20260601.json` |

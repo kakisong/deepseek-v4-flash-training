@@ -1415,6 +1415,34 @@ transformer_config_has_dsv4_mode=True
 transformer_config_has_experimental_attention_variant=True
 ```
 
+## FP32 Strict Closure Attempt
+
+验证脚本：`scripts/verify_deepseek_v4_mini_external_full_reference_fp32.py`
+
+运行记录：`artifacts/deepseek-v4-fp32-strict-closure-attempt-20260601.json`
+
+这个 follow-up 回答一个具体问题：能否直接把 loaded mini checkpoint 切成 FP32，关闭
+`strict_mini_backend_logprob_parity = FAIL` 和
+`external_reference_mini_checkpoint_one_step_train_parity = FAIL_DIAGNOSTIC`。
+
+理论上，FP32 是一个有价值的诊断：
+
+1. strict logprob parity 需要在同一 checkpoint / batch 下比较 dense、sparse、TileLang backend 的 FP32 logprob。
+2. full external selected-gradient parity 需要 Miles 模型和 explicit reference 都是真 FP32，并在 independent routing、backward enabled 下运行。
+
+实际运行结论是：**当前 Miles DeepSeek-V4 production runtime 不支持这个诊断**。
+
+full external FP32 verifier 强制 `bf16=false`、`fp16=false`、`fp8=null`、`MEGATRON_USE_KV_QAT=0` 后，在 checkpoint load 之前失败。根因是 `DeepSeekV4Attention` 构造期要求 `wo_a.weight.dtype == torch.bfloat16`。静态检查也显示 DeepSeek-V4 helper path、TileLang sparse MLA backward kernel 都含有 BF16 输入假设；而未改造的 mini forward verifier 默认会经由 Miles Megatron 参数层把 `bf16` 设回 `true`。
+
+因此 FP32 不能用来把这两条 strict gate 改写为 PASS：
+
+| gate | FP32 closure result | handling |
+| --- | --- | --- |
+| `strict_mini_backend_logprob_parity` | `NOT_RUNNABLE_ON_CURRENT_MILES_DSV4_RUNTIME` | 保留为 strict `FAIL`，继续由 BF16 tolerance / routing replay / layer localization 解释。 |
+| `external_reference_mini_checkpoint_one_step_train_parity` | `NOT_RUNNABLE_ON_CURRENT_MILES_DSV4_RUNTIME` | 保留为 `FAIL_DIAGNOSTIC`，不作为训练 PASS 证据。 |
+
+这里不建议为了证明而临时删除 BF16 assertion 或替换 kernel：那会验证一个新的 FP32 变体，而不是当前真实 BF16 训练路径。当前 proof 的正确落点仍是 BF16 production-path validation。
+
 ## 最终判断
 
 对于“Megatron-Core PR #4839 这类问题如何发现和处理”，当前流程已经闭环：
@@ -1431,9 +1459,10 @@ transformer_config_has_experimental_attention_variant=True
 
 - **已证明**：HC、RoPE、QAT、attention dense/sparse/tilelang、SFT loss explicit reference、SFT loss backward/update reference、compress 0/4/128 attention 训练步、1-layer non-compressed、`compress_ratio=4` indexer path、deterministic `compress_ratio=128` external training reference、score-routed MoE/shared expert external reference、loaded 4-layer full external forward/loss reference with routing replay BF16 tolerance、mini checkpoint attention I/O local training-step replay、attention-output straight-through 完整 SFT one-step replay、mini checkpoint correctness gate、official-vs-Miles full-forward BF16 tolerance、end-to-end BF16 tolerance envelope、optimizer update math、fix regression guards、proof coverage matrix、environment provenance、external reference provenance、official MLP expert formula replay、TE grouped expert 本地 forward/backward/update、EP=8 all-to-all dispatch/combine forward/backward/update、DeepSeek-V4 TransformerBlock 训练步，以及 proof ledger 中这些证据的机器一致性。
 - **已跑通并定位**：mini checkpoint forward、mini checkpoint routing replay、真实非注入 mini checkpoint SFT one-step、official full-forward probe、official runtime precision variant probe。
-- **未严格证明**：真实非注入完整 4-layer / production EP=8 MoE 端到端 strict backend parity、official-vs-Miles strict logprob parity、完整 4-layer full external one-step train selected-gradient strict parity。
+- **未严格证明**：真实非注入完整 4-layer / production EP=8 MoE 端到端 strict backend parity、official-vs-Miles strict logprob parity、完整 4-layer full external one-step train selected-gradient strict parity。FP32 direct closure 已尝试但当前 Miles DeepSeek-V4 runtime 不支持真 FP32 production path，因此不能用来关闭这些 strict boundary。
 
 因此文档最后两点的当前状态是：
 
 1. **已完成**：已经给 official-vs-Miles full-forward 建立可接受的 BF16 数值容差标准，并由 `deepseek-v4-official-forward-bf16-tolerance-20260531.json` 机器验证为 `PASS`。该标准没有消除 strict logprob mismatch；它把剩余 mismatch 固定为 BF16 runtime envelope 内的已知差异。
 2. **mini checkpoint 级 PASS 已完成，但不是 strict pass**：1-layer non-compressed external training reference 已经由 `deepseek-v4-external-training-reference-1layer-20260531.json` 验证为 `PASS`，`compress_ratio=4` indexer path 已经由 `deepseek-v4-external-training-reference-1layer-c4-20260531.json` 验证为 `PASS`，deterministic `compress_ratio=128` external training reference 已经由 `deepseek-v4-external-training-reference-1layer-c128-20260531.json` 验证为 `PASS`，score-routed MoE/shared expert external reference 已经由 `deepseek-v4-external-training-reference-1layer-moe-20260531.json` 验证为 `PASS`。SFT loss explicit reference 已经由 `deepseek-v4-sft-loss-reference-20260531.json` 验证为 `PASS`，SFT loss backward/update reference 已经由 `deepseek-v4-sft-loss-train-reference-20260531.json` 验证为 `PASS`。在此基础上，`deepseek-v4-mini-checkpoint-correctness-gate-20260531.json` 把 loaded 4-layer mini checkpoint、routed MoE、完整 SFT one-step、attention I/O training step、SFT loss forward/backward/update reference 和 BF16 envelope 组合验证为 `PASS`。完整 4-layer full external forward/loss reference 已经实现，并由 `deepseek-v4-mini-external-full-reference-bf16-routing-replay-tolerance-20260531.json` 在 routing replay BF16 容差下验证为 `PASS`；full external one-step train delta 也已运行，但 `deepseek-v4-mini-external-full-reference-bf16-routing-replay-train-tolerance-20260531.json` 仍是 selected-gradient diagnostic `FAIL`，所以不能宣称 monolithic strict one-step train parity 已通过。
+3. **FP32 direct closure 不可用**：`deepseek-v4-fp32-strict-closure-attempt-20260601.json` 记录了 8-rank FP32 verifier attempt。当前 production runtime 在 `DeepSeekV4Attention` 构造期要求 BF16 projection weight，并且多个 DeepSeek-V4 kernel path 假设 BF16 输入；因此 FP32 不能关闭 strict logprob parity 或 selected-gradient diagnostic gate。
