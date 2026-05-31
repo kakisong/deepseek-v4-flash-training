@@ -59,8 +59,8 @@
       "expected_status": "MISSING_INPUT",
       "id": "external_reference_mini_checkpoint_one_step_train_parity",
       "reason_contains": {
-        "forward parity": true,
-        "official/reference": true
+        "external training reference": true,
+        "mini checkpoint": true
       }
     }
   ],
@@ -247,6 +247,22 @@
         "mini_checkpoint_sft_one_step_routing_replay",
         "mini_checkpoint_sft_one_step_attention_output_replay",
         "mini_checkpoint_attention_io_training_step"
+      ]
+    },
+    {
+      "claim": "A one-layer non-compressed DeepSeek-V4 training block passes explicit PyTorch external-reference forward/backward/update parity.",
+      "coverage_status": "PASS",
+      "doc_sections": [
+        "External Training Reference"
+      ],
+      "evidence": [
+        "deepseek-v4-external-training-reference-1layer-20260531.json"
+      ],
+      "failures": [],
+      "id": "external_training_reference_1layer",
+      "status": "PROVED",
+      "summary_gates": [
+        "external_training_reference_1layer"
       ]
     },
     {

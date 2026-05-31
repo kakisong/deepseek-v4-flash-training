@@ -16,11 +16,12 @@ This directory archives the DeepSeek-V4 training correctness validation snapshot
 - Attention module, TransformerBlock, Grouped MLP, EP=8 dispatch training-step math: PASS.
 - Mini-checkpoint attention I/O training-step replay: PASS.
 - Complete SFT one-step with attention-output straight-through replay: PASS.
+- External training-reference one-layer non-compressed block parity: PASS.
 - Official-vs-Miles full-forward BF16 tolerance gate: PASS.
 - End-to-end BF16 tolerance envelope: PASS.
 - Proof coverage matrix and proof ledger: PASS.
 
-Strict official/reference logprob parity is still recorded as FAIL, and external reference one-step train parity is intentionally recorded as `SKIPPED_FORWARD_STRICT_PARITY_REQUIRED` until strict official/reference forward parity passes.
+Strict official/reference logprob parity is still recorded as FAIL. Full mini-checkpoint external reference one-step train parity remains `MISSING_INPUT`; the first external training-reference gate now passes for a one-layer non-compressed training block, and the remaining work is to extend that reference to compressed attention, routed MoE, loaded mini-checkpoint weights, and SFT loss.
 
 ## Integrity Check
 

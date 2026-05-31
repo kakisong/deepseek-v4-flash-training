@@ -1,6 +1,6 @@
 {
   "artifacts_dir_name": "advanced",
-  "conclusion": "Recorded artifacts consistently prove the covered HC/QAT/attention/MLP/MoE/training-step gates, validate the official forward BF16 tolerance gate, and localize the remaining real-forward strict parity failure to BF16 attention forward-value drift amplified by the full model.",
+  "conclusion": "Recorded artifacts consistently prove the covered HC/QAT/attention/MLP/MoE/training-step gates, validate the first external training-reference gate and the official forward BF16 tolerance gate, and localize the remaining real-forward strict parity failure to BF16 attention forward-value drift amplified by the full model.",
   "date": "2026-05-31",
   "failures": [],
   "gates": {
@@ -37,6 +37,19 @@
     "external_reference_provenance": {
       "artifact": "deepseek-v4-external-reference-provenance-20260531.json",
       "status": "PASS"
+    },
+    "external_training_reference_1layer": {
+      "artifact": "deepseek-v4-external-training-reference-1layer-20260531.json",
+      "status": "PASS"
+    },
+    "external_training_reference_1layer_bounds": {
+      "boundary": "This closes the first external training-reference gate for a one-layer non-compressed DeepSeek-V4 training block. Compressed attention, routed MoE, and loaded mini-checkpoint SFT are intentionally left as follow-up extensions.",
+      "grad_max_abs": 5.960464477539063e-08,
+      "input_grad_max_abs": 0.0,
+      "loss_abs": 0.0,
+      "num_common_grad_tensors": 13,
+      "output_max_abs": 0.0,
+      "state_after_step_max_abs": 0.0
     },
     "fix_regression_guards": {
       "artifact": "deepseek-v4-fix-regression-guards-20260531.json",

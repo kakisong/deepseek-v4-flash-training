@@ -1,0 +1,75 @@
+{
+  "batch_size": 1,
+  "boundary": "This closes the first external training-reference gate for a one-layer non-compressed DeepSeek-V4 training block. Compressed attention, routed MoE, and loaded mini-checkpoint SFT are intentionally left as follow-up extensions.",
+  "checks": {
+    "grad_max_abs": true,
+    "grad_tensor_sets_match": true,
+    "input_grad_max_abs": true,
+    "loss_abs": true,
+    "output_max_abs": true,
+    "state_after_step_max_abs": true
+  },
+  "comparison": {
+    "extra_reference_grad_tensors": [],
+    "grad": {
+      "max_abs": 5.960464477539063e-08,
+      "name": "final_layernorm.weight",
+      "relative_l2_gap": 0.0
+    },
+    "input_grad": {
+      "exact_equal": true,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "p99_abs": 0.0,
+      "relative_l2_gap": 0.0
+    },
+    "loss_abs": 0.0,
+    "missing_reference_grad_tensors": [],
+    "num_common_grad_tensors": 13,
+    "num_common_state_tensors": 22,
+    "num_megatron_grad_tensors": 13,
+    "num_reference_grad_tensors": 13,
+    "output": {
+      "exact_equal": true,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "p99_abs": 0.0,
+      "relative_l2_gap": 0.0
+    },
+    "state_after_step": {
+      "max_abs": 0.0,
+      "name": "",
+      "relative_l2_gap": 0.0
+    }
+  },
+  "config": {
+    "compress_ratio": 0,
+    "dsv4_hc_mult": 4,
+    "dsv4_hc_sinkhorn_iters": 2,
+    "ffn_hidden_size": 1024,
+    "hidden_size": 4096,
+    "mlp": "standard GELU MLP",
+    "normalization": "RMSNorm",
+    "num_attention_heads": 8,
+    "num_layers": 1
+  },
+  "date": "2026-05-31",
+  "failures": [],
+  "manual_update": {
+    "lr": 0.0001,
+    "rule": "sgd"
+  },
+  "num_parameters": 57488963,
+  "reference": "explicit PyTorch formula reference outside the Megatron module forward graph",
+  "scope": "external PyTorch training reference vs Megatron/Miles DeepSeek-V4 one-layer non-compressed TransformerBlock",
+  "seed": 20260531,
+  "seqlen": 8,
+  "status": "PASS",
+  "thresholds": {
+    "max_grad_abs": 1e-07,
+    "max_input_grad_abs": 0.0,
+    "max_loss_abs": 0.0,
+    "max_output_abs": 0.0,
+    "max_state_abs": 0.0
+  }
+}
