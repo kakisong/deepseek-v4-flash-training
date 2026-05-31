@@ -1,6 +1,6 @@
 {
   "artifacts_dir_name": "advanced",
-  "conclusion": "Recorded artifacts consistently prove the covered HC/QAT/attention/MLP/MoE/training-step gates, validate the non-compressed, c4 indexer, and deterministic compressed external training-reference gates and the official forward BF16 tolerance gate, and localize the remaining real-forward strict parity failure to BF16 attention forward-value drift amplified by the full model.",
+  "conclusion": "Recorded artifacts consistently prove the covered HC/QAT/attention/MLP/MoE/training-step gates, validate the non-compressed, c4 indexer, and deterministic compressed external training-reference gates, validate the mini-checkpoint correctness gate, and the official forward BF16 tolerance gate, and localize the remaining real-forward strict parity failure to BF16 attention forward-value drift amplified by the full model.",
   "date": "2026-05-31",
   "failures": [],
   "gates": {
@@ -98,6 +98,38 @@
     "loaded_weight_mapping": {
       "artifact": "deepseek-v4-loaded-weight-mapping-1layer-mlp-qatsim-20260531.json",
       "status": "PASS"
+    },
+    "mini_checkpoint_correctness_gate": {
+      "artifact": "deepseek-v4-mini-checkpoint-correctness-gate-20260531.json",
+      "status": "PASS"
+    },
+    "mini_checkpoint_correctness_gate_bounds": {
+      "attention_io_training_step_bounds": {
+        "max_input_grad_abs": 9.5367431640625e-07,
+        "max_output_abs": 0.0625,
+        "max_state_after_step_abs": 0.0
+      },
+      "moe_evidence": {
+        "grouped_mlp_math_status": "PASS",
+        "mlp_expert_replay_key_checks": {
+          "megatron_bf16_formula_is_closer_to_miles_than_official_formula": true,
+          "official_formula_total_replay_matches_official_ffn": true,
+          "official_vs_miles_uses_same_expert_indices": true
+        },
+        "mlp_expert_replay_status": "PASS_WITH_DRIFT_RECORDED",
+        "moe_ep8_dispatch_math_status": "PASS"
+      },
+      "rerun_artifact": "deepseek-v4-mini-checkpoint-correctness-rerun-sft-attention-output-replay-20260531.json",
+      "rerun_loss_abs_max": 0.0,
+      "rerun_selected_grad_rel_gap_max": 2.1286144848309263e-05,
+      "rerun_selected_state_abs_max": 9.5367431640625e-07,
+      "rerun_status": "PASS",
+      "rerun_world_size": 8,
+      "strict_boundaries": {
+        "not_reclassified_as_strict_pass": true,
+        "real_non_injected_forward_strict_status": "FAIL",
+        "real_non_injected_sft_one_step_strict_status": "FAIL"
+      }
     },
     "moe_ep8_dispatch_math": {
       "artifact": "deepseek-v4-moe-ep8-dispatch-math-20260531.json",

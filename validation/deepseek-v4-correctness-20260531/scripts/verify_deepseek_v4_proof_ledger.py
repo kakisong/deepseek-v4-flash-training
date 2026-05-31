@@ -89,6 +89,10 @@ def _main() -> int:
             "deepseek-v4-mini-train-step-attention-output-replay-qatsim-20260531.json",
             "PASS",
         ),
+        "mini_checkpoint_correctness_gate": (
+            "deepseek-v4-mini-checkpoint-correctness-gate-20260531.json",
+            "PASS",
+        ),
         "external_training_reference_1layer": (
             "deepseek-v4-external-training-reference-1layer-20260531.json",
             "PASS",
@@ -254,6 +258,42 @@ def _main() -> int:
         )
     gates["train_step_error_budget"] = train_budget
 
+    mini_correctness = _load(base, "deepseek-v4-mini-checkpoint-correctness-gate-20260531.json")
+    rerun_artifact = mini_correctness["loaded_checkpoint_sft"]["artifact"]
+    rerun = _load(base, rerun_artifact)
+    mini_bounds = {
+        "strict_boundaries": mini_correctness["strict_boundaries"],
+        "rerun_artifact": rerun_artifact,
+        "rerun_world_size": rerun["world_size"],
+        "rerun_status": rerun["status"],
+        "rerun_loss_abs_max": _max_comparison_value(rerun, "loss_abs_global_max"),
+        "rerun_selected_grad_rel_gap_max": _max_comparison_value(rerun, "selected_grad_max_rel_gap"),
+        "rerun_selected_state_abs_max": _max_comparison_value(rerun, "selected_state_max_abs"),
+        "attention_io_training_step_bounds": mini_correctness["attention_io_training_step_bounds"],
+        "moe_evidence": mini_correctness["moe_evidence"],
+    }
+    gates["mini_checkpoint_correctness_gate_bounds"] = mini_bounds
+    _check(rerun["status"] == "PASS", failures, "mini_checkpoint_correctness.rerun_status")
+    _check(rerun["world_size"] == 8, failures, "mini_checkpoint_correctness.rerun_world_size")
+    _check(mini_bounds["rerun_loss_abs_max"] == 0.0, failures, "mini_checkpoint_correctness.loss_exact")
+    _check(
+        mini_bounds["rerun_selected_grad_rel_gap_max"] <= rerun["thresholds"]["max_selected_grad_rel_gap"],
+        failures,
+        "mini_checkpoint_correctness.grad_rel_bound",
+    )
+    _check(
+        mini_bounds["rerun_selected_state_abs_max"] <= rerun["thresholds"]["max_selected_state_abs"],
+        failures,
+        "mini_checkpoint_correctness.state_abs_bound",
+    )
+    _check(
+        mini_correctness["strict_boundaries"]["real_non_injected_forward_strict_status"] == "FAIL"
+        and mini_correctness["strict_boundaries"]["real_non_injected_sft_one_step_strict_status"] == "FAIL"
+        and mini_correctness["strict_boundaries"]["not_reclassified_as_strict_pass"],
+        failures,
+        "mini_checkpoint_correctness.strict_boundaries_recorded",
+    )
+
     attention_io_train = _load(base, "deepseek-v4-mini-attention-io-training-step-qatsim-20260531.json")
     gates["attention_io_training_step_bounds"] = {
         "max_output_abs": _max_nested_value(attention_io_train, "output_max_abs_global_max"),
@@ -387,7 +427,7 @@ def _main() -> int:
         "conclusion": (
             "Recorded artifacts consistently prove the covered HC/QAT/attention/MLP/MoE/"
             "training-step gates, validate the non-compressed, c4 indexer, and deterministic compressed "
-            "external training-reference gates and "
+            "external training-reference gates, validate the mini-checkpoint correctness gate, and "
             "the official forward BF16 tolerance gate, and localize the remaining "
             "real-forward strict parity failure to BF16 attention forward-value drift "
             "amplified by the full model."

@@ -167,6 +167,7 @@ def _main() -> int:
                 "deepseek-v4-mini-train-step-qatsim-0415-20260531.json",
                 "deepseek-v4-mini-train-step-routing-replay-qatsim-20260531.json",
                 "deepseek-v4-mini-train-step-attention-output-replay-qatsim-20260531.json",
+                "deepseek-v4-mini-checkpoint-correctness-rerun-sft-attention-output-replay-20260531.json",
                 "deepseek-v4-mini-attention-io-training-step-qatsim-20260531.json",
             ],
             "expected_failing_diagnostic_artifacts": [
@@ -181,6 +182,17 @@ def _main() -> int:
             ],
             "doc_sections": ["Mini Checkpoint Drift Probe"],
             "status": "PROVED_WITH_BOUNDED_FORWARD_DRIFT",
+        },
+        {
+            "id": "mini_checkpoint_correctness_gate",
+            "claim": "mini checkpoint training correctness passes under the declared BF16 tolerance while strict real-forward/SFT parity remains an explicit boundary.",
+            "evidence": [
+                "deepseek-v4-mini-checkpoint-correctness-gate-20260531.json",
+                "deepseek-v4-mini-checkpoint-correctness-rerun-sft-attention-output-replay-20260531.json",
+            ],
+            "summary_gates": ["mini_checkpoint_correctness_gate"],
+            "doc_sections": ["Mini Checkpoint Correctness Gate"],
+            "status": "PROVED_WITH_BF16_TOLERANCE",
         },
         {
             "id": "external_training_reference_1layer",

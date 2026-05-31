@@ -1,0 +1,136 @@
+{
+  "artifacts_dir_name": "advanced",
+  "attention_io_training_step_bounds": {
+    "max_input_grad_abs": 9.5367431640625e-07,
+    "max_output_abs": 0.0625,
+    "max_state_after_step_abs": 0.0
+  },
+  "claim": "The Miles DeepSeek-V4 mini-checkpoint training path is correct under the declared BF16 runtime tolerance: loaded-checkpoint SFT one-step execution is finite, routed MoE math and EP=8 dispatch are independently reference-checked, attention training drift is bounded, and complete SFT loss/gradient/update parity passes after replaying the localized attention forward-value drift.",
+  "conclusion": "Mini checkpoint-level correctness is PASS under the declared BF16 training tolerance; strict real-forward and strict real-SFT parity remain explicitly recorded boundaries.",
+  "date": "2026-05-31",
+  "external_attention_training_references": {
+    "c0": {
+      "artifact_status": "PASS",
+      "compress_ratio": 0,
+      "grad_max_abs": 5.960464477539063e-08,
+      "input_grad_max_abs": 0.0,
+      "loss_abs": 0.0,
+      "num_common_grad_tensors": 13,
+      "output_max_abs": 0.0,
+      "state_after_step_max_abs": 0.0,
+      "thresholds": {
+        "max_grad_abs": 1e-07,
+        "max_input_grad_abs": 0.0,
+        "max_loss_abs": 0.0,
+        "max_output_abs": 0.0,
+        "max_state_abs": 0.0
+      }
+    },
+    "c128": {
+      "artifact_status": "PASS",
+      "compress_ratio": 128,
+      "grad_max_abs": 2.384185791015625e-07,
+      "input_grad_max_abs": 2.9802322387695312e-08,
+      "loss_abs": 0.0,
+      "num_common_grad_tensors": 17,
+      "output_max_abs": 0.0,
+      "state_after_step_max_abs": 4.656612873077393e-10,
+      "thresholds": {
+        "max_grad_abs": 5e-07,
+        "max_input_grad_abs": 1e-07,
+        "max_loss_abs": 0.0,
+        "max_output_abs": 0.0,
+        "max_state_abs": 1e-09
+      }
+    },
+    "c4": {
+      "artifact_status": "PASS",
+      "compress_ratio": 4,
+      "grad_max_abs": 1.1920928955078125e-07,
+      "input_grad_max_abs": 3.725290298461914e-09,
+      "loss_abs": 4.048051778227091e-07,
+      "num_common_grad_tensors": 17,
+      "output_max_abs": 0.03125,
+      "state_after_step_max_abs": 4.656612873077393e-10,
+      "thresholds": {
+        "max_grad_abs": 1e-06,
+        "max_input_grad_abs": 2e-07,
+        "max_loss_abs": 1e-06,
+        "max_output_abs": 0.04,
+        "max_state_abs": 1e-08
+      }
+    }
+  },
+  "failures": [],
+  "loaded_checkpoint_sft": {
+    "artifact": "deepseek-v4-mini-checkpoint-correctness-rerun-sft-attention-output-replay-20260531.json",
+    "attention_output_replay": {
+      "mode": "record_replay",
+      "reference_impl": "dense",
+      "straight_through": true
+    },
+    "checkpoint_name": "checkpoints",
+    "max_samples": 1,
+    "rollout_data_name": "1_0.pt",
+    "routing_replay": {
+      "mode": "record_replay",
+      "reference_impl": "dense"
+    },
+    "sft_replay_bounds": {
+      "dense_vs_sparse": {
+        "loss_abs_global_max": 0.0,
+        "selected_grad_max_rel_gap": 1.6638869012597368e-05,
+        "selected_state_max_abs": 4.76837158203125e-07
+      },
+      "dense_vs_tilelang": {
+        "loss_abs_global_max": 0.0,
+        "selected_grad_max_rel_gap": 2.1286144848309263e-05,
+        "selected_state_max_abs": 9.5367431640625e-07
+      },
+      "sparse_vs_tilelang": {
+        "loss_abs_global_max": 0.0,
+        "selected_grad_max_rel_gap": 1.768724307593672e-05,
+        "selected_state_max_abs": 9.5367431640625e-07
+      }
+    },
+    "world_size": 8
+  },
+  "moe_evidence": {
+    "grouped_mlp_math_status": "PASS",
+    "mlp_expert_replay_key_checks": {
+      "megatron_bf16_formula_is_closer_to_miles_than_official_formula": true,
+      "official_formula_total_replay_matches_official_ffn": true,
+      "official_vs_miles_uses_same_expert_indices": true
+    },
+    "mlp_expert_replay_status": "PASS_WITH_DRIFT_RECORDED",
+    "moe_ep8_dispatch_math_status": "PASS"
+  },
+  "real_non_injected_train_bf16_bounds": {
+    "dense_vs_sparse": {
+      "loss_abs_global_max": 1.5947265625,
+      "selected_grad_max_rel_gap": 0.00044641669722478294,
+      "selected_state_max_abs": 9.5367431640625e-07
+    },
+    "dense_vs_tilelang": {
+      "loss_abs_global_max": 0.703125,
+      "selected_grad_max_rel_gap": 0.00038428885225427756,
+      "selected_state_max_abs": 9.5367431640625e-07
+    },
+    "sparse_vs_tilelang": {
+      "loss_abs_global_max": 0.8916015625,
+      "selected_grad_max_rel_gap": 0.0002548021320385452,
+      "selected_state_max_abs": 9.5367431640625e-07
+    }
+  },
+  "scope": "DeepSeek-V4 4-layer mini checkpoint framework-level training correctness gate",
+  "status": "PASS",
+  "strict_boundaries": {
+    "not_reclassified_as_strict_pass": true,
+    "real_non_injected_forward_strict_status": "FAIL",
+    "real_non_injected_sft_one_step_strict_status": "FAIL"
+  },
+  "supporting_pass_gates": {
+    "end_to_end_bf16_tolerance": "PASS",
+    "optimizer_update_math": "PASS"
+  }
+}

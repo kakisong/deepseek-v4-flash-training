@@ -16,6 +16,7 @@ This directory archives the DeepSeek-V4 training correctness validation snapshot
 - Attention module, TransformerBlock, Grouped MLP, EP=8 dispatch training-step math: PASS.
 - Mini-checkpoint attention I/O training-step replay: PASS.
 - Complete SFT one-step with attention-output straight-through replay: PASS.
+- Mini-checkpoint framework-level correctness gate: PASS under the declared BF16 training tolerance. This includes a fresh loaded 4-layer mini-checkpoint SFT attention-output replay rerun, routed MoE evidence, EP=8 dispatch math, attention I/O training-step bounds, c0/c4/c128 external attention references, optimizer math, and the BF16 envelope.
 - External training-reference one-layer non-compressed block parity: PASS.
 - External training-reference one-layer `compress_ratio=4` indexer block parity: PASS within BF16/indexer-selection tolerance; indexer top-k selection pressure is exercised.
 - External training-reference one-layer deterministic `compress_ratio=128` compressed-attention block parity: PASS within BF16/FP32 rounding tolerance; output/loss are exact.
@@ -23,7 +24,7 @@ This directory archives the DeepSeek-V4 training correctness validation snapshot
 - End-to-end BF16 tolerance envelope: PASS.
 - Proof coverage matrix and proof ledger: PASS.
 
-Strict official/reference logprob parity is still recorded as FAIL. Full mini-checkpoint external reference one-step train parity remains `MISSING_INPUT`; the first external training-reference gate now passes for one-layer non-compressed, `compress_ratio=4` indexer, and deterministic `compress_ratio=128` training blocks, and the remaining work is to extend that reference to routed MoE, loaded mini-checkpoint weights, and SFT loss.
+Strict official/reference logprob parity is still recorded as FAIL. Full mini-checkpoint external reference one-step train parity remains `MISSING_INPUT` only for the stronger monolithic-reference claim: we have not rewritten the entire 4-layer checkpoint, routed MoE, and SFT loss as a single independent PyTorch reference. The mini-checkpoint training correctness gate itself is now PASS under the declared BF16 tolerance.
 
 ## Integrity Check
 
