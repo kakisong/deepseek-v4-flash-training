@@ -59,9 +59,9 @@
       "expected_status": "MISSING_INPUT",
       "id": "external_reference_mini_checkpoint_one_step_train_parity",
       "reason_contains": {
-        "compress_ratio=4": true,
         "external training reference": true,
-        "mini checkpoint": true
+        "mini checkpoint": true,
+        "routed MoE": true
       }
     }
   ],
@@ -251,13 +251,14 @@
       ]
     },
     {
-      "claim": "One-layer non-MoE DeepSeek-V4 training blocks pass explicit PyTorch external-reference forward/backward/update parity for non-compressed and deterministic compress_ratio=128 compressed attention.",
+      "claim": "One-layer non-MoE DeepSeek-V4 training blocks pass explicit PyTorch external-reference forward/backward/update parity for non-compressed, compress_ratio=4 indexer, and deterministic compress_ratio=128 compressed attention.",
       "coverage_status": "PASS",
       "doc_sections": [
         "External Training Reference"
       ],
       "evidence": [
         "deepseek-v4-external-training-reference-1layer-20260531.json",
+        "deepseek-v4-external-training-reference-1layer-c4-20260531.json",
         "deepseek-v4-external-training-reference-1layer-c128-20260531.json"
       ],
       "failures": [],

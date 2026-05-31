@@ -93,6 +93,10 @@ def _main() -> int:
             "deepseek-v4-external-training-reference-1layer-20260531.json",
             "PASS",
         ),
+        "external_training_reference_1layer_c4": (
+            "deepseek-v4-external-training-reference-1layer-c4-20260531.json",
+            "PASS",
+        ),
         "external_training_reference_1layer_c128": (
             "deepseek-v4-external-training-reference-1layer-c128-20260531.json",
             "PASS",
@@ -357,6 +361,17 @@ def _main() -> int:
         0,
     )
     _record_external_ref_bounds(
+        "external_training_reference_1layer_c4_bounds",
+        "deepseek-v4-external-training-reference-1layer-c4-20260531.json",
+        4,
+    )
+    c4_bounds = gates["external_training_reference_1layer_c4_bounds"]
+    _check(
+        bool(_load(base, "deepseek-v4-external-training-reference-1layer-c4-20260531.json")["config"].get("indexer_selection_pressure")),
+        failures,
+        "external_training_reference_1layer_c4.indexer_selection_pressure",
+    )
+    _record_external_ref_bounds(
         "external_training_reference_1layer_c128_bounds",
         "deepseek-v4-external-training-reference-1layer-c128-20260531.json",
         128,
@@ -371,7 +386,7 @@ def _main() -> int:
         "failures": failures,
         "conclusion": (
             "Recorded artifacts consistently prove the covered HC/QAT/attention/MLP/MoE/"
-            "training-step gates, validate the non-compressed and deterministic compressed "
+            "training-step gates, validate the non-compressed, c4 indexer, and deterministic compressed "
             "external training-reference gates and "
             "the official forward BF16 tolerance gate, and localize the remaining "
             "real-forward strict parity failure to BF16 attention forward-value drift "

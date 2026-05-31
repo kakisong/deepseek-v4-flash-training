@@ -17,12 +17,13 @@ This directory archives the DeepSeek-V4 training correctness validation snapshot
 - Mini-checkpoint attention I/O training-step replay: PASS.
 - Complete SFT one-step with attention-output straight-through replay: PASS.
 - External training-reference one-layer non-compressed block parity: PASS.
+- External training-reference one-layer `compress_ratio=4` indexer block parity: PASS within BF16/indexer-selection tolerance; indexer top-k selection pressure is exercised.
 - External training-reference one-layer deterministic `compress_ratio=128` compressed-attention block parity: PASS within BF16/FP32 rounding tolerance; output/loss are exact.
 - Official-vs-Miles full-forward BF16 tolerance gate: PASS.
 - End-to-end BF16 tolerance envelope: PASS.
 - Proof coverage matrix and proof ledger: PASS.
 
-Strict official/reference logprob parity is still recorded as FAIL. Full mini-checkpoint external reference one-step train parity remains `MISSING_INPUT`; the first external training-reference gate now passes for one-layer non-compressed and deterministic `compress_ratio=128` training blocks, and the remaining work is to extend that reference to the `compress_ratio=4` indexer path, routed MoE, loaded mini-checkpoint weights, and SFT loss.
+Strict official/reference logprob parity is still recorded as FAIL. Full mini-checkpoint external reference one-step train parity remains `MISSING_INPUT`; the first external training-reference gate now passes for one-layer non-compressed, `compress_ratio=4` indexer, and deterministic `compress_ratio=128` training blocks, and the remaining work is to extend that reference to routed MoE, loaded mini-checkpoint weights, and SFT loss.
 
 ## Integrity Check
 

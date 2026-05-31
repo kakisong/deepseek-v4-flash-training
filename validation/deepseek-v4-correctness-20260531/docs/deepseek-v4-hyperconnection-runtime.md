@@ -8,7 +8,7 @@
 
 ## 快速阅读
 
-一句话结论：**PR #4839 的 HyperConnection 方向问题没有在 Miles 当前 DeepSeek-V4 路径复现；核心算子、训练步、optimizer update 和两个 1-layer external training reference gate 已经通过验证。完整模型真实非注入 forward 的 strict logprob parity 仍未关闭，但剩余差异已被定位并纳入 BF16 容差边界。**
+一句话结论：**PR #4839 的 HyperConnection 方向问题没有在 Miles 当前 DeepSeek-V4 路径复现；核心算子、训练步、optimizer update 和三个 1-layer external training reference gate 已经通过验证。完整模型真实非注入 forward 的 strict logprob parity 仍未关闭，但剩余差异已被定位并纳入 BF16 容差边界。**
 
 建议按这个顺序读：
 
@@ -34,7 +34,8 @@
 | reference | 用来对照的“标准答案”。本文既有 official inference reference，也有脚本里手写的 PyTorch 训练态公式 reference。 |
 | replay | 把某一层或某个中间 tensor 固定住重跑，用来判断误差从哪里开始出现。 |
 | external training reference | 不调用 Megatron `TransformerBlock.forward()` 的手写训练公式，用来验证 Miles/Megatron 模块的 forward/backward/update。 |
-| `compress_ratio=128` / c128 | 一条 deterministic compressed-KV attention 验证路径。它验证 compressor 数学和 KV 拼接，但不覆盖 `compress_ratio=4` indexer 选择路径。 |
+| `compress_ratio=4` / c4 | 一条覆盖 V4 indexer top-k 选择压力的 compressed-attention 验证路径。explicit PyTorch indexer scores 与 TileLang fast-math top-k 在边界附近允许 BF16/indexer-selection 容差。 |
+| `compress_ratio=128` / c128 | 一条 deterministic compressed-KV attention 验证路径。它验证 compressor 数学和 KV 拼接。 |
 
 ## External References
 
@@ -55,7 +56,7 @@ Miles 的正确性结论仍以本仓库 artifact 为准：operator math、trace 
 
 1. **PR #4839 的 HC 方向问题没有在 Miles 当前路径复现。** Miles 当前 DeepSeek-V4 没有直接走 Megatron upstream `HyperConnectionModule`，而是走 Miles 自己的 HC 实现；算子验证证明 Miles post-mix 等价于 `H_res.T @ residual`，并明显不同于错误的 `H_res @ residual`。
 2. **核心训练数学已经通过分层验证。** 已覆盖 HC、RoPE、official-compatible KV QAT、dense/sparse/tilelang attention、Grouped MLP、EP=8 all-to-all dispatcher、TransformerBlock 训练步、optimizer update、fix regression guards。
-3. **external training reference 已经完成第一层闭环。** 手写 PyTorch 训练态公式 reference 已经分别对齐 1-layer non-compressed block 和 deterministic `compress_ratio=128` compressed-attention block；forward/loss exact，梯度和一步更新在声明阈值内。
+3. **external training reference 已经完成第一层闭环。** 手写 PyTorch 训练态公式 reference 已经分别对齐 1-layer non-compressed、`compress_ratio=4` indexer path 和 deterministic `compress_ratio=128` compressed-attention block；c0/c128 forward/loss exact，c4 在 BF16/indexer-selection 容差内，三条路径的梯度和一步更新都在声明阈值内。
 4. **完整模型 strict parity 仍然是边界项。** mini checkpoint 和 official-vs-Miles 的真实非注入 forward strict logprob parity 仍记录为 `FAIL`；当前证据把它定位为 BF16/FP8 training runtime 与 official inference runtime 的数值漂移，并通过 BF16 tolerance envelope 约束，而不是把它改写成 strict pass。
 
 按问题拆开看：
@@ -67,7 +68,7 @@ Miles 的正确性结论仍以本仓库 artifact 为准：operator math、trace 
 | 训练相关算子是否正确？ | 已覆盖的算子和训练步通过。 | attention / block training-step、Grouped MLP、EP=8 dispatcher、optimizer update artifacts。 |
 | official-vs-Miles 是否 strict 完全一致？ | 还不是。strict logprob parity 仍是 `FAIL`。 | official forward BF16 tolerance、mini drift probe、proof ledger。 |
 | 这个 `FAIL` 是否说明训练无效？ | 不能这样判断。当前 evidence 显示训练链路在消除已定位 forward value drift 后闭合，真实 drift 落在声明 BF16 envelope 内。 | attention-output replay、end-to-end BF16 tolerance、external training reference。 |
-| 还有什么没证明？ | `compress_ratio=4` indexer path、routed MoE、loaded 4-layer mini checkpoint、SFT loss 的完整 external reference one-step train parity 仍是 `MISSING_INPUT`。 | proof summary / coverage matrix / proof ledger。 |
+| 还有什么没证明？ | routed MoE、loaded 4-layer mini checkpoint、SFT loss 的完整 external reference one-step train parity 仍是 `MISSING_INPUT`。 | proof summary / coverage matrix / proof ledger。 |
 
 因此，我们可以证明：**当前已覆盖的 HC、RoPE、QAT、attention dense/sparse/tilelang、local grouped expert、EP=8 all-to-all dispatch/combine、模块训练步、block 训练步、mini checkpoint attention I/O 训练步、以及消除 attention 前向值漂移后的完整 SFT one-step 训练链路这些核心数学和训练算子是正确的。**
 
@@ -929,14 +930,16 @@ top3_balanced_multiroute:
 最新结果：
 
 - `docs/en/advanced/deepseek-v4-external-training-reference-1layer-20260531.json`
+- `docs/en/advanced/deepseek-v4-external-training-reference-1layer-c4-20260531.json`
 - `docs/en/advanced/deepseek-v4-external-training-reference-1layer-c128-20260531.json`
 
 这一步是对前面“external reference one-step train parity 应该怎么做”的落地修正：不再把 official inference runtime 当成训练 reference，而是写一个训练态的显式 PyTorch 公式 reference，再和 Megatron/Miles module forward graph 对齐。
 
-当前 gate 覆盖的是 1-layer、non-MoE DeepSeek-V4 TransformerBlock 的两条路径：
+当前 gate 覆盖的是 1-layer、non-MoE DeepSeek-V4 TransformerBlock 的三条路径：
 
 1. `compress_ratio=0` non-compressed attention。
-2. deterministic `compress_ratio=128` compressed-KV attention。
+2. `compress_ratio=4` V4 indexer compressed-attention path。
+3. deterministic `compress_ratio=128` compressed-KV attention。
 
 共同覆盖项包括：
 
@@ -953,17 +956,20 @@ top3_balanced_multiroute:
 | path | seqlen | output max_abs | loss_abs | input_grad max_abs | grad max_abs | state_after_step max_abs | common grad tensors |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `compress_ratio=0` | 8 | 0.0 | 0.0 | 0.0 | 5.960464477539063e-08 | 0.0 | 13 |
+| `compress_ratio=4` | 2304 | 0.03125 | 4.048051778227091e-07 | 3.725290298461914e-09 | 1.1920928955078125e-07 | 4.656612873077393e-10 | 17 |
 | `compress_ratio=128` | 256 | 0.0 | 0.0 | 2.9802322387695312e-08 | 2.384185791015625e-07 | 4.656612873077393e-10 | 17 |
+
+`compress_ratio=4` 使用 `seqlen=2304`，产生 576 个 compressed KV groups，大于 indexer topk=512，因此实际触发了 V4 indexer top-k 选择压力。该路径的 explicit PyTorch indexer scores 与 TileLang fast-math ordering 在 top-k 边界附近不要求 strict exact；artifact 将 forward 阈值声明为 `max_output_abs=0.04`、`max_loss_abs=1e-6`，实际 output max_abs 为 `0.03125`、loss_abs 为 `4.048051778227091e-07`，梯度和一步更新仍在更严格的小量级阈值内。
 
 `compress_ratio=128` 的 forward/loss 仍然 exact；input gradient、参数梯度和 step 后状态只剩 BF16/FP32 舍入量级差异，分别低于 `1e-7`、`5e-7`、`1e-9` 阈值。
 
-这说明：在干净的训练态 block 上，Miles/Megatron 的 DeepSeek-V4 non-compressed attention 和 deterministic compressed-KV attention 都能被显式 PyTorch reference 复现，且 backward 和一步更新在预设数学阈值内闭合。
+这说明：在干净的训练态 block 上，Miles/Megatron 的 DeepSeek-V4 non-compressed attention、c4 indexer compressed attention 和 deterministic c128 compressed-KV attention 都能被显式 PyTorch reference 复现，且 backward 和一步更新在预设数学阈值内闭合。
 
 边界也要明确：
 
-1. 这个 gate 已经关闭“是否能构造训练态 external reference 并对齐一步训练”的第一段风险，并把覆盖面从 non-compressed attention 扩展到 deterministic `compress_ratio=128` compressed-KV attention。
-2. 它还没有覆盖 `compress_ratio=4` indexer path、routed MoE、loaded 4-layer mini checkpoint 和完整 SFT loss。
-3. 因此 `external_reference_mini_checkpoint_one_step_train_parity` 仍保持 `MISSING_INPUT`，但原因已经不是 official inference strict forward parity，也不是 `compress_ratio=128` 这一条 compressed-KV 数学链路；剩余工作是把 external training reference 扩展到 `compress_ratio=4` indexer / MoE / loaded mini checkpoint / SFT loss。
+1. 这个 gate 已经关闭“是否能构造训练态 external reference 并对齐一步训练”的第一段风险，并把覆盖面从 non-compressed attention 扩展到 c4 indexer path 和 deterministic `compress_ratio=128` compressed-KV attention。
+2. 它还没有覆盖 routed MoE、loaded 4-layer mini checkpoint 和完整 SFT loss。
+3. 因此 `external_reference_mini_checkpoint_one_step_train_parity` 仍保持 `MISSING_INPUT`，但原因已经不是 official inference strict forward parity，也不是 c4/c128 attention 数学链路；剩余工作是把 external training reference 扩展到 MoE / loaded mini checkpoint / SFT loss。
 
 ## End-to-End BF16 Tolerance
 
@@ -1087,7 +1093,7 @@ coverage matrix 把本次目标拆成可检查 requirement，而不是只依赖�
 5. TE grouped MLP 和 EP=8 all-to-all dispatcher 的 forward/backward/update 由数学 verifier 覆盖。
 6. official attention、weight mapping、head replay 和 MLP expert replay 对 official-vs-Miles drift 做了定位。
 7. official-vs-Miles full-forward BF16 tolerance 有独立 PASS artifact，并保留 strict forward parity 仍未关闭的边界。
-8. external training reference 1-layer gate 有独立 PASS artifact，证明显式 PyTorch 训练态 reference 可以复现 non-compressed 和 deterministic `compress_ratio=128` compressed-attention DeepSeek-V4 block 的 forward/backward/update。
+8. external training reference 1-layer gate 有独立 PASS artifact，证明显式 PyTorch 训练态 reference 可以复现 non-compressed、`compress_ratio=4` indexer path 和 deterministic `compress_ratio=128` compressed-attention DeepSeek-V4 block 的 forward/backward/update。
 9. mini checkpoint forward drift 被 routing replay、activation replay、sublayer replay 和 attention I/O replay 定位。
 10. mini SFT training chain 被 baseline、routing replay、attention-output replay 和 attention I/O training-step 覆盖。
 11. End-to-end BF16 tolerance envelope、optimizer update math、proof ledger 都有独立 PASS artifact。
@@ -1165,14 +1171,14 @@ coverage matrix 把本次目标拆成可检查 requirement，而不是只依赖�
 7. 完整 SFT one-step 的 attention-output straight-through replay 在三组 backend compare 上 `loss_abs_global_max=0.0`，selected gradient relative gap 仍显著低于 `0.002` 阈值。
 8. 端到端 BF16 tolerance artifact 为 `PASS`。
 9. official-vs-Miles forward BF16 tolerance artifact 为 `PASS`，并记录 strict forward parity 仍为 `FAIL`。
-10. external training reference 1-layer artifacts 均为 `PASS`：`compress_ratio=0` forward/loss/input-grad/update exact，最大参数梯度差异为 `5.960464477539063e-08`；`compress_ratio=128` forward/loss exact，input-grad 最大差异 `2.9802322387695312e-08`，最大参数梯度差异 `2.384185791015625e-07`，step 后状态最大差异 `4.656612873077393e-10`。
+10. external training reference 1-layer artifacts 均为 `PASS`：`compress_ratio=0` forward/loss/input-grad/update exact，最大参数梯度差异为 `5.960464477539063e-08`；`compress_ratio=4` 在 indexer top-k selection pressure 下 output max_abs `0.03125`、loss_abs `4.048051778227091e-07`、input-grad 最大差异 `3.725290298461914e-09`、最大参数梯度差异 `1.1920928955078125e-07`、step 后状态最大差异 `4.656612873077393e-10`；`compress_ratio=128` forward/loss exact，input-grad 最大差异 `2.9802322387695312e-08`，最大参数梯度差异 `2.384185791015625e-07`，step 后状态最大差异 `4.656612873077393e-10`。
 11. Optimizer update math artifact 为 `PASS`。
 12. Precision fix regression guard artifact 为 `PASS`。
 13. Proof coverage matrix artifact 为 `PASS`。
 14. Environment provenance artifact 为 `PASS`。
 15. External reference provenance artifact 为 `PASS`。
 
-因此 ledger 给出的机器结论是：已记录的 artifact 能一致证明当前覆盖的数学算子、训练步、non-compressed / deterministic c128 external training reference、official forward BF16 tolerance、optimizer update math、修复项 source guard、coverage matrix、environment provenance、external reference provenance 和 dense/sparse/tilelang 训练链路；真实非注入 forward/train-step drift 落在声明的 BF16 tolerance envelope 内；剩余 strict parity 失败被一致定位为 BF16 attention forward-value drift 经过完整模型放大，而不是 HC、QAT、attention backward、MLP、EP=8 dispatcher、output head 或参数更新公式错误。
+因此 ledger 给出的机器结论是：已记录的 artifact 能一致证明当前覆盖的数学算子、训练步、non-compressed / c4 indexer / deterministic c128 external training reference、official forward BF16 tolerance、optimizer update math、修复项 source guard、coverage matrix、environment provenance、external reference provenance 和 dense/sparse/tilelang 训练链路；真实非注入 forward/train-step drift 落在声明的 BF16 tolerance envelope 内；剩余 strict parity 失败被一致定位为 BF16 attention forward-value drift 经过完整模型放大，而不是 HC、QAT、attention backward、MLP、EP=8 dispatcher、output head 或参数更新公式错误。
 
 ## 环境
 
@@ -1216,11 +1222,11 @@ transformer_config_has_experimental_attention_variant=True
 
 对于“Miles 当前训练方式是否已经严格证明正确”，当前答案必须分层：
 
-- **已证明**：HC、RoPE、QAT、attention dense/sparse/tilelang、compress 0/4/128 attention 训练步、1-layer non-compressed 与 deterministic `compress_ratio=128` external training reference、mini checkpoint attention I/O local training-step replay、attention-output straight-through 完整 SFT one-step replay、official-vs-Miles full-forward BF16 tolerance、end-to-end BF16 tolerance envelope、optimizer update math、fix regression guards、proof coverage matrix、environment provenance、external reference provenance、official MLP expert formula replay、TE grouped expert 本地 forward/backward/update、EP=8 all-to-all dispatch/combine forward/backward/update、DeepSeek-V4 TransformerBlock 训练步，以及 proof ledger 中这些证据的机器一致性。
+- **已证明**：HC、RoPE、QAT、attention dense/sparse/tilelang、compress 0/4/128 attention 训练步、1-layer non-compressed、`compress_ratio=4` indexer path 与 deterministic `compress_ratio=128` external training reference、mini checkpoint attention I/O local training-step replay、attention-output straight-through 完整 SFT one-step replay、official-vs-Miles full-forward BF16 tolerance、end-to-end BF16 tolerance envelope、optimizer update math、fix regression guards、proof coverage matrix、environment provenance、external reference provenance、official MLP expert formula replay、TE grouped expert 本地 forward/backward/update、EP=8 all-to-all dispatch/combine forward/backward/update、DeepSeek-V4 TransformerBlock 训练步，以及 proof ledger 中这些证据的机器一致性。
 - **已跑通并定位**：mini checkpoint forward、mini checkpoint routing replay、真实非注入 mini checkpoint SFT one-step、official full-forward probe、official runtime precision variant probe。
 - **未严格证明**：真实非注入完整 4-layer / production EP=8 MoE 端到端 strict backend parity、official-vs-Miles strict logprob parity、覆盖 compressed attention / routed MoE / loaded mini checkpoint / SFT loss 的 external reference one-step train parity。
 
 因此文档最后两点的当前状态是：
 
 1. **已完成**：已经给 official-vs-Miles full-forward 建立可接受的 BF16 数值容差标准，并由 `deepseek-v4-official-forward-bf16-tolerance-20260531.json` 机器验证为 `PASS`。该标准没有消除 strict logprob mismatch；它把剩余 mismatch 固定为 BF16 runtime envelope 内的已知差异。
-2. **已完成第一段并扩展到 deterministic c128，但未完成 mini checkpoint 级 PASS**：1-layer non-compressed external training reference 已经由 `deepseek-v4-external-training-reference-1layer-20260531.json` 验证为 `PASS`，deterministic `compress_ratio=128` external training reference 已经由 `deepseek-v4-external-training-reference-1layer-c128-20260531.json` 验证为 `PASS`。完整 external reference one-step train parity 仍需要把 reference 扩展到 `compress_ratio=4` indexer path、routed MoE、loaded 4-layer mini checkpoint 和 SFT loss；因此该完整 gate 仍是 `MISSING_INPUT`，不是训练链路的新失败。
+2. **已完成第一段并扩展到 c4/c128，但未完成 mini checkpoint 级 PASS**：1-layer non-compressed external training reference 已经由 `deepseek-v4-external-training-reference-1layer-20260531.json` 验证为 `PASS`，`compress_ratio=4` indexer path 已经由 `deepseek-v4-external-training-reference-1layer-c4-20260531.json` 验证为 `PASS`，deterministic `compress_ratio=128` external training reference 已经由 `deepseek-v4-external-training-reference-1layer-c128-20260531.json` 验证为 `PASS`。完整 external reference one-step train parity 仍需要把 reference 扩展到 routed MoE、loaded 4-layer mini checkpoint 和 SFT loss；因此该完整 gate 仍是 `MISSING_INPUT`，不是训练链路的新失败。

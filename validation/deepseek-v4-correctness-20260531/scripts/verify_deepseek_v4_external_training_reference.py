@@ -16,10 +16,11 @@ training-time math:
 * standard GELU MLP
 * backward gradients and one manual SGD update
 
-The reference currently covers ``compress_ratio=0`` and a deterministic
-``compress_ratio=128`` compressed-KV path with a non-MoE MLP so that each gate
-is mathematically tight.  The ``compress_ratio=4`` indexer path, routed MoE, and
-loaded mini-checkpoint SFT are separate extensions after these gates are stable.
+The reference currently covers ``compress_ratio=0``, ``compress_ratio=4`` with
+the V4 indexer path, and a deterministic ``compress_ratio=128`` compressed-KV
+path with a non-MoE MLP so that each gate is mathematically tight. Routed MoE
+and loaded mini-checkpoint SFT are separate extensions after these gates are
+stable.
 """
 
 from __future__ import annotations
@@ -45,6 +46,7 @@ from miles_plugins.models.deepseek_v4.deepseek_v4 import get_dsv4_spec
 from miles_plugins.models.deepseek_v4.ops.kernel.sinkhorn import hc_split_sinkhorn
 from miles_plugins.models.deepseek_v4.ops.qat import fp8_simulate_qat
 from miles_plugins.models.deepseek_v4.ops.rope import apply_rotary_emb
+from miles_plugins.models.deepseek_v4.ops.utils import rotate_activation
 
 
 SEED = 20260531
@@ -89,8 +91,8 @@ def _init_method(tensor: torch.Tensor) -> torch.Tensor:
 
 
 def _build_config(compress_ratio: int) -> TransformerConfig:
-    if compress_ratio not in (0, 128):
-        raise ValueError(f"supported external-reference compress ratios are 0 and 128, got {compress_ratio}")
+    if compress_ratio not in (0, 4, 128):
+        raise ValueError(f"supported external-reference compress ratios are 0, 4, and 128, got {compress_ratio}")
     config = TransformerConfig(
         tensor_model_parallel_size=1,
         pipeline_model_parallel_size=1,
@@ -248,6 +250,14 @@ def _compress_topk(batch: int, seqlen: int, ratio: int, offset: int, device: tor
     return matrix.unsqueeze(0).expand(batch, -1, -1)
 
 
+def _overlap_transform(tensor: torch.Tensor, *, ratio: int, head_dim: int, value: float) -> torch.Tensor:
+    bsz, groups, _, _ = tensor.shape
+    out = tensor.new_full((bsz, groups, 2 * ratio, head_dim), value)
+    out[:, :, ratio:] = tensor[:, :, :, head_dim:]
+    out[:, 1:, :ratio] = tensor[:, :-1, :, :head_dim]
+    return out
+
+
 def _compressor_reference(
     x_sbd: torch.Tensor,
     params: dict[str, torch.Tensor],
@@ -255,6 +265,9 @@ def _compressor_reference(
     *,
     config: TransformerConfig,
     ratio: int,
+    prefix: str = "layers.0.self_attention.compressor.",
+    head_dim: int | None = None,
+    rotate: bool = False,
 ) -> torch.Tensor:
     x = x_sbd.permute(1, 0, 2).contiguous()
     bsz, seqlen, _ = x.shape
@@ -264,22 +277,78 @@ def _compressor_reference(
             f"seqlen={seqlen} ratio={ratio}"
         )
 
-    prefix = "layers.0.self_attention.compressor."
-    head_dim = config.kv_lora_rank
+    head_dim = int(head_dim or config.kv_lora_rank)
     rd = config.qk_pos_emb_head_dim
     nope_dim = head_dim - rd
+    overlap = ratio == 4
 
     x_fp32 = x.float()
     kv = F.linear(x_fp32, params[prefix + "wkv.weight"].float())
     score = F.linear(x_fp32, params[prefix + "wgate.weight"].float())
     kv = kv.unflatten(1, (-1, ratio))
     score = score.unflatten(1, (-1, ratio)) + params[prefix + "ape"].float()
+    if overlap:
+        kv = _overlap_transform(kv, ratio=ratio, head_dim=head_dim, value=0.0)
+        score = _overlap_transform(score, ratio=ratio, head_dim=head_dim, value=float("-inf"))
     kv = (kv * score.softmax(dim=2)).sum(dim=2)
     kv = _rmsnorm(kv.to(x_sbd.dtype), params[prefix + "norm.weight"], config.layernorm_epsilon)
     kv = torch.cat([kv[..., :-rd], apply_rotary_emb(kv[..., -rd:], freqs_cis[:seqlen:ratio])], dim=-1)
-    if os.environ.get("MEGATRON_USE_KV_QAT", "0") == "1":
+    if rotate:
+        kv = rotate_activation(kv)
+        if os.environ.get("MEGATRON_USE_KV_QAT", "0") == "1":
+            kv = fp8_simulate_qat(kv, 128)
+    elif os.environ.get("MEGATRON_USE_KV_QAT", "0") == "1":
         kv = torch.cat([fp8_simulate_qat(kv[..., :nope_dim].contiguous(), 64), kv[..., nope_dim:]], dim=-1)
     return kv
+
+
+def _indexer_topk_reference(
+    x_bsd: torch.Tensor,
+    qr_bsd: torch.Tensor,
+    params: dict[str, torch.Tensor],
+    freqs_cis: torch.Tensor,
+    compressor_freqs_cis: torch.Tensor,
+    *,
+    config: TransformerConfig,
+) -> torch.Tensor:
+    bsz, seqlen, _ = x_bsd.shape
+    ratio = 4
+    head_dim = config.dsa_indexer_head_dim
+    n_heads = config.dsa_indexer_n_heads
+    rd = config.qk_pos_emb_head_dim
+
+    q = F.linear(qr_bsd, params["layers.0.self_attention.indexer.linear_wq_b.weight"])
+    q = q.view(bsz, seqlen, n_heads, head_dim)
+    q = torch.cat([q[..., :-rd], apply_rotary_emb(q[..., -rd:], freqs_cis[:seqlen])], dim=-1)
+    q = q.permute(1, 0, 2, 3).contiguous()
+    q = rotate_activation(q)
+    if os.environ.get("MEGATRON_USE_KV_QAT", "0") == "1":
+        q = fp8_simulate_qat(q, 128)
+    q = q.permute(1, 0, 2, 3).contiguous()
+
+    k = _compressor_reference(
+        x_bsd.permute(1, 0, 2).contiguous(),
+        params,
+        compressor_freqs_cis,
+        config=config,
+        ratio=ratio,
+        prefix="layers.0.self_attention.indexer.compressor.",
+        head_dim=head_dim,
+        rotate=True,
+    )
+
+    weights = F.linear(x_bsd, params["layers.0.self_attention.indexer.linear_weights_proj.weight"])
+    weights = weights * (n_heads**-0.5) * (head_dim**-0.5)
+    scores = torch.einsum("bshd,bgd->bsgh", q.float(), k.float())
+    scores = torch.maximum(scores, torch.zeros((), device=x_bsd.device, dtype=scores.dtype))
+    scores = (scores * weights.float().unsqueeze(2)).sum(dim=-1)
+
+    groups = k.shape[1]
+    group_idx = torch.arange(groups, device=x_bsd.device).view(1, 1, groups)
+    q_first_invalid_group = (torch.arange(1, seqlen + 1, device=x_bsd.device).view(1, seqlen, 1) // ratio)
+    scores = scores.masked_fill(group_idx >= q_first_invalid_group, float("-inf"))
+    topk = min(int(config.dsa_indexer_topk), groups)
+    return scores.topk(topk, dim=-1)[1].to(torch.int32)
 
 
 def _dense_attention_reference(
@@ -312,6 +381,8 @@ def _attention_reference(
     params: dict[str, torch.Tensor],
     attention_freqs_cis: torch.Tensor,
     compressor_freqs_cis: torch.Tensor | None,
+    indexer_freqs_cis: torch.Tensor | None,
+    indexer_compressor_freqs_cis: torch.Tensor | None,
     *,
     config: TransformerConfig,
 ) -> torch.Tensor:
@@ -324,6 +395,7 @@ def _attention_reference(
 
     q = F.linear(x, params["layers.0.self_attention.wq_a.weight"])
     q = _rmsnorm(q, params["layers.0.self_attention.q_norm.weight"], config.layernorm_epsilon)
+    qr = q
     q = F.linear(q, params["layers.0.self_attention.wq_b.weight"])
     q = q.unflatten(-1, (n_heads, head_dim))
     q = q * torch.rsqrt(q.square().mean(-1, keepdim=True) + config.layernorm_epsilon)
@@ -341,7 +413,25 @@ def _attention_reference(
         if compressor_freqs_cis is None:
             raise ValueError("compressor freqs_cis is required for compressed reference")
         kv_compress = _compressor_reference(x_sbd, params, compressor_freqs_cis, config=config, ratio=ratio)
-        topk = torch.cat([topk, _compress_topk(bsz, seqlen, ratio, offset=seqlen, device=x.device)], dim=-1)
+        if ratio == 4:
+            if indexer_freqs_cis is None or indexer_compressor_freqs_cis is None:
+                raise ValueError("indexer freqs_cis is required for compress_ratio=4 reference")
+            compress_topk = _indexer_topk_reference(
+                x,
+                qr,
+                params,
+                indexer_freqs_cis,
+                indexer_compressor_freqs_cis,
+                config=config,
+            )
+            q_first_invalid_group = (
+                torch.arange(1, seqlen + 1, device=x.device, dtype=torch.int32).view(1, seqlen, 1) // ratio
+            )
+            topk_idx_mask = (compress_topk >= q_first_invalid_group) | (compress_topk < 0)
+            compress_topk = torch.where(topk_idx_mask, -1, compress_topk + seqlen)
+        else:
+            compress_topk = _compress_topk(bsz, seqlen, ratio, offset=seqlen, device=x.device)
+        topk = torch.cat([topk, compress_topk], dim=-1)
         kv = torch.cat([kv, kv_compress], dim=1)
     o = _dense_attention_reference(
         q,
@@ -370,6 +460,8 @@ def _block_reference(
     params: dict[str, torch.Tensor],
     attention_freqs_cis: torch.Tensor,
     compressor_freqs_cis: torch.Tensor | None,
+    indexer_freqs_cis: torch.Tensor | None,
+    indexer_compressor_freqs_cis: torch.Tensor | None,
     *,
     config: TransformerConfig,
 ) -> torch.Tensor:
@@ -388,7 +480,15 @@ def _block_reference(
         norm_eps=config.layernorm_epsilon,
     )
     x_attn = _rmsnorm(x_attn, params["layers.0.input_layernorm.weight"], config.layernorm_epsilon)
-    attn_out = _attention_reference(x_attn, params, attention_freqs_cis, compressor_freqs_cis, config=config)
+    attn_out = _attention_reference(
+        x_attn,
+        params,
+        attention_freqs_cis,
+        compressor_freqs_cis,
+        indexer_freqs_cis,
+        indexer_compressor_freqs_cis,
+        config=config,
+    )
     x = _hc_post(attn_out, residual, attn_post, attn_comb)
 
     residual = x
@@ -489,6 +589,8 @@ def _run_reference(
     params: dict[str, torch.Tensor],
     attention_freqs_cis: torch.Tensor,
     compressor_freqs_cis: torch.Tensor | None,
+    indexer_freqs_cis: torch.Tensor | None,
+    indexer_compressor_freqs_cis: torch.Tensor | None,
     hidden_states: torch.Tensor,
     upstream_grad: torch.Tensor,
     *,
@@ -496,7 +598,15 @@ def _run_reference(
     lr: float,
 ) -> dict[str, Any]:
     x = hidden_states.detach().clone().requires_grad_(True)
-    output = _block_reference(x, params, attention_freqs_cis, compressor_freqs_cis, config=config)
+    output = _block_reference(
+        x,
+        params,
+        attention_freqs_cis,
+        compressor_freqs_cis,
+        indexer_freqs_cis,
+        indexer_compressor_freqs_cis,
+        config=config,
+    )
     loss = (output.float() * upstream_grad.float()).mean()
     loss.backward()
     grads = {
@@ -555,7 +665,7 @@ def main() -> int:
     parser.add_argument("--json-output", type=Path)
     parser.add_argument("--seqlen", type=int, default=8)
     parser.add_argument("--batch-size", type=int, default=1)
-    parser.add_argument("--compress-ratio", type=int, choices=[0, 128], default=0)
+    parser.add_argument("--compress-ratio", type=int, choices=[0, 4, 128], default=0)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--max-loss-abs", type=float, default=None)
     parser.add_argument("--max-output-abs", type=float, default=None)
@@ -565,15 +675,15 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.max_loss_abs is None:
-        args.max_loss_abs = 0.0
+        args.max_loss_abs = 1e-6 if args.compress_ratio == 4 else 0.0
     if args.max_output_abs is None:
-        args.max_output_abs = 0.0
+        args.max_output_abs = 0.04 if args.compress_ratio == 4 else 0.0
     if args.max_input_grad_abs is None:
-        args.max_input_grad_abs = 0.0 if args.compress_ratio == 0 else 1e-7
+        args.max_input_grad_abs = 0.0 if args.compress_ratio == 0 else 2e-7 if args.compress_ratio == 4 else 1e-7
     if args.max_grad_abs is None:
-        args.max_grad_abs = 1e-7 if args.compress_ratio == 0 else 5e-7
+        args.max_grad_abs = 1e-7 if args.compress_ratio == 0 else 1e-6 if args.compress_ratio == 4 else 5e-7
     if args.max_state_abs is None:
-        args.max_state_abs = 0.0 if args.compress_ratio == 0 else 1e-9
+        args.max_state_abs = 0.0 if args.compress_ratio == 0 else 1e-8 if args.compress_ratio == 4 else 1e-9
 
     _init_distributed()
     try:
@@ -595,6 +705,11 @@ def main() -> int:
             if args.compress_ratio
             else None
         )
+        indexer_freqs_cis = None
+        indexer_compressor_freqs_cis = None
+        if args.compress_ratio == 4:
+            indexer_freqs_cis = block.layers[0].self_attention.indexer.freqs_cis.detach()
+            indexer_compressor_freqs_cis = block.layers[0].self_attention.indexer.compressor.freqs_cis.detach()
         num_parameters = sum(param.numel() for param in block.parameters())
 
         hidden_states = torch.randn(
@@ -611,6 +726,8 @@ def main() -> int:
             reference_params,
             attention_freqs_cis,
             compressor_freqs_cis,
+            indexer_freqs_cis,
+            indexer_compressor_freqs_cis,
             hidden_states,
             upstream_grad,
             config=config,
@@ -643,6 +760,11 @@ def main() -> int:
                 "num_attention_heads": config.num_attention_heads,
                 "ffn_hidden_size": config.ffn_hidden_size,
                 "compress_ratio": args.compress_ratio,
+                "compressed_kv_groups": args.seqlen // args.compress_ratio if args.compress_ratio else 0,
+                "indexer_topk": config.dsa_indexer_topk if args.compress_ratio == 4 else 0,
+                "indexer_selection_pressure": bool(
+                    args.compress_ratio == 4 and (args.seqlen // args.compress_ratio) > config.dsa_indexer_topk
+                ),
                 "dsv4_hc_mult": config.dsv4_hc_mult,
                 "dsv4_hc_sinkhorn_iters": config.dsv4_hc_sinkhorn_iters,
                 "normalization": config.normalization,
@@ -666,6 +788,15 @@ def main() -> int:
                 "This closes an external training-reference gate for a one-layer "
                 "DeepSeek-V4 training block. Routed MoE and loaded mini-checkpoint SFT "
                 "are intentionally left as follow-up extensions."
+            ),
+            "numerical_note": (
+                "compress_ratio=4 exercises the V4 indexer top-k path. When compressed_kv_groups "
+                "exceeds indexer_topk, explicit PyTorch indexer scores can differ from TileLang "
+                "fast-math ordering near the top-k boundary; the gate therefore uses a bounded "
+                "BF16/indexer-selection forward tolerance while still requiring gradient and "
+                "one-step update bounds."
+                if args.compress_ratio == 4
+                else ""
             ),
         }
         print(json.dumps(payload, indent=2, sort_keys=True))

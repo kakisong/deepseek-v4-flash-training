@@ -184,9 +184,10 @@ def _main() -> int:
         },
         {
             "id": "external_training_reference_1layer",
-            "claim": "One-layer non-MoE DeepSeek-V4 training blocks pass explicit PyTorch external-reference forward/backward/update parity for non-compressed and deterministic compress_ratio=128 compressed attention.",
+            "claim": "One-layer non-MoE DeepSeek-V4 training blocks pass explicit PyTorch external-reference forward/backward/update parity for non-compressed, compress_ratio=4 indexer, and deterministic compress_ratio=128 compressed attention.",
             "evidence": [
                 "deepseek-v4-external-training-reference-1layer-20260531.json",
+                "deepseek-v4-external-training-reference-1layer-c4-20260531.json",
                 "deepseek-v4-external-training-reference-1layer-c128-20260531.json",
             ],
             "summary_gates": ["external_training_reference_1layer"],
@@ -251,7 +252,7 @@ def _main() -> int:
         {
             "id": "external_reference_mini_checkpoint_one_step_train_parity",
             "expected_status": "MISSING_INPUT",
-            "reason_must_contain": ["external training reference", "compress_ratio=4", "mini checkpoint"],
+            "reason_must_contain": ["external training reference", "routed MoE", "mini checkpoint"],
         },
     ]
 

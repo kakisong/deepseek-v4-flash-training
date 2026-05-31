@@ -1,0 +1,79 @@
+{
+  "batch_size": 1,
+  "boundary": "This closes an external training-reference gate for a one-layer DeepSeek-V4 training block. Routed MoE and loaded mini-checkpoint SFT are intentionally left as follow-up extensions.",
+  "checks": {
+    "grad_max_abs": true,
+    "grad_tensor_sets_match": true,
+    "input_grad_max_abs": true,
+    "loss_abs": true,
+    "output_max_abs": true,
+    "state_after_step_max_abs": true
+  },
+  "comparison": {
+    "extra_reference_grad_tensors": [],
+    "grad": {
+      "max_abs": 1.1920928955078125e-07,
+      "name": "final_layernorm.weight",
+      "relative_l2_gap": 1.4540537703888745e-06
+    },
+    "input_grad": {
+      "exact_equal": false,
+      "max_abs": 3.725290298461914e-09,
+      "mean_abs": 6.831793464279201e-11,
+      "p99_abs": 9.313225746154785e-10,
+      "relative_l2_gap": 1.6224322414437609e-06
+    },
+    "loss_abs": 4.048051778227091e-07,
+    "missing_reference_grad_tensors": [],
+    "num_common_grad_tensors": 17,
+    "num_common_state_tensors": 32,
+    "num_megatron_grad_tensors": 17,
+    "num_reference_grad_tensors": 17,
+    "output": {
+      "exact_equal": false,
+      "max_abs": 0.03125,
+      "mean_abs": 0.00017208450299222022,
+      "p99_abs": 0.00390625,
+      "relative_l2_gap": 5.298217594651433e-07
+    },
+    "state_after_step": {
+      "max_abs": 4.656612873077393e-10,
+      "name": "layers.0.self_attention.compressor.wkv.weight",
+      "relative_l2_gap": 0.0
+    }
+  },
+  "config": {
+    "compress_ratio": 4,
+    "compressed_kv_groups": 576,
+    "dsv4_hc_mult": 4,
+    "dsv4_hc_sinkhorn_iters": 2,
+    "ffn_hidden_size": 1024,
+    "hidden_size": 4096,
+    "indexer_selection_pressure": true,
+    "indexer_topk": 512,
+    "mlp": "standard GELU MLP",
+    "normalization": "RMSNorm",
+    "num_attention_heads": 8,
+    "num_layers": 1
+  },
+  "date": "2026-05-31",
+  "failures": [],
+  "manual_update": {
+    "lr": 0.0001,
+    "rule": "sgd"
+  },
+  "num_parameters": 76631235,
+  "numerical_note": "compress_ratio=4 exercises the V4 indexer top-k path. When compressed_kv_groups exceeds indexer_topk, explicit PyTorch indexer scores can differ from TileLang fast-math ordering near the top-k boundary; the gate therefore uses a bounded BF16/indexer-selection forward tolerance while still requiring gradient and one-step update bounds.",
+  "reference": "explicit PyTorch formula reference outside the Megatron module forward graph",
+  "scope": "external PyTorch training reference vs Megatron/Miles DeepSeek-V4 one-layer compress_ratio=4 TransformerBlock",
+  "seed": 20260531,
+  "seqlen": 2304,
+  "status": "PASS",
+  "thresholds": {
+    "max_grad_abs": 1e-06,
+    "max_input_grad_abs": 2e-07,
+    "max_loss_abs": 1e-06,
+    "max_output_abs": 0.04,
+    "max_state_abs": 1e-08
+  }
+}
