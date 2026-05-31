@@ -304,7 +304,7 @@
       "train_selected_state_max_abs_global_max": 2.2351741790771484e-08,
       "train_status": "FAIL"
     },
-    "mini_external_full_reference_routing_replay_forward": {
+    "mini_external_full_reference_routing_replay_forward_tolerance": {
       "artifact": "deepseek-v4-mini-external-full-reference-bf16-routing-replay-tolerance-20260531.json",
       "status": "PASS"
     },

@@ -97,7 +97,7 @@ def _main() -> int:
             "deepseek-v4-mini-checkpoint-correctness-gate-20260531.json",
             "PASS",
         ),
-        "mini_external_full_reference_routing_replay_forward": (
+        "mini_external_full_reference_routing_replay_forward_tolerance": (
             "deepseek-v4-mini-external-full-reference-bf16-routing-replay-tolerance-20260531.json",
             "PASS",
         ),

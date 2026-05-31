@@ -1120,6 +1120,8 @@ forward-only routing replay 的 BF16 容差 gate 为 `PASS`：
 
 这个 `FAIL` 的解释不是“训练链路新失败”，也不是“缺少输入”。它说明：当完整 4-layer forward 仍保留约 `1e-5` relative L2 的 BF16 连续 drift 时，对完整图做 `delta.backward()` 会在部分小范数 selected 参数上放大梯度 delta。这个 monolithic external train delta 因此只作为 strict boundary / diagnostic 使用，不作为最终训练正确性 PASS gate。
 
+需要说明的是：这里的判定信号是 `selected_grad_*`，**不是** `selected_state_max_abs_global_max`。后者用的是诊断性 manual SGD `lr=1e-7`，所以 state delta ≈ `grad × 1e-7`：即使最坏 grad 达到 `1.0`，state delta 也只有约 `1e-7`，恒在 `2e-5` 阈值以下约 200×。换句话说 selected-state 这条边界是 lr 选择的结果、不携带独立的梯度质量信息；真正记录这次 diagnostic 失败的是放大后的 selected-gradient delta。
+
 最终采用的训练证明链仍是组合证明：SFT loss forward/backward/update explicit reference、attention-output SFT one-step replay、attention I/O local training-step、c0/c4/c128 external training reference、score-routed MoE block reference、真实 EP=8 MoELayer reference、optimizer update math 和 mini checkpoint correctness gate。full external forward PASS 加强了“完整 4-layer 数学结构可被显式 reference 重建”的证据；full external train FAIL 则明确说明 strict monolithic backward parity 仍未关闭。
 
 ## Mini Checkpoint Correctness Gate
