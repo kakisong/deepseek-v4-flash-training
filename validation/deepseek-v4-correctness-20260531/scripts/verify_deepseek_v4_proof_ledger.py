@@ -101,6 +101,10 @@ def _main() -> int:
             "deepseek-v4-sft-loss-reference-20260531.json",
             "PASS",
         ),
+        "sft_loss_train_explicit_reference": (
+            "deepseek-v4-sft-loss-train-reference-20260531.json",
+            "PASS",
+        ),
         "external_training_reference_1layer": (
             "deepseek-v4-external-training-reference-1layer-20260531.json",
             "PASS",
@@ -272,6 +276,7 @@ def _main() -> int:
 
     mini_correctness = _load(base, "deepseek-v4-mini-checkpoint-correctness-gate-20260531.json")
     sft_loss_reference = _load(base, required_pass["sft_loss_explicit_reference"][0])
+    sft_loss_train_reference = _load(base, required_pass["sft_loss_train_explicit_reference"][0])
     rerun_artifact = mini_correctness["loaded_checkpoint_sft"]["artifact"]
     rerun = _load(base, rerun_artifact)
     sft_loss_reference_bounds = {
@@ -315,6 +320,65 @@ def _main() -> int:
         failures,
         "sft_loss_reference.formula",
     )
+    sft_loss_train_reference_bounds = {
+        "artifact": required_pass["sft_loss_train_explicit_reference"][0],
+        "world_size": sft_loss_train_reference["world_size"],
+        "attention_impl": sft_loss_train_reference["attention_impl"],
+        "reference_formula": sft_loss_train_reference["reference_formula"],
+        "loss_abs_global_max": sft_loss_train_reference["comparison"]["loss_abs_global_max"],
+        "token_count_abs_global_max": sft_loss_train_reference["comparison"]["token_count_abs_global_max"],
+        "selected_grad_max_abs": sft_loss_train_reference["comparison"]["selected_grad_max_abs"],
+        "selected_grad_max_rel_gap": sft_loss_train_reference["comparison"]["selected_grad_max_rel_gap"],
+        "selected_state_max_abs": sft_loss_train_reference["comparison"]["selected_state_max_abs"],
+        "num_common_grad_tensors_global": sft_loss_train_reference["comparison"]["num_common_grad_tensors_global"],
+        "num_common_state_tensors_global": sft_loss_train_reference["comparison"]["num_common_state_tensors_global"],
+        "thresholds": sft_loss_train_reference["thresholds"],
+        "boundary": sft_loss_train_reference["boundary"],
+    }
+    gates["sft_loss_train_explicit_reference_bounds"] = sft_loss_train_reference_bounds
+    _check(sft_loss_train_reference_bounds["world_size"] == 8, failures, "sft_loss_train_reference.world_size")
+    _check(
+        sft_loss_train_reference_bounds["reference_formula"]
+        == "sum(-log_softmax(response_logits)[target_token] * loss_mask)",
+        failures,
+        "sft_loss_train_reference.formula",
+    )
+    _check(
+        sft_loss_train_reference_bounds["loss_abs_global_max"]
+        <= sft_loss_train_reference["thresholds"]["max_loss_abs"],
+        failures,
+        "sft_loss_train_reference.loss_bound",
+    )
+    _check(
+        sft_loss_train_reference_bounds["token_count_abs_global_max"]
+        <= sft_loss_train_reference["thresholds"]["max_token_count_abs"],
+        failures,
+        "sft_loss_train_reference.token_count_bound",
+    )
+    _check(
+        sft_loss_train_reference_bounds["selected_grad_max_abs"]
+        <= sft_loss_train_reference["thresholds"]["max_selected_grad_abs"],
+        failures,
+        "sft_loss_train_reference.grad_abs_bound",
+    )
+    _check(
+        sft_loss_train_reference_bounds["selected_grad_max_rel_gap"]
+        <= sft_loss_train_reference["thresholds"]["max_selected_grad_rel_gap"],
+        failures,
+        "sft_loss_train_reference.grad_rel_bound",
+    )
+    _check(
+        sft_loss_train_reference_bounds["selected_state_max_abs"]
+        <= sft_loss_train_reference["thresholds"]["max_selected_state_abs"],
+        failures,
+        "sft_loss_train_reference.state_abs_bound",
+    )
+    _check(
+        sft_loss_train_reference_bounds["num_common_grad_tensors_global"] > 0
+        and sft_loss_train_reference_bounds["num_common_state_tensors_global"] > 0,
+        failures,
+        "sft_loss_train_reference.tensor_sets",
+    )
     mini_bounds = {
         "strict_boundaries": mini_correctness["strict_boundaries"],
         "rerun_artifact": rerun_artifact,
@@ -325,6 +389,7 @@ def _main() -> int:
         "rerun_selected_state_abs_max": _max_comparison_value(rerun, "selected_state_max_abs"),
             "attention_io_training_step_bounds": mini_correctness["attention_io_training_step_bounds"],
             "sft_loss_reference": mini_correctness["sft_loss_reference"],
+            "sft_loss_train_reference": mini_correctness["sft_loss_train_reference"],
             "moe_evidence": mini_correctness["moe_evidence"],
         }
     gates["mini_checkpoint_correctness_gate_bounds"] = mini_bounds
@@ -360,6 +425,20 @@ def _main() -> int:
             mini_correctness["sft_loss_reference"][key] == sft_loss_reference_bounds[key],
             failures,
             f"mini_checkpoint_correctness.sft_loss_reference.{key}",
+        )
+    for key in (
+        "loss_abs_global_max",
+        "token_count_abs_global_max",
+        "selected_grad_max_abs",
+        "selected_grad_max_rel_gap",
+        "selected_state_max_abs",
+        "world_size",
+        "reference_formula",
+    ):
+        _check(
+            mini_correctness["sft_loss_train_reference"][key] == sft_loss_train_reference_bounds[key],
+            failures,
+            f"mini_checkpoint_correctness.sft_loss_train_reference.{key}",
         )
 
     attention_io_train = _load(base, "deepseek-v4-mini-attention-io-training-step-qatsim-20260531.json")
@@ -579,6 +658,7 @@ def _main() -> int:
             "external training-reference gates, validate the score-routed MoE external reference, "
             "validate the real EP=8 MoELayer external reference, "
             "validate the SFT loss explicit reference and "
+            "its backward/update explicit reference and "
             "mini-checkpoint correctness gate, and "
             "the official forward BF16 tolerance gate, and localize the remaining "
             "real-forward strict parity failure to BF16 attention forward-value drift "

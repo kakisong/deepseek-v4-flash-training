@@ -133,6 +133,7 @@ def main() -> int:
     attention_io_train = _load(base, "deepseek-v4-mini-attention-io-training-step-qatsim-20260531.json")
     e2e_tolerance = _load(base, "deepseek-v4-end-to-end-bf16-tolerance-20260531.json")
     sft_loss_reference = _load(base, "deepseek-v4-sft-loss-reference-20260531.json")
+    sft_loss_train_reference = _load(base, "deepseek-v4-sft-loss-train-reference-20260531.json")
     grouped_mlp = _load(base, "deepseek-v4-grouped-mlp-math-20260531.json")
     moe_dispatch = _load(base, "deepseek-v4-moe-ep8-dispatch-math-20260531.json")
     external_moe_ep8 = _load(base, "deepseek-v4-external-moe-ep8-reference-20260531.json")
@@ -147,6 +148,7 @@ def main() -> int:
 
     _check(_status(e2e_tolerance) == "PASS", failures, "end_to_end_bf16_tolerance.status")
     _check(_status(sft_loss_reference) == "PASS", failures, "sft_loss_reference.status")
+    _check(_status(sft_loss_train_reference) == "PASS", failures, "sft_loss_train_reference.status")
     _check(_status(optimizer) == "PASS", failures, "optimizer_update_math.status")
 
     strict_forward = {
@@ -279,6 +281,68 @@ def main() -> int:
         failures,
         "sft_loss_reference.token_count",
     )
+    sft_loss_train_reference_bounds = {
+        "artifact_status": _status(sft_loss_train_reference),
+        "world_size": sft_loss_train_reference["world_size"],
+        "attention_impl": sft_loss_train_reference["attention_impl"],
+        "reference_formula": sft_loss_train_reference["reference_formula"],
+        "loss_abs_global_max": sft_loss_train_reference["comparison"]["loss_abs_global_max"],
+        "token_count_abs_global_max": sft_loss_train_reference["comparison"]["token_count_abs_global_max"],
+        "selected_grad_max_abs": sft_loss_train_reference["comparison"]["selected_grad_max_abs"],
+        "selected_grad_max_rel_gap": sft_loss_train_reference["comparison"]["selected_grad_max_rel_gap"],
+        "selected_state_max_abs": sft_loss_train_reference["comparison"]["selected_state_max_abs"],
+        "num_common_grad_tensors_global": sft_loss_train_reference["comparison"]["num_common_grad_tensors_global"],
+        "num_common_state_tensors_global": sft_loss_train_reference["comparison"]["num_common_state_tensors_global"],
+        "boundary": sft_loss_train_reference["boundary"],
+        "thresholds": sft_loss_train_reference["thresholds"],
+    }
+    _check(sft_loss_train_reference_bounds["world_size"] == 8, failures, "sft_loss_train_reference.world_size")
+    _check(
+        sft_loss_train_reference_bounds["reference_formula"]
+        == "sum(-log_softmax(response_logits)[target_token] * loss_mask)",
+        failures,
+        "sft_loss_train_reference.formula",
+    )
+    _check(
+        sft_loss_train_reference_bounds["loss_abs_global_max"]
+        <= sft_loss_train_reference["thresholds"]["max_loss_abs"],
+        failures,
+        "sft_loss_train_reference.loss",
+    )
+    _check(
+        sft_loss_train_reference_bounds["token_count_abs_global_max"]
+        <= sft_loss_train_reference["thresholds"]["max_token_count_abs"],
+        failures,
+        "sft_loss_train_reference.token_count",
+    )
+    _check(
+        sft_loss_train_reference_bounds["selected_grad_max_abs"]
+        <= sft_loss_train_reference["thresholds"]["max_selected_grad_abs"],
+        failures,
+        "sft_loss_train_reference.grad_abs",
+    )
+    _check(
+        sft_loss_train_reference_bounds["selected_grad_max_rel_gap"]
+        <= sft_loss_train_reference["thresholds"]["max_selected_grad_rel_gap"],
+        failures,
+        "sft_loss_train_reference.grad_rel",
+    )
+    _check(
+        sft_loss_train_reference_bounds["selected_state_max_abs"]
+        <= sft_loss_train_reference["thresholds"]["max_selected_state_abs"],
+        failures,
+        "sft_loss_train_reference.state_abs",
+    )
+    _check(
+        sft_loss_train_reference_bounds["num_common_grad_tensors_global"] > 0,
+        failures,
+        "sft_loss_train_reference.grad_tensors",
+    )
+    _check(
+        sft_loss_train_reference_bounds["num_common_state_tensors_global"] > 0,
+        failures,
+        "sft_loss_train_reference.state_tensors",
+    )
 
     _check(_status(grouped_mlp) == "PASS", failures, "grouped_mlp_math.status")
     _check(_all_case_status(grouped_mlp), failures, "grouped_mlp_math.all_cases")
@@ -404,8 +468,9 @@ def main() -> int:
             "The Miles DeepSeek-V4 mini-checkpoint training path is correct under the declared BF16 "
             "runtime tolerance: loaded-checkpoint SFT one-step execution is finite, routed MoE math "
             "and EP=8 dispatch/real MoELayer execution are independently reference-checked, "
-            "attention training drift is bounded, and complete SFT loss/gradient/update parity "
-            "passes after replaying the localized attention forward-value drift."
+            "the SFT loss objective is independently checked through backward/update, attention "
+            "training drift is bounded, and complete SFT loss/gradient/update parity passes after "
+            "replaying the localized attention forward-value drift."
         ),
         "strict_boundaries": {
             "real_non_injected_forward_strict_status": strict_forward_status,
@@ -425,6 +490,7 @@ def main() -> int:
         "real_non_injected_train_bf16_bounds": real_train_bounds,
         "attention_io_training_step_bounds": attention_io_bounds,
         "sft_loss_reference": sft_loss_reference_bounds,
+        "sft_loss_train_reference": sft_loss_train_reference_bounds,
         "moe_evidence": {
             "grouped_mlp_math_status": _status(grouped_mlp),
             "moe_ep8_dispatch_math_status": _status(moe_dispatch),

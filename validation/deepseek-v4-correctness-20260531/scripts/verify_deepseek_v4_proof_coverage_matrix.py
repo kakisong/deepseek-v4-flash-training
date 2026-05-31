@@ -167,13 +167,14 @@ def _main() -> int:
         },
         {
             "id": "mini_checkpoint_training_chain",
-            "claim": "mini SFT training chain is finite; attention-output replay gives exact loss parity and bounded gradient/update drift.",
+            "claim": "mini SFT training chain is finite; explicit SFT loss backward/update reference passes; attention-output replay gives exact loss parity and bounded gradient/update drift.",
             "evidence": [
                 "deepseek-v4-mini-train-step-qatsim-0415-20260531.json",
                 "deepseek-v4-mini-train-step-routing-replay-qatsim-20260531.json",
                 "deepseek-v4-mini-train-step-attention-output-replay-qatsim-20260531.json",
                 "deepseek-v4-mini-checkpoint-correctness-rerun-sft-attention-output-replay-20260531.json",
                 "deepseek-v4-mini-attention-io-training-step-qatsim-20260531.json",
+                "deepseek-v4-sft-loss-train-reference-20260531.json",
             ],
             "expected_failing_diagnostic_artifacts": [
                 "deepseek-v4-mini-train-step-qatsim-0415-20260531.json",
@@ -195,6 +196,7 @@ def _main() -> int:
                 "deepseek-v4-mini-checkpoint-correctness-gate-20260531.json",
                 "deepseek-v4-mini-checkpoint-correctness-rerun-sft-attention-output-replay-20260531.json",
                 "deepseek-v4-sft-loss-reference-20260531.json",
+                "deepseek-v4-sft-loss-train-reference-20260531.json",
                 "deepseek-v4-external-training-reference-1layer-moe-20260531.json",
                 "deepseek-v4-external-moe-ep8-reference-20260531.json",
             ],
@@ -204,9 +206,12 @@ def _main() -> int:
         },
         {
             "id": "sft_loss_explicit_reference",
-            "claim": "loaded mini checkpoint SFT loss matches an explicit PyTorch log_softmax/gather/loss_mask reference.",
-            "evidence": ["deepseek-v4-sft-loss-reference-20260531.json"],
-            "summary_gates": ["sft_loss_explicit_reference"],
+            "claim": "loaded mini checkpoint SFT loss and its backward/update surface match an explicit PyTorch log_softmax/gather/loss_mask reference.",
+            "evidence": [
+                "deepseek-v4-sft-loss-reference-20260531.json",
+                "deepseek-v4-sft-loss-train-reference-20260531.json",
+            ],
+            "summary_gates": ["sft_loss_explicit_reference", "sft_loss_train_explicit_reference"],
             "doc_sections": ["SFT Loss Explicit Reference"],
             "status": "PROVED",
         },

@@ -1,6 +1,6 @@
 {
   "artifacts_dir_name": "artifacts",
-  "conclusion": "Recorded artifacts consistently prove the covered HC/QAT/attention/MLP/MoE/training-step gates, validate the non-compressed, c4 indexer, and deterministic compressed external training-reference gates, validate the score-routed MoE external reference, validate the real EP=8 MoELayer external reference, validate the SFT loss explicit reference and mini-checkpoint correctness gate, and the official forward BF16 tolerance gate, and localize the remaining real-forward strict parity failure to BF16 attention forward-value drift amplified by the full model.",
+  "conclusion": "Recorded artifacts consistently prove the covered HC/QAT/attention/MLP/MoE/training-step gates, validate the non-compressed, c4 indexer, and deterministic compressed external training-reference gates, validate the score-routed MoE external reference, validate the real EP=8 MoELayer external reference, validate the SFT loss explicit reference and its backward/update explicit reference and mini-checkpoint correctness gate, and the official forward BF16 tolerance gate, and localize the remaining real-forward strict parity failure to BF16 attention forward-value drift amplified by the full model.",
   "date": "2026-05-31",
   "failures": [],
   "gates": {
@@ -225,6 +225,27 @@
         "token_count_abs_global_max": 0.0,
         "world_size": 8
       },
+      "sft_loss_train_reference": {
+        "artifact_status": "PASS",
+        "attention_impl": "dense",
+        "boundary": "Shares the Miles/Megatron model forward path; proves SFT objective/backward/update against an explicit PyTorch loss formula by backpropagating their loss delta, not a monolithic external model-forward reference.",
+        "loss_abs_global_max": 0.00048828125,
+        "num_common_grad_tensors_global": 272,
+        "num_common_state_tensors_global": 272,
+        "reference_formula": "sum(-log_softmax(response_logits)[target_token] * loss_mask)",
+        "selected_grad_max_abs": 0.009491967037320137,
+        "selected_grad_max_rel_gap": 0.006301201940482904,
+        "selected_state_max_abs": 9.531504474580288e-10,
+        "thresholds": {
+          "max_loss_abs": 0.002,
+          "max_selected_grad_abs": 0.01,
+          "max_selected_grad_rel_gap": 0.01,
+          "max_selected_state_abs": 2e-05,
+          "max_token_count_abs": 0.0
+        },
+        "token_count_abs_global_max": 0.0,
+        "world_size": 8
+      },
       "strict_boundaries": {
         "not_reclassified_as_strict_pass": true,
         "real_non_injected_forward_strict_status": "FAIL",
@@ -362,6 +383,31 @@
         "max_logprob_abs": 0.002,
         "max_logprob_mean_abs": 2e-05,
         "max_loss_abs": 0.002
+      },
+      "token_count_abs_global_max": 0.0,
+      "world_size": 8
+    },
+    "sft_loss_train_explicit_reference": {
+      "artifact": "deepseek-v4-sft-loss-train-reference-20260531.json",
+      "status": "PASS"
+    },
+    "sft_loss_train_explicit_reference_bounds": {
+      "artifact": "deepseek-v4-sft-loss-train-reference-20260531.json",
+      "attention_impl": "dense",
+      "boundary": "Shares the Miles/Megatron model forward path; proves SFT objective/backward/update against an explicit PyTorch loss formula by backpropagating their loss delta, not a monolithic external model-forward reference.",
+      "loss_abs_global_max": 0.00048828125,
+      "num_common_grad_tensors_global": 272,
+      "num_common_state_tensors_global": 272,
+      "reference_formula": "sum(-log_softmax(response_logits)[target_token] * loss_mask)",
+      "selected_grad_max_abs": 0.009491967037320137,
+      "selected_grad_max_rel_gap": 0.006301201940482904,
+      "selected_state_max_abs": 9.531504474580288e-10,
+      "thresholds": {
+        "max_loss_abs": 0.002,
+        "max_selected_grad_abs": 0.01,
+        "max_selected_grad_rel_gap": 0.01,
+        "max_selected_state_abs": 2e-05,
+        "max_token_count_abs": 0.0
       },
       "token_count_abs_global_max": 0.0,
       "world_size": 8

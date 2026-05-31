@@ -1,0 +1,228 @@
+{
+  "acceptance_note": "Raw validation was run on the loaded mini checkpoint with the production Megatron fused CE loss path. The selected-gradient delta is evaluated under a BF16/fused-CE tolerance; the resulting one-step SGD selected-state delta is bounded by max_selected_state_abs.",
+  "attention_impl": "dense",
+  "boundary": "Shares the Miles/Megatron model forward path; proves SFT objective/backward/update against an explicit PyTorch loss formula by backpropagating their loss delta, not a monolithic external model-forward reference.",
+  "checkpoint": "checkpoints",
+  "comparison": {
+    "label": "miles_loss_function_minus_explicit_sft_formula_delta",
+    "loss_abs_global_max": 0.00048828125,
+    "loss_abs_local": 0.0,
+    "nonfinite_grad_tensors_global": 0,
+    "num_common_grad_tensors_global": 272,
+    "num_common_state_tensors_global": 272,
+    "rank_details": [
+      {
+        "grad_delta_max_abs_name": "module.decoder.layers.2.self_attention.wkv.weight",
+        "nonfinite_grad_tensors": 0,
+        "num_selected_tensors": 34,
+        "num_selected_tensors_with_grad": 34,
+        "rank": 0,
+        "state_delta_max_abs_name": "module.decoder.layers.2.self_attention.wkv.weight"
+      },
+      {
+        "grad_delta_max_abs_name": "module.decoder.layers.0.self_attention.wkv.weight",
+        "nonfinite_grad_tensors": 0,
+        "num_selected_tensors": 34,
+        "num_selected_tensors_with_grad": 34,
+        "rank": 1,
+        "state_delta_max_abs_name": "module.decoder.layers.0.self_attention.wkv.weight"
+      },
+      {
+        "grad_delta_max_abs_name": "module.decoder.layers.0.self_attention.wkv.weight",
+        "nonfinite_grad_tensors": 0,
+        "num_selected_tensors": 34,
+        "num_selected_tensors_with_grad": 34,
+        "rank": 2,
+        "state_delta_max_abs_name": "module.decoder.layers.0.self_attention.wkv.weight"
+      },
+      {
+        "grad_delta_max_abs_name": "module.decoder.layers.2.self_attention.wkv.weight",
+        "nonfinite_grad_tensors": 0,
+        "num_selected_tensors": 34,
+        "num_selected_tensors_with_grad": 34,
+        "rank": 3,
+        "state_delta_max_abs_name": "module.decoder.layers.2.self_attention.wkv.weight"
+      },
+      {
+        "grad_delta_max_abs_name": "module.decoder.layers.2.self_attention.wkv.weight",
+        "nonfinite_grad_tensors": 0,
+        "num_selected_tensors": 34,
+        "num_selected_tensors_with_grad": 34,
+        "rank": 4,
+        "state_delta_max_abs_name": "module.decoder.layers.2.self_attention.wkv.weight"
+      },
+      {
+        "grad_delta_max_abs_name": "module.decoder.layers.2.self_attention.wkv.weight",
+        "nonfinite_grad_tensors": 0,
+        "num_selected_tensors": 34,
+        "num_selected_tensors_with_grad": 34,
+        "rank": 5,
+        "state_delta_max_abs_name": "module.decoder.layers.2.self_attention.wkv.weight"
+      },
+      {
+        "grad_delta_max_abs_name": "module.decoder.layers.0.self_attention.wkv.weight",
+        "nonfinite_grad_tensors": 0,
+        "num_selected_tensors": 34,
+        "num_selected_tensors_with_grad": 34,
+        "rank": 6,
+        "state_delta_max_abs_name": "module.decoder.layers.0.self_attention.wkv.weight"
+      },
+      {
+        "grad_delta_max_abs_name": "module.decoder.layers.0.self_attention.wkv.weight",
+        "nonfinite_grad_tensors": 0,
+        "num_selected_tensors": 34,
+        "num_selected_tensors_with_grad": 34,
+        "rank": 7,
+        "state_delta_max_abs_name": "module.decoder.layers.0.self_attention.wkv.weight"
+      }
+    ],
+    "selected_grad_delta_l2_norm": 2.96398111466929,
+    "selected_grad_delta_relative_to_param_l2": 0.006301201940482904,
+    "selected_grad_max_abs": 0.009491967037320137,
+    "selected_grad_max_rel_gap": 0.006301201940482904,
+    "selected_state_max_abs": 9.531504474580288e-10,
+    "selected_state_max_rel_gap": 0.0,
+    "token_count_abs_global_max": 0.0,
+    "token_count_abs_local": 0.0
+  },
+  "date": "2026-05-31",
+  "failures": [],
+  "local_stats_by_rank": [
+    {
+      "explicit_loss": 6819.36865234375,
+      "loss_delta": 0.0,
+      "miles_loss": 6819.36865234375,
+      "rank": 0,
+      "selected_grad_delta_max_abs": 0.009491967037320137,
+      "token_count": 402.0
+    },
+    {
+      "explicit_loss": 6818.16552734375,
+      "loss_delta": 0.0,
+      "miles_loss": 6818.16552734375,
+      "rank": 1,
+      "selected_grad_delta_max_abs": 0.009491967037320137,
+      "token_count": 402.0
+    },
+    {
+      "explicit_loss": 6817.9375,
+      "loss_delta": 0.0,
+      "miles_loss": 6817.9375,
+      "rank": 2,
+      "selected_grad_delta_max_abs": 0.009491967037320137,
+      "token_count": 402.0
+    },
+    {
+      "explicit_loss": 6818.71875,
+      "loss_delta": 0.0,
+      "miles_loss": 6818.71875,
+      "rank": 3,
+      "selected_grad_delta_max_abs": 0.009491967037320137,
+      "token_count": 402.0
+    },
+    {
+      "explicit_loss": 6818.96875,
+      "loss_delta": 0.00048828125,
+      "miles_loss": 6818.96923828125,
+      "rank": 4,
+      "selected_grad_delta_max_abs": 0.009491967037320137,
+      "token_count": 402.0
+    },
+    {
+      "explicit_loss": 6817.884765625,
+      "loss_delta": 0.0,
+      "miles_loss": 6817.884765625,
+      "rank": 5,
+      "selected_grad_delta_max_abs": 0.009491967037320137,
+      "token_count": 402.0
+    },
+    {
+      "explicit_loss": 6818.2783203125,
+      "loss_delta": 0.0,
+      "miles_loss": 6818.2783203125,
+      "rank": 6,
+      "selected_grad_delta_max_abs": 0.009491967037320137,
+      "token_count": 402.0
+    },
+    {
+      "explicit_loss": 6818.2451171875,
+      "loss_delta": 0.0,
+      "miles_loss": 6818.2451171875,
+      "rank": 7,
+      "selected_grad_delta_max_abs": 0.009491967037320137,
+      "token_count": 402.0
+    }
+  ],
+  "manual_update": {
+    "adamw_beta1": 0.9,
+    "adamw_beta2": 0.98,
+    "adamw_eps": 1e-08,
+    "adamw_lr": 1e-07,
+    "adamw_step": null,
+    "adamw_weight_decay": 0.1,
+    "adamw_zero_moment_initial_state": false,
+    "rule": "sgd",
+    "selected_only": true,
+    "sgd_lr": 1e-07
+  },
+  "max_samples": 1,
+  "paths": {
+    "explicit_sft_formula": {
+      "global_stats": {
+        "loss_max": 6819.36865234375,
+        "loss_min": 6817.884765625,
+        "token_count_max": 402.0,
+        "token_count_min": 402.0
+      },
+      "loss": 6819.36865234375,
+      "loss_log": {
+        "count": 402.0,
+        "loss": 6819.36865234375
+      },
+      "per_sample": [
+        {
+          "explicit_loss_sum": 6819.36865234375,
+          "loss_tokens": 402.0,
+          "response_length": 402,
+          "sample": 0,
+          "total_length": 505
+        }
+      ],
+      "token_count": 402.0
+    },
+    "miles_loss_function": {
+      "global_stats": {
+        "loss_max": 6819.36865234375,
+        "loss_min": 6817.884765625,
+        "token_count_max": 402.0,
+        "token_count_min": 402.0
+      },
+      "loss": 6819.36865234375,
+      "loss_log": {
+        "count": 402.0,
+        "loss": 6819.36865234375
+      },
+      "token_count": 402.0
+    }
+  },
+  "reference_formula": "sum(-log_softmax(response_logits)[target_token] * loss_mask)",
+  "rollout_data_name": "1_0.pt",
+  "runtime": {
+    "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
+    "CUDA_DEVICE_MAX_CONNECTIONS": "1",
+    "MEGATRON_USE_KV_QAT": "1",
+    "NCCL_ALGO": null,
+    "deterministic_mode": false
+  },
+  "scope": "4-layer DeepSeek-V4 mini checkpoint SFT loss backward/update explicit PyTorch reference",
+  "seed": 20260531,
+  "status": "PASS",
+  "thresholds": {
+    "max_loss_abs": 0.002,
+    "max_selected_grad_abs": 0.01,
+    "max_selected_grad_rel_gap": 0.01,
+    "max_selected_state_abs": 2e-05,
+    "max_token_count_abs": 0.0
+  },
+  "world_size": 8
+}
