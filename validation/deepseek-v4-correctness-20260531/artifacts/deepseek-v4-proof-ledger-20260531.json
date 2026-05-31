@@ -1,6 +1,6 @@
 {
   "artifacts_dir_name": "artifacts",
-  "conclusion": "Recorded artifacts consistently prove the covered HC/QAT/attention/MLP/MoE/training-step gates, validate the non-compressed, c4 indexer, and deterministic compressed external training-reference gates, validate the score-routed MoE external reference, validate the SFT loss explicit reference and mini-checkpoint correctness gate, and the official forward BF16 tolerance gate, and localize the remaining real-forward strict parity failure to BF16 attention forward-value drift amplified by the full model.",
+  "conclusion": "Recorded artifacts consistently prove the covered HC/QAT/attention/MLP/MoE/training-step gates, validate the non-compressed, c4 indexer, and deterministic compressed external training-reference gates, validate the score-routed MoE external reference, validate the real EP=8 MoELayer external reference, validate the SFT loss explicit reference and mini-checkpoint correctness gate, and the official forward BF16 tolerance gate, and localize the remaining real-forward strict parity failure to BF16 attention forward-value drift amplified by the full model.",
   "date": "2026-05-31",
   "failures": [],
   "gates": {
@@ -33,6 +33,39 @@
     "environment_provenance": {
       "artifact": "deepseek-v4-environment-provenance-20260531.json",
       "status": "PASS"
+    },
+    "external_moe_ep8_reference": {
+      "artifact": "deepseek-v4-external-moe-ep8-reference-20260531.json",
+      "status": "PASS"
+    },
+    "external_moe_ep8_reference_bounds": {
+      "artifact": "deepseek-v4-external-moe-ep8-reference-20260531.json",
+      "expert_grad_max_abs_global_max": 0.0,
+      "expert_parallel_size": 8,
+      "expert_state_after_step_max_abs_global_max": 0.0,
+      "input_grad_max_abs_global_max": 7.62939453125e-06,
+      "loss_abs_global_max": 7.690023630857468e-05,
+      "num_local_experts_per_rank": 1,
+      "output_max_abs_global_max": 0.03125,
+      "per_expert_selected_tokens": [
+        12,
+        11,
+        12,
+        8,
+        12,
+        16,
+        13,
+        12
+      ],
+      "ranks_with_nonzero_local_expert_grad": 8,
+      "thresholds": {
+        "max_expert_grad_abs": 0.0002,
+        "max_input_grad_abs": 2e-05,
+        "max_loss_abs": 0.0001,
+        "max_output_abs": 0.04,
+        "max_state_abs": 1e-07
+      },
+      "world_size": 8
     },
     "external_reference_provenance": {
       "artifact": "deepseek-v4-external-reference-provenance-20260531.json",
@@ -141,6 +174,33 @@
             "max_output_abs": 0.04,
             "max_state_abs": 1e-07
           }
+        },
+        "external_moe_ep8_reference": {
+          "artifact_status": "PASS",
+          "expert_grad_max_abs_global_max": 0.0,
+          "expert_state_after_step_max_abs_global_max": 0.0,
+          "input_grad_max_abs_global_max": 7.62939453125e-06,
+          "loss_abs_global_max": 7.690023630857468e-05,
+          "output_max_abs_global_max": 0.03125,
+          "per_expert_selected_tokens": [
+            12,
+            11,
+            12,
+            8,
+            12,
+            16,
+            13,
+            12
+          ],
+          "ranks_with_nonzero_local_expert_grad": 8,
+          "thresholds": {
+            "max_expert_grad_abs": 0.0002,
+            "max_input_grad_abs": 2e-05,
+            "max_loss_abs": 0.0001,
+            "max_output_abs": 0.04,
+            "max_state_abs": 1e-07
+          },
+          "world_size": 8
         },
         "grouped_mlp_math_status": "PASS",
         "mlp_expert_replay_key_checks": {

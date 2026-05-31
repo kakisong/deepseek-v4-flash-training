@@ -92,6 +92,29 @@ def _external_reference_summary(payload: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _external_moe_ep8_summary(payload: Dict[str, Any]) -> Dict[str, Any]:
+    summary = payload["global_summary"]
+    thresholds = payload["thresholds"]
+    return {
+        "artifact_status": _status(payload),
+        "world_size": payload["world_size"],
+        "loss_abs_global_max": summary["loss_abs_global_max"],
+        "output_max_abs_global_max": summary["output_max_abs_global_max"],
+        "input_grad_max_abs_global_max": summary["input_grad_max_abs_global_max"],
+        "expert_grad_max_abs_global_max": summary["expert_grad_max_abs_global_max"],
+        "expert_state_after_step_max_abs_global_max": summary["expert_state_after_step_max_abs_global_max"],
+        "per_expert_selected_tokens": summary["per_expert_selected_tokens"],
+        "ranks_with_nonzero_local_expert_grad": summary["ranks_with_nonzero_local_expert_grad"],
+        "thresholds": {
+            "max_loss_abs": thresholds["max_loss_abs"],
+            "max_output_abs": thresholds["max_output_abs"],
+            "max_input_grad_abs": thresholds["max_input_grad_abs"],
+            "max_expert_grad_abs": thresholds["max_expert_grad_abs"],
+            "max_state_abs": thresholds["max_state_abs"],
+        },
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--artifacts-dir", type=Path, default=Path("docs/en/advanced"))
@@ -112,6 +135,7 @@ def main() -> int:
     sft_loss_reference = _load(base, "deepseek-v4-sft-loss-reference-20260531.json")
     grouped_mlp = _load(base, "deepseek-v4-grouped-mlp-math-20260531.json")
     moe_dispatch = _load(base, "deepseek-v4-moe-ep8-dispatch-math-20260531.json")
+    external_moe_ep8 = _load(base, "deepseek-v4-external-moe-ep8-reference-20260531.json")
     mlp_replay = _load(base, "deepseek-v4-mlp-expert-replay-qatsim-0415-20260531.json")
     optimizer = _load(base, "deepseek-v4-optimizer-update-math-20260531.json")
     external_refs = {
@@ -261,6 +285,55 @@ def main() -> int:
     _check(_status(moe_dispatch) == "PASS", failures, "moe_ep8_dispatch_math.status")
     _check(moe_dispatch.get("expert_parallel_size") == 8, failures, "moe_ep8_dispatch_math.ep8")
     _check(_all_case_status(moe_dispatch), failures, "moe_ep8_dispatch_math.all_cases")
+    external_moe_ep8_bounds = _external_moe_ep8_summary(external_moe_ep8)
+    _check(_status(external_moe_ep8) == "PASS", failures, "external_moe_ep8_reference.status")
+    _check(external_moe_ep8.get("world_size") == 8, failures, "external_moe_ep8_reference.world_size")
+    _check(
+        external_moe_ep8["config"].get("expert_parallel_size") == 8
+        and external_moe_ep8["config"].get("num_local_experts_per_rank") == 1,
+        failures,
+        "external_moe_ep8_reference.ep8_layout",
+    )
+    _check(
+        external_moe_ep8_bounds["loss_abs_global_max"]
+        <= external_moe_ep8_bounds["thresholds"]["max_loss_abs"],
+        failures,
+        "external_moe_ep8_reference.loss",
+    )
+    _check(
+        external_moe_ep8_bounds["output_max_abs_global_max"]
+        <= external_moe_ep8_bounds["thresholds"]["max_output_abs"],
+        failures,
+        "external_moe_ep8_reference.output",
+    )
+    _check(
+        external_moe_ep8_bounds["input_grad_max_abs_global_max"]
+        <= external_moe_ep8_bounds["thresholds"]["max_input_grad_abs"],
+        failures,
+        "external_moe_ep8_reference.input_grad",
+    )
+    _check(
+        external_moe_ep8_bounds["expert_grad_max_abs_global_max"]
+        <= external_moe_ep8_bounds["thresholds"]["max_expert_grad_abs"],
+        failures,
+        "external_moe_ep8_reference.expert_grad",
+    )
+    _check(
+        external_moe_ep8_bounds["expert_state_after_step_max_abs_global_max"]
+        <= external_moe_ep8_bounds["thresholds"]["max_state_abs"],
+        failures,
+        "external_moe_ep8_reference.state_after_step",
+    )
+    _check(
+        all(count > 0 for count in external_moe_ep8_bounds["per_expert_selected_tokens"]),
+        failures,
+        "external_moe_ep8_reference.all_experts_selected",
+    )
+    _check(
+        external_moe_ep8_bounds["ranks_with_nonzero_local_expert_grad"] == external_moe_ep8["world_size"],
+        failures,
+        "external_moe_ep8_reference.nonzero_expert_grad",
+    )
     _check(_status(mlp_replay) == "PASS_WITH_DRIFT_RECORDED", failures, "mlp_expert_replay.status")
     _check(
         bool(mlp_replay["key_checks"]["official_formula_total_replay_matches_official_ffn"]),
@@ -330,9 +403,9 @@ def main() -> int:
         "claim": (
             "The Miles DeepSeek-V4 mini-checkpoint training path is correct under the declared BF16 "
             "runtime tolerance: loaded-checkpoint SFT one-step execution is finite, routed MoE math "
-            "and EP=8 dispatch are independently reference-checked, attention training drift is "
-            "bounded, and complete SFT loss/gradient/update parity passes after replaying the "
-            "localized attention forward-value drift."
+            "and EP=8 dispatch/real MoELayer execution are independently reference-checked, "
+            "attention training drift is bounded, and complete SFT loss/gradient/update parity "
+            "passes after replaying the localized attention forward-value drift."
         ),
         "strict_boundaries": {
             "real_non_injected_forward_strict_status": strict_forward_status,
@@ -355,6 +428,7 @@ def main() -> int:
         "moe_evidence": {
             "grouped_mlp_math_status": _status(grouped_mlp),
             "moe_ep8_dispatch_math_status": _status(moe_dispatch),
+            "external_moe_ep8_reference": external_moe_ep8_bounds,
             "mlp_expert_replay_status": _status(mlp_replay),
             "mlp_expert_replay_key_checks": mlp_replay["key_checks"],
             "external_moe_block_reference": external_reference_bounds["moe"],

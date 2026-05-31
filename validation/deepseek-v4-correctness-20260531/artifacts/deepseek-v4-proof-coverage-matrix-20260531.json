@@ -142,21 +142,23 @@
       ]
     },
     {
-      "claim": "TE grouped MLP and EP=8 all-to-all dispatcher math pass forward/backward/update checks.",
+      "claim": "TE grouped MLP, EP=8 all-to-all dispatcher math, and real EP=8 MoELayer external reference pass forward/backward/update checks.",
       "coverage_status": "PASS",
       "doc_sections": [
         "\u7b97\u5b50\u6570\u5b66\u9a8c\u8bc1"
       ],
       "evidence": [
         "deepseek-v4-grouped-mlp-math-20260531.json",
-        "deepseek-v4-moe-ep8-dispatch-math-20260531.json"
+        "deepseek-v4-moe-ep8-dispatch-math-20260531.json",
+        "deepseek-v4-external-moe-ep8-reference-20260531.json"
       ],
       "failures": [],
       "id": "moe_and_grouped_mlp_math",
       "status": "PROVED",
       "summary_gates": [
         "grouped_mlp_training_math",
-        "moe_ep8_alltoall_dispatch_math"
+        "moe_ep8_alltoall_dispatch_math",
+        "external_moe_ep8_reference"
       ]
     },
     {
@@ -263,7 +265,8 @@
         "deepseek-v4-mini-checkpoint-correctness-gate-20260531.json",
         "deepseek-v4-mini-checkpoint-correctness-rerun-sft-attention-output-replay-20260531.json",
         "deepseek-v4-sft-loss-reference-20260531.json",
-        "deepseek-v4-external-training-reference-1layer-moe-20260531.json"
+        "deepseek-v4-external-training-reference-1layer-moe-20260531.json",
+        "deepseek-v4-external-moe-ep8-reference-20260531.json"
       ],
       "failures": [],
       "id": "mini_checkpoint_correctness_gate",
@@ -289,7 +292,7 @@
       ]
     },
     {
-      "claim": "One-layer DeepSeek-V4 training blocks pass explicit PyTorch external-reference forward/backward/update parity for non-compressed attention, compress_ratio=4 indexer, deterministic compress_ratio=128 compressed attention, and score-routed MoE.",
+      "claim": "DeepSeek-V4 training blocks and the real EP=8 MoELayer pass explicit PyTorch external-reference forward/backward/update parity for non-compressed attention, compress_ratio=4 indexer, deterministic compress_ratio=128 compressed attention, score-routed MoE, and production EP layout.",
       "coverage_status": "PASS",
       "doc_sections": [
         "External Training Reference"
@@ -298,14 +301,16 @@
         "deepseek-v4-external-training-reference-1layer-20260531.json",
         "deepseek-v4-external-training-reference-1layer-c4-20260531.json",
         "deepseek-v4-external-training-reference-1layer-c128-20260531.json",
-        "deepseek-v4-external-training-reference-1layer-moe-20260531.json"
+        "deepseek-v4-external-training-reference-1layer-moe-20260531.json",
+        "deepseek-v4-external-moe-ep8-reference-20260531.json"
       ],
       "failures": [],
       "id": "external_training_reference_1layer",
       "status": "PROVED",
       "summary_gates": [
         "external_training_reference_1layer",
-        "external_training_reference_1layer_moe"
+        "external_training_reference_1layer_moe",
+        "external_moe_ep8_reference"
       ]
     },
     {

@@ -1,11 +1,11 @@
 {
-  "artifacts_dir_name": "advanced",
+  "artifacts_dir_name": "artifacts",
   "attention_io_training_step_bounds": {
     "max_input_grad_abs": 9.5367431640625e-07,
     "max_output_abs": 0.0625,
     "max_state_after_step_abs": 0.0
   },
-  "claim": "The Miles DeepSeek-V4 mini-checkpoint training path is correct under the declared BF16 runtime tolerance: loaded-checkpoint SFT one-step execution is finite, routed MoE math and EP=8 dispatch are independently reference-checked, attention training drift is bounded, and complete SFT loss/gradient/update parity passes after replaying the localized attention forward-value drift.",
+  "claim": "The Miles DeepSeek-V4 mini-checkpoint training path is correct under the declared BF16 runtime tolerance: loaded-checkpoint SFT one-step execution is finite, routed MoE math and EP=8 dispatch/real MoELayer execution are independently reference-checked, attention training drift is bounded, and complete SFT loss/gradient/update parity passes after replaying the localized attention forward-value drift.",
   "conclusion": "Mini checkpoint-level correctness is PASS under the declared BF16 training tolerance; strict real-forward and strict real-SFT parity remain explicitly recorded boundaries.",
   "date": "2026-05-31",
   "external_attention_training_references": {
@@ -129,6 +129,33 @@
         "max_output_abs": 0.04,
         "max_state_abs": 1e-07
       }
+    },
+    "external_moe_ep8_reference": {
+      "artifact_status": "PASS",
+      "expert_grad_max_abs_global_max": 0.0,
+      "expert_state_after_step_max_abs_global_max": 0.0,
+      "input_grad_max_abs_global_max": 7.62939453125e-06,
+      "loss_abs_global_max": 7.690023630857468e-05,
+      "output_max_abs_global_max": 0.03125,
+      "per_expert_selected_tokens": [
+        12,
+        11,
+        12,
+        8,
+        12,
+        16,
+        13,
+        12
+      ],
+      "ranks_with_nonzero_local_expert_grad": 8,
+      "thresholds": {
+        "max_expert_grad_abs": 0.0002,
+        "max_input_grad_abs": 2e-05,
+        "max_loss_abs": 0.0001,
+        "max_output_abs": 0.04,
+        "max_state_abs": 1e-07
+      },
+      "world_size": 8
     },
     "grouped_mlp_math_status": "PASS",
     "mlp_expert_replay_key_checks": {

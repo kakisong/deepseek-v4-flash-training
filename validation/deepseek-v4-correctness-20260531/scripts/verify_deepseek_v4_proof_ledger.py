@@ -84,6 +84,10 @@ def _main() -> int:
         "transformer_block_training_step": ("deepseek-v4-transformer-block-training-step-qatsim-20260531.json", "PASS"),
         "grouped_mlp_math": ("deepseek-v4-grouped-mlp-math-20260531.json", "PASS"),
         "moe_ep8_dispatch_math": ("deepseek-v4-moe-ep8-dispatch-math-20260531.json", "PASS"),
+        "external_moe_ep8_reference": (
+            "deepseek-v4-external-moe-ep8-reference-20260531.json",
+            "PASS",
+        ),
         "attention_io_training_step": ("deepseek-v4-mini-attention-io-training-step-qatsim-20260531.json", "PASS"),
         "sft_attention_output_replay": (
             "deepseek-v4-mini-train-step-attention-output-replay-qatsim-20260531.json",
@@ -383,6 +387,70 @@ def _main() -> int:
         "attention_io_training_step.state_bound",
     )
 
+    external_moe_ep8 = _load(base, "deepseek-v4-external-moe-ep8-reference-20260531.json")
+    external_moe_ep8_summary = external_moe_ep8["global_summary"]
+    gates["external_moe_ep8_reference_bounds"] = {
+        "artifact": "deepseek-v4-external-moe-ep8-reference-20260531.json",
+        "world_size": external_moe_ep8["world_size"],
+        "expert_parallel_size": external_moe_ep8["config"]["expert_parallel_size"],
+        "num_local_experts_per_rank": external_moe_ep8["config"]["num_local_experts_per_rank"],
+        "loss_abs_global_max": external_moe_ep8_summary["loss_abs_global_max"],
+        "output_max_abs_global_max": external_moe_ep8_summary["output_max_abs_global_max"],
+        "input_grad_max_abs_global_max": external_moe_ep8_summary["input_grad_max_abs_global_max"],
+        "expert_grad_max_abs_global_max": external_moe_ep8_summary["expert_grad_max_abs_global_max"],
+        "expert_state_after_step_max_abs_global_max": external_moe_ep8_summary[
+            "expert_state_after_step_max_abs_global_max"
+        ],
+        "per_expert_selected_tokens": external_moe_ep8_summary["per_expert_selected_tokens"],
+        "ranks_with_nonzero_local_expert_grad": external_moe_ep8_summary["ranks_with_nonzero_local_expert_grad"],
+        "thresholds": external_moe_ep8["thresholds"],
+    }
+    _check(external_moe_ep8["world_size"] == 8, failures, "external_moe_ep8_reference.world_size")
+    _check(
+        external_moe_ep8["config"]["expert_parallel_size"] == 8
+        and external_moe_ep8["config"]["num_local_experts_per_rank"] == 1,
+        failures,
+        "external_moe_ep8_reference.ep8_layout",
+    )
+    _check(
+        external_moe_ep8_summary["loss_abs_global_max"] <= external_moe_ep8["thresholds"]["max_loss_abs"],
+        failures,
+        "external_moe_ep8_reference.loss_bound",
+    )
+    _check(
+        external_moe_ep8_summary["output_max_abs_global_max"] <= external_moe_ep8["thresholds"]["max_output_abs"],
+        failures,
+        "external_moe_ep8_reference.output_bound",
+    )
+    _check(
+        external_moe_ep8_summary["input_grad_max_abs_global_max"]
+        <= external_moe_ep8["thresholds"]["max_input_grad_abs"],
+        failures,
+        "external_moe_ep8_reference.input_grad_bound",
+    )
+    _check(
+        external_moe_ep8_summary["expert_grad_max_abs_global_max"]
+        <= external_moe_ep8["thresholds"]["max_expert_grad_abs"],
+        failures,
+        "external_moe_ep8_reference.expert_grad_bound",
+    )
+    _check(
+        external_moe_ep8_summary["expert_state_after_step_max_abs_global_max"]
+        <= external_moe_ep8["thresholds"]["max_state_abs"],
+        failures,
+        "external_moe_ep8_reference.state_bound",
+    )
+    _check(
+        all(count > 0 for count in external_moe_ep8_summary["per_expert_selected_tokens"]),
+        failures,
+        "external_moe_ep8_reference.all_experts_selected",
+    )
+    _check(
+        external_moe_ep8_summary["ranks_with_nonzero_local_expert_grad"] == external_moe_ep8["world_size"],
+        failures,
+        "external_moe_ep8_reference.nonzero_expert_grad",
+    )
+
     official_tolerance = _load(base, "deepseek-v4-official-forward-bf16-tolerance-20260531.json")
     gates["official_forward_bf16_tolerance_bounds"] = {
         "strict_forward_status": official_tolerance["strict_forward_status"],
@@ -509,6 +577,7 @@ def _main() -> int:
             "Recorded artifacts consistently prove the covered HC/QAT/attention/MLP/MoE/"
             "training-step gates, validate the non-compressed, c4 indexer, and deterministic compressed "
             "external training-reference gates, validate the score-routed MoE external reference, "
+            "validate the real EP=8 MoELayer external reference, "
             "validate the SFT loss explicit reference and "
             "mini-checkpoint correctness gate, and "
             "the official forward BF16 tolerance gate, and localize the remaining "
