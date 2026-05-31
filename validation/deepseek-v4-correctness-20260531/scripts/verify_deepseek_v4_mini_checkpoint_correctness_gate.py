@@ -139,6 +139,18 @@ def main() -> int:
     external_moe_ep8 = _load(base, "deepseek-v4-external-moe-ep8-reference-20260531.json")
     mlp_replay = _load(base, "deepseek-v4-mlp-expert-replay-qatsim-0415-20260531.json")
     optimizer = _load(base, "deepseek-v4-optimizer-update-math-20260531.json")
+    full_external_forward = _load(
+        base,
+        "deepseek-v4-mini-external-full-reference-bf16-routing-replay-tolerance-20260531.json",
+    )
+    full_external_train = _load(
+        base,
+        "deepseek-v4-mini-external-full-reference-bf16-routing-replay-train-tolerance-20260531.json",
+    )
+    full_external_router_debug = _load(
+        base,
+        "deepseek-v4-mini-external-full-reference-bf16-router-debug-20260531.json",
+    )
     external_refs = {
         "c0": _load(base, "deepseek-v4-external-training-reference-1layer-20260531.json"),
         "c4": _load(base, "deepseek-v4-external-training-reference-1layer-c4-20260531.json"),
@@ -150,6 +162,78 @@ def main() -> int:
     _check(_status(sft_loss_reference) == "PASS", failures, "sft_loss_reference.status")
     _check(_status(sft_loss_train_reference) == "PASS", failures, "sft_loss_train_reference.status")
     _check(_status(optimizer) == "PASS", failures, "optimizer_update_math.status")
+    _check(_status(full_external_forward) == "PASS", failures, "full_external_forward.status")
+    _check(
+        full_external_forward["routing_replay"]["mode"] == "miles_router_map_replay",
+        failures,
+        "full_external_forward.routing_replay",
+    )
+    _check(
+        full_external_forward["logit_gap_global"]["max_abs"]
+        <= full_external_forward["thresholds"]["max_logit_abs"],
+        failures,
+        "full_external_forward.logit_max_abs",
+    )
+    _check(
+        full_external_forward["logit_gap_global"]["mean_abs"]
+        <= full_external_forward["thresholds"]["max_logit_mean_abs"],
+        failures,
+        "full_external_forward.logit_mean_abs",
+    )
+    _check(
+        full_external_forward["logit_gap_global"]["p99_abs"]
+        <= full_external_forward["thresholds"]["max_logit_p99_abs"],
+        failures,
+        "full_external_forward.logit_p99_abs",
+    )
+    _check(
+        full_external_forward["logit_gap_global"]["relative_l2_gap"]
+        <= full_external_forward["thresholds"]["max_logit_rel_gap"],
+        failures,
+        "full_external_forward.logit_relative_l2",
+    )
+    _check(
+        full_external_forward["loss_abs_global_max"]
+        <= full_external_forward["thresholds"]["max_loss_abs"],
+        failures,
+        "full_external_forward.loss_abs",
+    )
+    _check(
+        full_external_forward["loss_abs_per_token_global_max"]
+        <= full_external_forward["thresholds"]["max_loss_abs_per_token"],
+        failures,
+        "full_external_forward.loss_abs_per_token",
+    )
+    _check(
+        full_external_forward["token_count_abs_global_max"] == 0.0,
+        failures,
+        "full_external_forward.token_count",
+    )
+    _check(_status(full_external_train) == "FAIL", failures, "full_external_train.strict_boundary_status")
+    _check(
+        "selected_grad_max_abs" in full_external_train["failures"]
+        and "selected_grad_relative_to_param_l2" in full_external_train["failures"],
+        failures,
+        "full_external_train.gradient_boundary_recorded",
+    )
+    _check(
+        full_external_train["selected_backward_update_delta"]["selected_state_max_abs_global_max"]
+        <= full_external_train["thresholds"]["max_selected_state_abs"],
+        failures,
+        "full_external_train.state_delta_bound",
+    )
+    _check(_status(full_external_router_debug) == "FAIL", failures, "full_external_router_debug.status")
+    for layer_idx in range(3):
+        _check(
+            full_external_router_debug["layer_gap_global"][f"layer_{layer_idx}.router_map"]["max_abs"] == 0.0,
+            failures,
+            f"full_external_router_debug.layer_{layer_idx}_hash_router_exact",
+        )
+    _check(
+        full_external_router_debug["layer_gap_global"]["layer_3.router_map"]["max_abs"] == 1.0,
+        failures,
+        "full_external_router_debug.layer_3_router_branch_flip_recorded",
+    )
 
     strict_forward = {
         item["label"]: item
@@ -503,6 +587,31 @@ def main() -> int:
         "supporting_pass_gates": {
             "end_to_end_bf16_tolerance": _status(e2e_tolerance),
             "optimizer_update_math": _status(optimizer),
+        },
+        "external_full_reference": {
+            "forward_artifact": "deepseek-v4-mini-external-full-reference-bf16-routing-replay-tolerance-20260531.json",
+            "forward_status": _status(full_external_forward),
+            "forward_tolerance_profile": full_external_forward["tolerance_profile"],
+            "forward_logit_gap_global": full_external_forward["logit_gap_global"],
+            "forward_loss_abs_global_max": full_external_forward["loss_abs_global_max"],
+            "forward_loss_abs_per_token_global_max": full_external_forward[
+                "loss_abs_per_token_global_max"
+            ],
+            "train_artifact": "deepseek-v4-mini-external-full-reference-bf16-routing-replay-train-tolerance-20260531.json",
+            "train_status": _status(full_external_train),
+            "train_failures": full_external_train["failures"],
+            "train_selected_backward_update_delta": full_external_train["selected_backward_update_delta"],
+            "router_debug_artifact": "deepseek-v4-mini-external-full-reference-bf16-router-debug-20260531.json",
+            "router_debug_status": _status(full_external_router_debug),
+            "router_debug_layer_3_router_map": full_external_router_debug["layer_gap_global"][
+                "layer_3.router_map"
+            ],
+            "boundary": (
+                "The loaded 4-layer full external forward reference passes with Miles routing replay "
+                "under BF16 tolerance. The monolithic backward/update delta remains a diagnostic "
+                "FAIL because residual forward drift is amplified in selected gradients; this is "
+                "recorded as a strict boundary, not reclassified as a training pass."
+            ),
         },
         "failures": failures,
         "conclusion": (

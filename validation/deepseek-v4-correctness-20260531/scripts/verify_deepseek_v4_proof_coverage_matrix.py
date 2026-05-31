@@ -15,6 +15,7 @@ PROVED_STATUSES = {
     "PASS_WITH_ATTENTION_DRIFT_LOCALIZED",
     "PASS_WITH_LAYERWISE_ATTENTION_DRIFT_LOCALIZED",
     "PASS_WITH_BF16_ATTENTION_IO_DRIFT_RECORDED",
+    "PASS_WITH_ROUTING_REPLAY_BF16_TOLERANCE",
     "RUN_WITH_DRIFT_RECORDED",
 }
 
@@ -205,6 +206,22 @@ def _main() -> int:
             "status": "PROVED_WITH_BF16_TOLERANCE",
         },
         {
+            "id": "mini_checkpoint_external_full_reference",
+            "claim": "loaded 4-layer mini checkpoint full external forward reference passes with Miles routing replay under BF16 tolerance, while monolithic train delta remains a recorded strict boundary.",
+            "evidence": [
+                "deepseek-v4-mini-external-full-reference-bf16-routing-replay-tolerance-20260531.json",
+                "deepseek-v4-mini-external-full-reference-bf16-routing-replay-train-tolerance-20260531.json",
+                "deepseek-v4-mini-external-full-reference-bf16-router-debug-20260531.json",
+            ],
+            "expected_failing_diagnostic_artifacts": [
+                "deepseek-v4-mini-external-full-reference-bf16-routing-replay-train-tolerance-20260531.json",
+                "deepseek-v4-mini-external-full-reference-bf16-router-debug-20260531.json",
+            ],
+            "summary_gates": ["mini_checkpoint_external_full_forward_reference"],
+            "doc_sections": ["Mini Checkpoint Full External Reference"],
+            "status": "PROVED_WITH_ROUTING_REPLAY_BF16_TOLERANCE",
+        },
+        {
             "id": "sft_loss_explicit_reference",
             "claim": "loaded mini checkpoint SFT loss and its backward/update surface match an explicit PyTorch log_softmax/gather/loss_mask reference.",
             "evidence": [
@@ -290,8 +307,8 @@ def _main() -> int:
         },
         {
             "id": "external_reference_mini_checkpoint_one_step_train_parity",
-            "expected_status": "MISSING_INPUT",
-            "reason_must_contain": ["external training reference", "routed MoE", "mini checkpoint", "SFT loss"],
+            "expected_status": "FAIL_DIAGNOSTIC",
+            "reason_must_contain": ["full external", "routing replay", "selected_grad"],
         },
     ]
 

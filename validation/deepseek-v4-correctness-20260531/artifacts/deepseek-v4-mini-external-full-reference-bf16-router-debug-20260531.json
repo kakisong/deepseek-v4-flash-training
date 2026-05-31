@@ -1,0 +1,285 @@
+{
+  "attention_impl": "dense",
+  "backward_update_check": "SKIPPED_FORWARD_ONLY",
+  "boundary": "This is a full loaded-checkpoint external forward/loss reference and a selected non-expert backward/update delta check. It intentionally does not reclassify real dense/sparse/tilelang backend strict parity. Full local-expert EP all-to-all backward/update remains covered by the dedicated real EP=8 MoELayer external reference, because monolithic full-model replicated-weight gradients and local-expert all-source gradients have different distributed reduction semantics.",
+  "checkpoint_name": "checkpoints",
+  "date": "2026-05-31",
+  "failures": [
+    "logit_max_abs",
+    "logit_p99_abs",
+    "logit_relative_l2_gap",
+    "loss_abs"
+  ],
+  "layer_gap_global": {
+    "layer_0": {
+      "max_abs": 0.125,
+      "mean_abs": 3.95502574974671e-05,
+      "p99_abs": 0.0009765625,
+      "relative_l2_gap": 8.02284649936702e-07,
+      "status": "OK"
+    },
+    "layer_0.input_layernorm": {
+      "max_abs": 0.000244140625,
+      "mean_abs": 2.9831426218152046e-10,
+      "p99_abs": 0.0,
+      "relative_l2_gap": 0.0,
+      "status": "OK"
+    },
+    "layer_0.mlp": {
+      "max_abs": 0.125,
+      "mean_abs": 0.00026661070296540856,
+      "p99_abs": 0.00390625,
+      "relative_l2_gap": 7.747464765284207e-07,
+      "status": "OK"
+    },
+    "layer_0.pre_mlp_layernorm": {
+      "max_abs": 0.0078125,
+      "mean_abs": 2.5488563551334664e-05,
+      "p99_abs": 0.0009765625,
+      "relative_l2_gap": 3.4444318763870996e-07,
+      "status": "OK"
+    },
+    "layer_0.router_map": {
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "p99_abs": 0.0,
+      "relative_l2_gap": 0.0,
+      "status": "OK"
+    },
+    "layer_0.router_probs": {
+      "max_abs": 0.005859375,
+      "mean_abs": 7.217749953269958e-07,
+      "p99_abs": 0.0,
+      "relative_l2_gap": 4.2677018408099343e-07,
+      "status": "OK"
+    },
+    "layer_0.self_attention": {
+      "max_abs": 0.03125,
+      "mean_abs": 0.00016755773685872555,
+      "p99_abs": 0.00390625,
+      "relative_l2_gap": 2.550599429440581e-07,
+      "status": "OK"
+    },
+    "layer_1": {
+      "max_abs": 0.375,
+      "mean_abs": 0.000157412767293863,
+      "p99_abs": 0.001953125,
+      "relative_l2_gap": 1.0707400091014563e-06,
+      "status": "OK"
+    },
+    "layer_1.input_layernorm": {
+      "max_abs": 0.00244140625,
+      "mean_abs": 2.811382364598103e-05,
+      "p99_abs": 0.00048828125,
+      "relative_l2_gap": 2.663853440165731e-06,
+      "status": "OK"
+    },
+    "layer_1.mlp": {
+      "max_abs": 0.125,
+      "mean_abs": 0.0007774223340675235,
+      "p99_abs": 0.00390625,
+      "relative_l2_gap": 1.6891880478819843e-06,
+      "status": "OK"
+    },
+    "layer_1.pre_mlp_layernorm": {
+      "max_abs": 0.01171875,
+      "mean_abs": 0.000849110831040889,
+      "p99_abs": 0.00390625,
+      "relative_l2_gap": 1.5139914437800606e-05,
+      "status": "OK"
+    },
+    "layer_1.router_map": {
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "p99_abs": 0.0,
+      "relative_l2_gap": 0.0,
+      "status": "OK"
+    },
+    "layer_1.router_probs": {
+      "max_abs": 0.0078125,
+      "mean_abs": 6.249174475669861e-06,
+      "p99_abs": 0.0,
+      "relative_l2_gap": 3.916150773664029e-06,
+      "status": "OK"
+    },
+    "layer_1.self_attention": {
+      "max_abs": 0.0625,
+      "mean_abs": 0.0045578861609101295,
+      "p99_abs": 0.01953125,
+      "relative_l2_gap": 9.788441657554436e-06,
+      "status": "OK"
+    },
+    "layer_2": {
+      "max_abs": 0.5,
+      "mean_abs": 0.0002363911917200312,
+      "p99_abs": 0.001953125,
+      "relative_l2_gap": 9.073873306064684e-07,
+      "status": "OK"
+    },
+    "layer_2.input_layernorm": {
+      "max_abs": 0.015625,
+      "mean_abs": 0.00018834078218787909,
+      "p99_abs": 0.0009765625,
+      "relative_l2_gap": 1.569995934980195e-05,
+      "status": "OK"
+    },
+    "layer_2.mlp": {
+      "max_abs": 0.0625,
+      "mean_abs": 0.0014019741211086512,
+      "p99_abs": 0.005859375,
+      "relative_l2_gap": 1.1897977559294226e-05,
+      "status": "OK"
+    },
+    "layer_2.pre_mlp_layernorm": {
+      "max_abs": 0.0234375,
+      "mean_abs": 0.001648689853027463,
+      "p99_abs": 0.0068359375,
+      "relative_l2_gap": 2.6140530160922992e-05,
+      "status": "OK"
+    },
+    "layer_2.router_map": {
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "p99_abs": 0.0,
+      "relative_l2_gap": 0.0,
+      "status": "OK"
+    },
+    "layer_2.router_probs": {
+      "max_abs": 0.0078125,
+      "mean_abs": 1.0632909834384918e-05,
+      "p99_abs": 0.0,
+      "relative_l2_gap": 6.605386296154592e-06,
+      "status": "OK"
+    },
+    "layer_2.self_attention": {
+      "max_abs": 0.078125,
+      "mean_abs": 0.006380717270076275,
+      "p99_abs": 0.0234375,
+      "relative_l2_gap": 2.7531949050585425e-05,
+      "status": "OK"
+    },
+    "layer_3": {
+      "max_abs": 0.5,
+      "mean_abs": 0.0014441527891904116,
+      "p99_abs": 0.0185546875,
+      "relative_l2_gap": 8.044568338694269e-06,
+      "status": "OK"
+    },
+    "layer_3.input_layernorm": {
+      "max_abs": 0.00390625,
+      "mean_abs": 0.00020016080816276371,
+      "p99_abs": 0.0009765625,
+      "relative_l2_gap": 1.997771349848687e-05,
+      "status": "OK"
+    },
+    "layer_3.mlp": {
+      "max_abs": 0.26416015625,
+      "mean_abs": 0.010095128789544106,
+      "p99_abs": 0.06640625,
+      "relative_l2_gap": 0.003510736053122576,
+      "status": "OK"
+    },
+    "layer_3.pre_mlp_layernorm": {
+      "max_abs": 0.015625,
+      "mean_abs": 0.001319614122621715,
+      "p99_abs": 0.005859375,
+      "relative_l2_gap": 2.4851876444076382e-05,
+      "status": "OK"
+    },
+    "layer_3.router_map": {
+      "max_abs": 1.0,
+      "mean_abs": 0.0049285888671875,
+      "p99_abs": 0.0,
+      "relative_l2_gap": 0.10514322916666663,
+      "status": "OK"
+    },
+    "layer_3.router_probs": {
+      "max_abs": 0.23828125,
+      "mean_abs": 0.0006822971627116203,
+      "p99_abs": 0.001953125,
+      "relative_l2_gap": 0.024363164963727257,
+      "status": "OK"
+    },
+    "layer_3.self_attention": {
+      "max_abs": 0.125,
+      "mean_abs": 0.0069336434826254845,
+      "p99_abs": 0.0234375,
+      "relative_l2_gap": 2.469399794746696e-05,
+      "status": "OK"
+    }
+  },
+  "logit_gap_global": {
+    "max_abs": 2.296875,
+    "mean_abs": 0.03377578780055046,
+    "p99_abs": 0.228515625,
+    "relative_l2_gap": 0.00014250133649462704
+  },
+  "logit_gap_local": {
+    "max_abs": 2.28125,
+    "mean_abs": 0.03362835571169853,
+    "nonzero_abs_count": 50849706,
+    "numel": 66191360,
+    "p99_abs": 0.228515625,
+    "relative_l2_gap": 0.00014194756494967375
+  },
+  "loss_abs_global_max": 3.2626953125,
+  "loss_abs_local": 3.0400390625,
+  "manual_update": {
+    "lr": 1e-07,
+    "rule": "sgd"
+  },
+  "max_samples": 1,
+  "miles_loss": 6789.2734375,
+  "miles_loss_log": {
+    "count": 402.0,
+    "loss": 6789.2734375
+  },
+  "model_config": {
+    "dsv4_compress_ratios": [
+      0,
+      0,
+      4,
+      128
+    ],
+    "dsv4_hc_mult": 4,
+    "dsv4_hc_sinkhorn_iters": 20,
+    "dsv4_mode": true,
+    "dsv4_n_hash_layers": 3,
+    "expert_parallel_size": 8,
+    "hidden_size": 4096,
+    "local_experts_per_rank": 32,
+    "num_attention_heads": 64,
+    "num_layers": 4,
+    "num_moe_experts": 256,
+    "vocab_size": 129280
+  },
+  "precision_mode": {
+    "miles_fp8": "None",
+    "miles_fp8_recipe": "delayed",
+    "reference": "explicit BF16/FP32 PyTorch math; FP8 quantization is not simulated here"
+  },
+  "reference": "explicit PyTorch embedding + 4 DeepSeek-V4 layers + dense attention reference + EP=8 hash-routed / score-routed MoE forward + output head + SFT loss",
+  "reference_formula": "full_model_reference_then_sum(-log_softmax(response_logits)[target_token] * loss_mask)",
+  "reference_loss": 6792.3134765625,
+  "rollout_data_name": "1_0.pt",
+  "scope": "DeepSeek-V4 loaded 4-layer mini checkpoint full-model external reference",
+  "seed": 20260531,
+  "selected_backward_update_delta": {
+    "status": "SKIPPED_FORWARD_ONLY"
+  },
+  "status": "FAIL",
+  "thresholds": {
+    "max_logit_abs": 0.2,
+    "max_logit_mean_abs": 0.04,
+    "max_logit_p99_abs": 0.15,
+    "max_logit_rel_gap": 5e-06,
+    "max_loss_abs": 0.002,
+    "max_selected_grad_abs": 0.01,
+    "max_selected_grad_rel_gap": 0.01,
+    "max_selected_state_abs": 2e-05,
+    "max_token_count_abs": 0.0
+  },
+  "token_count_abs_global_max": 0.0,
+  "token_count_abs_local": 0.0,
+  "world_size": 8
+}

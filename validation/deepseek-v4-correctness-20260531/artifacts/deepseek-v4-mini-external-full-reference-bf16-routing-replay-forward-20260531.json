@@ -1,0 +1,91 @@
+{
+  "attention_impl": "dense",
+  "backward_update_check": "SKIPPED_FORWARD_ONLY",
+  "boundary": "This is a full loaded-checkpoint external forward/loss reference and a selected non-expert backward/update delta check. It intentionally does not reclassify real dense/sparse/tilelang backend strict parity. Full local-expert EP all-to-all backward/update remains covered by the dedicated real EP=8 MoELayer external reference, because monolithic full-model replicated-weight gradients and local-expert all-source gradients have different distributed reduction semantics.",
+  "checkpoint_name": "checkpoints",
+  "date": "2026-05-31",
+  "failures": [
+    "logit_max_abs",
+    "logit_relative_l2_gap",
+    "loss_abs"
+  ],
+  "layer_gap_global": null,
+  "logit_gap_global": {
+    "max_abs": 0.25,
+    "mean_abs": 0.011305308900773525,
+    "p99_abs": 0.04736328125,
+    "relative_l2_gap": 1.1485764424779e-05
+  },
+  "logit_gap_local": {
+    "max_abs": 0.25,
+    "mean_abs": 0.01125300768762827,
+    "nonzero_abs_count": 42510266,
+    "numel": 66191360,
+    "p99_abs": 0.046875,
+    "relative_l2_gap": 1.132726471830825e-05
+  },
+  "loss_abs_global_max": 1.41162109375,
+  "loss_abs_local": 1.216796875,
+  "manual_update": {
+    "lr": 1e-07,
+    "rule": "sgd"
+  },
+  "max_samples": 1,
+  "miles_loss": 6789.09765625,
+  "miles_loss_log": {
+    "count": 402.0,
+    "loss": 6789.09765625
+  },
+  "model_config": {
+    "dsv4_compress_ratios": [
+      0,
+      0,
+      4,
+      128
+    ],
+    "dsv4_hc_mult": 4,
+    "dsv4_hc_sinkhorn_iters": 20,
+    "dsv4_mode": true,
+    "dsv4_n_hash_layers": 3,
+    "expert_parallel_size": 8,
+    "hidden_size": 4096,
+    "local_experts_per_rank": 32,
+    "num_attention_heads": 64,
+    "num_layers": 4,
+    "num_moe_experts": 256,
+    "vocab_size": 129280
+  },
+  "precision_mode": {
+    "miles_fp8": "None",
+    "miles_fp8_recipe": "delayed",
+    "reference": "explicit BF16/FP32 PyTorch math; FP8 quantization is not simulated here"
+  },
+  "reference": "explicit PyTorch embedding + 4 DeepSeek-V4 layers + dense attention reference + EP=8 hash-routed / score-routed MoE forward + output head + SFT loss",
+  "reference_formula": "full_model_reference_then_sum(-log_softmax(response_logits)[target_token] * loss_mask)",
+  "reference_loss": 6790.314453125,
+  "rollout_data_name": "1_0.pt",
+  "routing_replay": {
+    "description": "When enabled, the reference fixes the discrete expert mask to the Miles router map and recomputes routing probabilities from reference scores through that fixed mask.",
+    "mode": "miles_router_map_replay"
+  },
+  "scope": "DeepSeek-V4 loaded 4-layer mini checkpoint full-model external reference",
+  "seed": 20260531,
+  "selected_backward_update_delta": {
+    "status": "SKIPPED_FORWARD_ONLY"
+  },
+  "status": "FAIL",
+  "thresholds": {
+    "max_logit_abs": 0.2,
+    "max_logit_mean_abs": 0.04,
+    "max_logit_p99_abs": 0.15,
+    "max_logit_rel_gap": 5e-06,
+    "max_loss_abs": 0.002,
+    "max_selected_grad_abs": 0.01,
+    "max_selected_grad_rel_gap": 0.01,
+    "max_selected_state_abs": 2e-05,
+    "max_token_count_abs": 0.0
+  },
+  "token_count_abs_global_max": 0.0,
+  "token_count_abs_local": 0.0,
+  "world_size": 8
+}

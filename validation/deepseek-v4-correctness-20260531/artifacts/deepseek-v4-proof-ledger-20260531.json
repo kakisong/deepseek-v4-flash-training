@@ -1,6 +1,6 @@
 {
-  "artifacts_dir_name": "artifacts",
-  "conclusion": "Recorded artifacts consistently prove the covered HC/QAT/attention/MLP/MoE/training-step gates, validate the non-compressed, c4 indexer, and deterministic compressed external training-reference gates, validate the score-routed MoE external reference, validate the real EP=8 MoELayer external reference, validate the SFT loss explicit reference and its backward/update explicit reference and mini-checkpoint correctness gate, and the official forward BF16 tolerance gate, and localize the remaining real-forward strict parity failure to BF16 attention forward-value drift amplified by the full model.",
+  "artifacts_dir_name": "advanced",
+  "conclusion": "Recorded artifacts consistently prove the covered HC/QAT/attention/MLP/MoE/training-step gates, validate the non-compressed, c4 indexer, and deterministic compressed external training-reference gates, validate the score-routed MoE external reference, validate the real EP=8 MoELayer external reference, validate the SFT loss explicit reference and its backward/update explicit reference and mini-checkpoint correctness gate, validate the loaded 4-layer full external forward reference with routing replay BF16 tolerance, and the official forward BF16 tolerance gate, and localize the remaining real-forward strict parity failure to BF16 attention forward-value drift amplified by the full model and selected-gradient strict delta.",
   "date": "2026-05-31",
   "failures": [],
   "gates": {
@@ -251,6 +251,62 @@
         "real_non_injected_forward_strict_status": "FAIL",
         "real_non_injected_sft_one_step_strict_status": "FAIL"
       }
+    },
+    "mini_external_full_reference": {
+      "forward_artifact": "deepseek-v4-mini-external-full-reference-bf16-routing-replay-tolerance-20260531.json",
+      "forward_logit_gap_global": {
+        "max_abs": 0.25,
+        "mean_abs": 0.01131382118910551,
+        "p99_abs": 0.05078125,
+        "relative_l2_gap": 1.1485556081547443e-05
+      },
+      "forward_loss_abs_global_max": 1.25732421875,
+      "forward_loss_abs_per_token_global_max": 0.0031276721859452737,
+      "forward_routing_replay": "miles_router_map_replay",
+      "forward_status": "PASS",
+      "forward_tolerance_profile": "routing_replay_bf16_forward",
+      "router_debug_layer_0_router_map": {
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "p99_abs": 0.0,
+        "relative_l2_gap": 0.0,
+        "status": "OK"
+      },
+      "router_debug_layer_1_router_map": {
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "p99_abs": 0.0,
+        "relative_l2_gap": 0.0,
+        "status": "OK"
+      },
+      "router_debug_layer_2_router_map": {
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "p99_abs": 0.0,
+        "relative_l2_gap": 0.0,
+        "status": "OK"
+      },
+      "router_debug_layer_3_router_map": {
+        "max_abs": 1.0,
+        "mean_abs": 0.0049285888671875,
+        "p99_abs": 0.0,
+        "relative_l2_gap": 0.10514322916666663,
+        "status": "OK"
+      },
+      "router_debug_status": "FAIL",
+      "train_artifact": "deepseek-v4-mini-external-full-reference-bf16-routing-replay-train-tolerance-20260531.json",
+      "train_failures": [
+        "selected_grad_max_abs",
+        "selected_grad_relative_to_param_l2"
+      ],
+      "train_selected_grad_max_abs_global_max": 1.0,
+      "train_selected_grad_relative_to_param_l2_global": 0.01485428690998053,
+      "train_selected_state_max_abs_global_max": 2.2351741790771484e-08,
+      "train_status": "FAIL"
+    },
+    "mini_external_full_reference_routing_replay_forward": {
+      "artifact": "deepseek-v4-mini-external-full-reference-bf16-routing-replay-tolerance-20260531.json",
+      "status": "PASS"
     },
     "moe_ep8_dispatch_math": {
       "artifact": "deepseek-v4-moe-ep8-dispatch-math-20260531.json",

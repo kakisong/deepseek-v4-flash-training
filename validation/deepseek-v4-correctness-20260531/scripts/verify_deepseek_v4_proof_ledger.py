@@ -97,6 +97,10 @@ def _main() -> int:
             "deepseek-v4-mini-checkpoint-correctness-gate-20260531.json",
             "PASS",
         ),
+        "mini_external_full_reference_routing_replay_forward": (
+            "deepseek-v4-mini-external-full-reference-bf16-routing-replay-tolerance-20260531.json",
+            "PASS",
+        ),
         "sft_loss_explicit_reference": (
             "deepseek-v4-sft-loss-reference-20260531.json",
             "PASS",
@@ -441,6 +445,126 @@ def _main() -> int:
             f"mini_checkpoint_correctness.sft_loss_train_reference.{key}",
         )
 
+    full_external_forward = _load(
+        base,
+        "deepseek-v4-mini-external-full-reference-bf16-routing-replay-tolerance-20260531.json",
+    )
+    full_external_train = _load(
+        base,
+        "deepseek-v4-mini-external-full-reference-bf16-routing-replay-train-tolerance-20260531.json",
+    )
+    full_external_router_debug = _load(
+        base,
+        "deepseek-v4-mini-external-full-reference-bf16-router-debug-20260531.json",
+    )
+    gates["mini_external_full_reference"] = {
+        "forward_artifact": "deepseek-v4-mini-external-full-reference-bf16-routing-replay-tolerance-20260531.json",
+        "forward_status": _status(full_external_forward),
+        "forward_routing_replay": full_external_forward["routing_replay"]["mode"],
+        "forward_tolerance_profile": full_external_forward["tolerance_profile"],
+        "forward_logit_gap_global": full_external_forward["logit_gap_global"],
+        "forward_loss_abs_global_max": full_external_forward["loss_abs_global_max"],
+        "forward_loss_abs_per_token_global_max": full_external_forward[
+            "loss_abs_per_token_global_max"
+        ],
+        "train_artifact": "deepseek-v4-mini-external-full-reference-bf16-routing-replay-train-tolerance-20260531.json",
+        "train_status": _status(full_external_train),
+        "train_failures": full_external_train["failures"],
+        "train_selected_grad_max_abs_global_max": full_external_train[
+            "selected_backward_update_delta"
+        ]["selected_grad_max_abs_global_max"],
+        "train_selected_grad_relative_to_param_l2_global": full_external_train[
+            "selected_backward_update_delta"
+        ]["selected_grad_relative_to_param_l2_global"],
+        "train_selected_state_max_abs_global_max": full_external_train[
+            "selected_backward_update_delta"
+        ]["selected_state_max_abs_global_max"],
+        "router_debug_status": _status(full_external_router_debug),
+        "router_debug_layer_0_router_map": full_external_router_debug["layer_gap_global"][
+            "layer_0.router_map"
+        ],
+        "router_debug_layer_1_router_map": full_external_router_debug["layer_gap_global"][
+            "layer_1.router_map"
+        ],
+        "router_debug_layer_2_router_map": full_external_router_debug["layer_gap_global"][
+            "layer_2.router_map"
+        ],
+        "router_debug_layer_3_router_map": full_external_router_debug["layer_gap_global"][
+            "layer_3.router_map"
+        ],
+    }
+    _check(_status(full_external_forward) == "PASS", failures, "mini_external_full_reference.forward_status")
+    _check(
+        full_external_forward["routing_replay"]["mode"] == "miles_router_map_replay",
+        failures,
+        "mini_external_full_reference.routing_replay",
+    )
+    _check(
+        full_external_forward["logit_gap_global"]["max_abs"]
+        <= full_external_forward["thresholds"]["max_logit_abs"],
+        failures,
+        "mini_external_full_reference.logit_max",
+    )
+    _check(
+        full_external_forward["logit_gap_global"]["mean_abs"]
+        <= full_external_forward["thresholds"]["max_logit_mean_abs"],
+        failures,
+        "mini_external_full_reference.logit_mean",
+    )
+    _check(
+        full_external_forward["logit_gap_global"]["p99_abs"]
+        <= full_external_forward["thresholds"]["max_logit_p99_abs"],
+        failures,
+        "mini_external_full_reference.logit_p99",
+    )
+    _check(
+        full_external_forward["logit_gap_global"]["relative_l2_gap"]
+        <= full_external_forward["thresholds"]["max_logit_rel_gap"],
+        failures,
+        "mini_external_full_reference.logit_rel",
+    )
+    _check(
+        full_external_forward["loss_abs_global_max"]
+        <= full_external_forward["thresholds"]["max_loss_abs"],
+        failures,
+        "mini_external_full_reference.loss",
+    )
+    _check(
+        full_external_forward["loss_abs_per_token_global_max"]
+        <= full_external_forward["thresholds"]["max_loss_abs_per_token"],
+        failures,
+        "mini_external_full_reference.loss_per_token",
+    )
+    _check(
+        full_external_forward["token_count_abs_global_max"] == 0.0,
+        failures,
+        "mini_external_full_reference.token_count",
+    )
+    _check(_status(full_external_train) == "FAIL", failures, "mini_external_full_reference.train_boundary_status")
+    _check(
+        "selected_grad_max_abs" in full_external_train["failures"]
+        and "selected_grad_relative_to_param_l2" in full_external_train["failures"],
+        failures,
+        "mini_external_full_reference.train_gradient_boundary",
+    )
+    _check(
+        full_external_train["selected_backward_update_delta"]["selected_state_max_abs_global_max"]
+        <= full_external_train["thresholds"]["max_selected_state_abs"],
+        failures,
+        "mini_external_full_reference.train_state_bound",
+    )
+    for layer_idx in range(3):
+        _check(
+            full_external_router_debug["layer_gap_global"][f"layer_{layer_idx}.router_map"]["max_abs"] == 0.0,
+            failures,
+            f"mini_external_full_reference.layer_{layer_idx}_hash_router_exact",
+        )
+    _check(
+        full_external_router_debug["layer_gap_global"]["layer_3.router_map"]["max_abs"] == 1.0,
+        failures,
+        "mini_external_full_reference.layer_3_router_branch_flip_recorded",
+    )
+
     attention_io_train = _load(base, "deepseek-v4-mini-attention-io-training-step-qatsim-20260531.json")
     gates["attention_io_training_step_bounds"] = {
         "max_output_abs": _max_nested_value(attention_io_train, "output_max_abs_global_max"),
@@ -659,10 +783,11 @@ def _main() -> int:
             "validate the real EP=8 MoELayer external reference, "
             "validate the SFT loss explicit reference and "
             "its backward/update explicit reference and "
-            "mini-checkpoint correctness gate, and "
+            "mini-checkpoint correctness gate, validate the loaded 4-layer "
+            "full external forward reference with routing replay BF16 tolerance, and "
             "the official forward BF16 tolerance gate, and localize the remaining "
             "real-forward strict parity failure to BF16 attention forward-value drift "
-            "amplified by the full model."
+            "amplified by the full model and selected-gradient strict delta."
             if not failures
             else "Recorded artifacts are not mutually sufficient for the proof ledger."
         ),

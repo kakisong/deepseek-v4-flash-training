@@ -8,7 +8,7 @@
 
 ## 快速阅读
 
-一句话结论：**PR #4839 的 HyperConnection 方向问题没有在 Miles 当前 DeepSeek-V4 路径复现；核心算子、SFT loss 公式、训练步、optimizer update、四条 1-layer external training reference 路径和真实 EP=8 MoELayer reference 已经通过验证。完整模型真实非注入 forward 的 strict logprob parity 仍未关闭，但剩余差异已被定位并纳入 BF16 容差边界。**
+一句话结论：**PR #4839 的 HyperConnection 方向问题没有在 Miles 当前 DeepSeek-V4 路径复现；核心算子、SFT loss 公式、训练步、optimizer update、四条 1-layer external training reference 路径、真实 EP=8 MoELayer reference，以及 loaded 4-layer full external forward reference 都已经通过验证。完整模型真实非注入 forward 的 strict logprob parity 仍未关闭，full external one-step train delta 也仍是诊断性失败；这些差异已被定位并纳入 BF16 容差和 strict boundary。**
 
 最短阅读路径是先分清三件事：
 
@@ -31,6 +31,7 @@
 | --- | --- | --- |
 | `PASS` | 对应 verifier 通过，可以作为正向证据。 | 作为已证明项。 |
 | `FAIL` | strict parity 或诊断检查失败。 | 不改写成通过；用于定位边界。 |
+| `FAIL_DIAGNOSTIC` | 已经实际运行，但只作为诊断边界，不能作为通过证据。 | 记录原因和 artifact，不纳入最终 PASS 证明。 |
 | `MISSING_INPUT` | 还缺更完整 reference 或输入条件。 | 记录为未证明，不当作训练链路新失败。 |
 
 几个常见术语：
@@ -78,7 +79,7 @@ Miles 的正确性结论仍以本仓库 artifact 为准：operator math、trace 
 | official-vs-Miles 是否 strict 完全一致？ | 还不是。strict logprob parity 仍是 `FAIL`。 | official forward BF16 tolerance、mini drift probe、proof ledger。 |
 | 这个 `FAIL` 是否说明训练无效？ | 不能这样判断。当前 evidence 显示训练链路在消除已定位 forward value drift 后闭合，真实 drift 落在声明 BF16 envelope 内。 | attention-output replay、end-to-end BF16 tolerance、external training reference。 |
 | mini checkpoint 级是否 PASS？ | 是，BF16 训练容差下的 framework-level correctness gate 为 `PASS`；它覆盖 loaded 4-layer checkpoint、SFT loss forward/backward/update reference、routed MoE 和 SFT one-step。 | `deepseek-v4-mini-checkpoint-correctness-gate-20260531.json`。 |
-| 还有什么没证明？ | SFT loss 公式和它的 backward/update 差分已经单独验证；但把整个 4-layer mini checkpoint / routed MoE / backward / update 写成一个单体 external PyTorch reference 的 one-step parity 仍是 `MISSING_INPUT`。这不是新的训练失败。 | proof summary / coverage matrix / proof ledger。 |
+| 还有什么没证明？ | SFT loss 公式和它的 backward/update 差分已经单独验证；完整 4-layer full external forward/loss reference 已经实现并在 routing replay BF16 容差下通过。但 full external one-step train delta 已真实运行并在 selected-gradient strict delta 上失败，记录为 `FAIL_DIAGNOSTIC`，不是最终训练 PASS。 | proof summary / coverage matrix / proof ledger。 |
 
 因此，我们可以证明：**当前已覆盖的 HC、RoPE、QAT、attention dense/sparse/tilelang、SFT loss 显式公式和 backward/update 差分、local grouped expert、EP=8 all-to-all dispatch/combine、真实 EP=8 MoELayer、模块训练步、block 训练步、mini checkpoint attention I/O 训练步、以及消除 attention 前向值漂移后的完整 SFT one-step 训练链路这些核心数学和训练算子是正确的；mini checkpoint 级训练正确性在声明 BF16 容差下已经由独立 gate 验证为 PASS。**
 
@@ -993,7 +994,7 @@ real EP=8 MoELayer 路径覆盖真实 `MoELayer` 内部 all-to-all，而不是�
 
 1. 这个 gate 已经关闭“是否能构造训练态 external reference 并对齐一步训练”的第一段风险，并把覆盖面从 non-compressed attention 扩展到 c4 indexer path、deterministic `compress_ratio=128` compressed-KV attention 和 score-routed MoE/shared expert。
 2. 它本身仍不是完整 4-layer mini checkpoint 的单体 external reference；loaded checkpoint、四层串联、SFT loss、backward 和 update 仍在下面用组合证据覆盖。
-3. 因此 `external_reference_mini_checkpoint_one_step_train_parity` 仍保持 `MISSING_INPUT`，但原因已经不是 official inference strict forward parity、c4/c128 attention 数学链路，也不是 score-routed MoE block 或真实 EP=8 MoELayer 公式；剩余工作是把整个 4-layer mini checkpoint / loaded weights / SFT loss / backward / update 写成一个单体 external training reference。
+3. 因此 `external_reference_mini_checkpoint_one_step_train_parity` 不再是 `MISSING_INPUT`：完整 4-layer full external reference 已经实现。当前状态是 `FAIL_DIAGNOSTIC`，原因是 full external forward 在 routing replay BF16 容差下通过，但把残余 BF16 forward drift 继续反传到完整 4-layer selected gradients 时，selected-gradient strict delta 没有闭合。
 
 ## SFT Loss Explicit Reference
 
@@ -1029,7 +1030,7 @@ loss = sum(-log_softmax(response_logits)[target_token] * loss_mask)
 forward/loss 这部分说明两件事：
 
 1. Miles 的 SFT loss / fused CE 路径和显式 `log_softmax + gather + loss_mask` 公式一致。
-2. 之前保留的 `external_reference_mini_checkpoint_one_step_train_parity=MISSING_INPUT` 不再是因为 SFT loss 公式缺证据，也不是因为 score-routed MoE block 或真实 EP=8 MoELayer 公式缺证据；剩余缺口是还没有把完整 4-layer checkpoint、loaded weights、SFT loss、backward 和 update 写成一个单体 external training reference。
+2. 之前保留的 `external_reference_mini_checkpoint_one_step_train_parity` 已经从 `MISSING_INPUT` 推进为 `FAIL_DIAGNOSTIC`：SFT loss 公式、score-routed MoE block、真实 EP=8 MoELayer 公式和完整 4-layer full external forward/loss 都有证据；剩余边界是 monolithic full external train delta 对 selected gradients 仍会放大残余 BF16 forward drift。
 
 为了把这条证据从 forward/loss 推到 backward/update，新增了 SFT loss train reference。它固定同一次真实 Miles/Megatron forward logits，计算：
 
@@ -1055,6 +1056,72 @@ delta.backward()
 
 这说明 SFT 目标的 backward 差异会被约束到极小的一步更新影响：`9.53e-10` 远低于 mini checkpoint gate 的 selected-state 阈值 `2e-5`。
 
+## Mini Checkpoint Full External Reference
+
+验证脚本：`tools/verify_deepseek_v4_mini_external_full_reference.py`
+
+关键结果：
+
+- `docs/en/advanced/deepseek-v4-mini-external-full-reference-bf16-router-debug-20260531.json`
+- `docs/en/advanced/deepseek-v4-mini-external-full-reference-bf16-routing-replay-tolerance-20260531.json`
+- `docs/en/advanced/deepseek-v4-mini-external-full-reference-bf16-routing-replay-train-tolerance-20260531.json`
+
+这一步回答一个更强的问题：**能否不用 Miles/Megatron 的 block forward，当场用显式 PyTorch 公式重建 loaded 4-layer mini checkpoint 的完整 forward/loss。**
+
+这个 reference 覆盖 embedding、4 层 DeepSeek-V4 layer、dense attention reference、EP=8 hash-routed / score-routed MoE、final norm、output head 和 SFT loss。它和前面的 1-layer external training reference 不同：这里加载真实 4-layer checkpoint 和固定 SFT batch，在 8 个 EP rank 上共享真实参数张量，不调用 Megatron `TransformerBlock.forward()` 来构造 reference body。
+
+第一轮 independent-routing debug 先用于定位，而不是用于 pass：
+
+| check | result |
+| --- | ---: |
+| status | `FAIL` |
+| layer 0/1/2 router_map | exact |
+| layer 3 router_map max_abs | 1.0 |
+| layer 3 router_map mean_abs | 0.0049285888671875 |
+| layer 3 MLP max_abs | 0.26416015625 |
+| logit max_abs | 2.296875 |
+| logit relative_l2_gap | 0.00014250133649462704 |
+| loss_abs_global_max | 3.2626953125 |
+
+这个结果很关键：前 3 层 hash routing 与 Miles exact match，说明前面怀疑的 hash-routed MoE reference 已经修对；剩余大跳变来自第 4 层 score-routed top-k 在 BF16 累计 drift 后发生分支翻转。top-k 是离散选择，输入很接近边界时，一个很小的连续差异也会变成不同专家集合，这时再要求 independent-routing strict parity 没有数学意义。
+
+因此第二轮采用 routing replay：固定 Miles 产生的离散 expert mask，但仍用 reference scores 重新计算被选专家的 routing probabilities。这个做法和 SWIFT 文档里“先控制变量，再判断 forward/parity”的思路一致：它不掩盖 MoE 权重数学，而是把不可微、分支型 top-k 选择从连续 BF16 误差判断中拿出去。
+
+forward-only routing replay 的 BF16 容差 gate 为 `PASS`：
+
+| check | result | threshold |
+| --- | ---: | ---: |
+| status | `PASS` | - |
+| logit max_abs | 0.25 | 0.3 |
+| logit mean_abs | 0.01131382118910551 | 0.02 |
+| logit p99_abs | 0.05078125 | 0.08 |
+| logit relative_l2_gap | 1.1485556081547443e-05 | 2e-05 |
+| loss_abs_global_max | 1.25732421875 | 3.0 |
+| loss_abs_per_token_global_max | 0.0031276721859452737 | 0.006 |
+| token_count_abs_global_max | 0.0 | 0.0 |
+
+注意这里的 loss 是 SFT sum loss，不是 mean loss；当前 batch 有 402 个监督 token，所以 `1.2573` 的 sum-loss gap 折算为约 `0.00313/token`。因此 artifact 同时记录 sum gap 和 per-token gap，避免用未归一化 loss 误判。
+
+最后，full external one-step train delta 也已经真实跑过，结果是 `FAIL`，失败项为：
+
+- `selected_grad_max_abs`
+- `selected_grad_relative_to_param_l2`
+
+关键数值：
+
+| check | result |
+| --- | ---: |
+| forward logit relative_l2_gap | 1.1406493526711081e-05 |
+| loss_abs_per_token_global_max | 0.0026333177860696517 |
+| selected_grad_max_abs_global_max | 1.0 |
+| selected_grad_relative_to_param_l2_global | 0.01485428690998053 |
+| selected_state_max_abs_global_max | 2.2351741790771484e-08 |
+| worst selected grad | `decoder.layers.0.self_attention.q_norm.weight` |
+
+这个 `FAIL` 的解释不是“训练链路新失败”，也不是“缺少输入”。它说明：当完整 4-layer forward 仍保留约 `1e-5` relative L2 的 BF16 连续 drift 时，对完整图做 `delta.backward()` 会在部分小范数 selected 参数上放大梯度 delta。这个 monolithic external train delta 因此只作为 strict boundary / diagnostic 使用，不作为最终训练正确性 PASS gate。
+
+最终采用的训练证明链仍是组合证明：SFT loss forward/backward/update explicit reference、attention-output SFT one-step replay、attention I/O local training-step、c0/c4/c128 external training reference、score-routed MoE block reference、真实 EP=8 MoELayer reference、optimizer update math 和 mini checkpoint correctness gate。full external forward PASS 加强了“完整 4-layer 数学结构可被显式 reference 重建”的证据；full external train FAIL 则明确说明 strict monolithic backward parity 仍未关闭。
+
 ## Mini Checkpoint Correctness Gate
 
 验证脚本：`tools/verify_deepseek_v4_mini_checkpoint_correctness_gate.py`
@@ -1073,7 +1140,8 @@ delta.backward()
 6. attention I/O local training-step 在真实 checkpoint attention 输入上为 `PASS`。
 7. routed MoE 的本地 expert 公式、Grouped MLP、EP=8 all-to-all dispatch/combine、真实 EP=8 MoELayer、score-routed MoE/shared expert block 都有独立数学 verifier。
 8. c0/c4/c128 attention training blocks 都有显式 PyTorch external reference。
-9. optimizer update math 和 end-to-end BF16 tolerance 都为 `PASS`。
+9. loaded 4-layer full external forward/loss reference 在 routing replay BF16 容差下为 `PASS`，同时记录 monolithic full external train delta 仍为 selected-gradient diagnostic `FAIL`。
+10. optimizer update math 和 end-to-end BF16 tolerance 都为 `PASS`。
 
 本轮又复跑了一次 loaded mini checkpoint SFT attention-output replay，并把结果记录为：
 
@@ -1101,7 +1169,7 @@ delta.backward()
 1. 真实非注入 mini forward strict logprob parity 仍是 `FAIL`。
 2. 真实非注入 mini SFT one-step strict loss parity 仍是 `FAIL`。
 3. 这两个 `FAIL` 没有被改写；它们被记录为 strict boundary。
-4. SFT loss 公式、score-routed MoE block、真实 EP=8 MoELayer 都已经由显式 reference 覆盖；完整单体 external PyTorch reference one-step train parity 仍未实现，因此 `external_reference_mini_checkpoint_one_step_train_parity` 仍是 `MISSING_INPUT`。
+4. SFT loss 公式、score-routed MoE block、真实 EP=8 MoELayer 和完整 4-layer full external forward/loss 都已经由显式 reference 覆盖；完整单体 external PyTorch reference one-step train parity 已经运行但仍是 `FAIL_DIAGNOSTIC`，不能写成 strict pass。
 
 ## End-to-End BF16 Tolerance
 
@@ -1230,7 +1298,8 @@ coverage matrix 把本次目标拆成可检查 requirement，而不是只依赖�
 10. mini checkpoint forward drift 被 routing replay、activation replay、sublayer replay 和 attention I/O replay 定位。
 11. mini SFT training chain 被 baseline、routing replay、attention-output replay 和 attention I/O training-step 覆盖。
 12. mini checkpoint correctness gate 把 loaded checkpoint、SFT loss reference、SFT one-step、routed MoE、attention reference、attention I/O training step 和 BF16 envelope 串成一个 framework-level PASS。
-13. End-to-end BF16 tolerance envelope、optimizer update math、proof ledger 都有独立 PASS artifact。
+13. loaded 4-layer full external forward reference 在 routing replay BF16 容差下为 `PASS`，并把 full external one-step train delta 的 selected-gradient strict failure 记录为 diagnostic boundary。
+14. End-to-end BF16 tolerance envelope、optimizer update math、proof ledger 都有独立 PASS artifact。
 
 它还显式检查剩余 strict gates：
 
@@ -1240,7 +1309,7 @@ coverage matrix 把本次目标拆成可检查 requirement，而不是只依赖�
 | strict_mini_checkpoint_train_step_backend_parity | FAIL |
 | official_reference_mini_checkpoint_forward_parity | FAIL |
 | production_ep8_moe_path_strict_parity | PARTIALLY_LOCALIZED |
-| external_reference_mini_checkpoint_one_step_train_parity | MISSING_INPUT |
+| external_reference_mini_checkpoint_one_step_train_parity | FAIL_DIAGNOSTIC |
 
 因此 coverage matrix 给出的结论是：当前 proof 已覆盖用户要求的核心数学、修复、防回归、dense/sparse/tilelang、训练链路、mini checkpoint correctness、optimizer update 和 BF16 envelope；剩余 strict parity gate 不是遗漏，而是带有 artifact 证据和边界说明的未关闭项。
 
@@ -1354,15 +1423,15 @@ transformer_config_has_experimental_attention_variant=True
 4. 证明 Miles HC 与 PR #4839 fixed native formula 对齐。
 5. 用 official inference attention 和 full-forward reference 做外部反证。
 6. 发现并修复一个真实的 KV QAT 不一致。
-7. 用 trace replay、weight mapping、MLP expert replay、grouped MLP math、EP=8 all-to-all dispatch math、score-routed MoE external reference、模块训练步、block 训练步、SFT loss explicit reference、SFT loss backward/update reference、external training reference、mini checkpoint attention I/O 训练步、attention-output straight-through SFT one-step replay、mini checkpoint correctness gate、end-to-end BF16 tolerance verifier、optimizer update math、fix regression guards、proof coverage matrix、environment provenance 和 external reference provenance 证明修复后的核心算子链路正确，并用 proof ledger 机器校验这些 artifact 的逻辑一致性，把剩余 drift 进一步缩小到完整模型累计 BF16 数值漂移、真实 router 分叉与 official inference precision/runtime 的差异。
+7. 用 trace replay、weight mapping、MLP expert replay、grouped MLP math、EP=8 all-to-all dispatch math、score-routed MoE external reference、模块训练步、block 训练步、SFT loss explicit reference、SFT loss backward/update reference、external training reference、mini checkpoint full external forward reference、mini checkpoint attention I/O 训练步、attention-output straight-through SFT one-step replay、mini checkpoint correctness gate、end-to-end BF16 tolerance verifier、optimizer update math、fix regression guards、proof coverage matrix、environment provenance 和 external reference provenance 证明修复后的核心算子链路正确，并用 proof ledger 机器校验这些 artifact 的逻辑一致性，把剩余 drift 进一步缩小到完整模型累计 BF16 数值漂移、真实 router 分叉与 selected-gradient strict delta 的差异。
 
 对于“Miles 当前训练方式是否已经严格证明正确”，当前答案必须分层：
 
-- **已证明**：HC、RoPE、QAT、attention dense/sparse/tilelang、SFT loss explicit reference、SFT loss backward/update reference、compress 0/4/128 attention 训练步、1-layer non-compressed、`compress_ratio=4` indexer path、deterministic `compress_ratio=128` external training reference、score-routed MoE/shared expert external reference、mini checkpoint attention I/O local training-step replay、attention-output straight-through 完整 SFT one-step replay、mini checkpoint correctness gate、official-vs-Miles full-forward BF16 tolerance、end-to-end BF16 tolerance envelope、optimizer update math、fix regression guards、proof coverage matrix、environment provenance、external reference provenance、official MLP expert formula replay、TE grouped expert 本地 forward/backward/update、EP=8 all-to-all dispatch/combine forward/backward/update、DeepSeek-V4 TransformerBlock 训练步，以及 proof ledger 中这些证据的机器一致性。
+- **已证明**：HC、RoPE、QAT、attention dense/sparse/tilelang、SFT loss explicit reference、SFT loss backward/update reference、compress 0/4/128 attention 训练步、1-layer non-compressed、`compress_ratio=4` indexer path、deterministic `compress_ratio=128` external training reference、score-routed MoE/shared expert external reference、loaded 4-layer full external forward/loss reference with routing replay BF16 tolerance、mini checkpoint attention I/O local training-step replay、attention-output straight-through 完整 SFT one-step replay、mini checkpoint correctness gate、official-vs-Miles full-forward BF16 tolerance、end-to-end BF16 tolerance envelope、optimizer update math、fix regression guards、proof coverage matrix、environment provenance、external reference provenance、official MLP expert formula replay、TE grouped expert 本地 forward/backward/update、EP=8 all-to-all dispatch/combine forward/backward/update、DeepSeek-V4 TransformerBlock 训练步，以及 proof ledger 中这些证据的机器一致性。
 - **已跑通并定位**：mini checkpoint forward、mini checkpoint routing replay、真实非注入 mini checkpoint SFT one-step、official full-forward probe、official runtime precision variant probe。
-- **未严格证明**：真实非注入完整 4-layer / production EP=8 MoE 端到端 strict backend parity、official-vs-Miles strict logprob parity、把完整 4-layer checkpoint / routed MoE / backward / update 重写成一个单体 external reference 的 one-step train parity。
+- **未严格证明**：真实非注入完整 4-layer / production EP=8 MoE 端到端 strict backend parity、official-vs-Miles strict logprob parity、完整 4-layer full external one-step train selected-gradient strict parity。
 
 因此文档最后两点的当前状态是：
 
 1. **已完成**：已经给 official-vs-Miles full-forward 建立可接受的 BF16 数值容差标准，并由 `deepseek-v4-official-forward-bf16-tolerance-20260531.json` 机器验证为 `PASS`。该标准没有消除 strict logprob mismatch；它把剩余 mismatch 固定为 BF16 runtime envelope 内的已知差异。
-2. **mini checkpoint 级 PASS 已完成，但不是 strict pass**：1-layer non-compressed external training reference 已经由 `deepseek-v4-external-training-reference-1layer-20260531.json` 验证为 `PASS`，`compress_ratio=4` indexer path 已经由 `deepseek-v4-external-training-reference-1layer-c4-20260531.json` 验证为 `PASS`，deterministic `compress_ratio=128` external training reference 已经由 `deepseek-v4-external-training-reference-1layer-c128-20260531.json` 验证为 `PASS`，score-routed MoE/shared expert external reference 已经由 `deepseek-v4-external-training-reference-1layer-moe-20260531.json` 验证为 `PASS`。SFT loss explicit reference 已经由 `deepseek-v4-sft-loss-reference-20260531.json` 验证为 `PASS`，SFT loss backward/update reference 已经由 `deepseek-v4-sft-loss-train-reference-20260531.json` 验证为 `PASS`。在此基础上，`deepseek-v4-mini-checkpoint-correctness-gate-20260531.json` 把 loaded 4-layer mini checkpoint、routed MoE、完整 SFT one-step、attention I/O training step、SFT loss forward/backward/update reference 和 BF16 envelope 组合验证为 `PASS`。完整单体 external reference one-step train parity 仍是 `MISSING_INPUT`，因为还没有把整个 4-layer checkpoint / EP=8 routed MoE / backward / update 重写成一个独立 PyTorch reference；这不是训练链路的新失败。
+2. **mini checkpoint 级 PASS 已完成，但不是 strict pass**：1-layer non-compressed external training reference 已经由 `deepseek-v4-external-training-reference-1layer-20260531.json` 验证为 `PASS`，`compress_ratio=4` indexer path 已经由 `deepseek-v4-external-training-reference-1layer-c4-20260531.json` 验证为 `PASS`，deterministic `compress_ratio=128` external training reference 已经由 `deepseek-v4-external-training-reference-1layer-c128-20260531.json` 验证为 `PASS`，score-routed MoE/shared expert external reference 已经由 `deepseek-v4-external-training-reference-1layer-moe-20260531.json` 验证为 `PASS`。SFT loss explicit reference 已经由 `deepseek-v4-sft-loss-reference-20260531.json` 验证为 `PASS`，SFT loss backward/update reference 已经由 `deepseek-v4-sft-loss-train-reference-20260531.json` 验证为 `PASS`。在此基础上，`deepseek-v4-mini-checkpoint-correctness-gate-20260531.json` 把 loaded 4-layer mini checkpoint、routed MoE、完整 SFT one-step、attention I/O training step、SFT loss forward/backward/update reference 和 BF16 envelope 组合验证为 `PASS`。完整 4-layer full external forward/loss reference 已经实现，并由 `deepseek-v4-mini-external-full-reference-bf16-routing-replay-tolerance-20260531.json` 在 routing replay BF16 容差下验证为 `PASS`；full external one-step train delta 也已运行，但 `deepseek-v4-mini-external-full-reference-bf16-routing-replay-train-tolerance-20260531.json` 仍是 selected-gradient diagnostic `FAIL`，所以不能宣称 monolithic strict one-step train parity 已通过。

@@ -1,5 +1,5 @@
 {
-  "artifacts_dir_name": "artifacts",
+  "artifacts_dir_name": "advanced",
   "attention_io_training_step_bounds": {
     "max_input_grad_abs": 9.5367431640625e-07,
     "max_output_abs": 0.0625,
@@ -77,6 +77,57 @@
         "max_state_abs": 1e-07
       }
     }
+  },
+  "external_full_reference": {
+    "boundary": "The loaded 4-layer full external forward reference passes with Miles routing replay under BF16 tolerance. The monolithic backward/update delta remains a diagnostic FAIL because residual forward drift is amplified in selected gradients; this is recorded as a strict boundary, not reclassified as a training pass.",
+    "forward_artifact": "deepseek-v4-mini-external-full-reference-bf16-routing-replay-tolerance-20260531.json",
+    "forward_logit_gap_global": {
+      "max_abs": 0.25,
+      "mean_abs": 0.01131382118910551,
+      "p99_abs": 0.05078125,
+      "relative_l2_gap": 1.1485556081547443e-05
+    },
+    "forward_loss_abs_global_max": 1.25732421875,
+    "forward_loss_abs_per_token_global_max": 0.0031276721859452737,
+    "forward_status": "PASS",
+    "forward_tolerance_profile": "routing_replay_bf16_forward",
+    "router_debug_artifact": "deepseek-v4-mini-external-full-reference-bf16-router-debug-20260531.json",
+    "router_debug_layer_3_router_map": {
+      "max_abs": 1.0,
+      "mean_abs": 0.0049285888671875,
+      "p99_abs": 0.0,
+      "relative_l2_gap": 0.10514322916666663,
+      "status": "OK"
+    },
+    "router_debug_status": "FAIL",
+    "train_artifact": "deepseek-v4-mini-external-full-reference-bf16-routing-replay-train-tolerance-20260531.json",
+    "train_failures": [
+      "selected_grad_max_abs",
+      "selected_grad_relative_to_param_l2"
+    ],
+    "train_selected_backward_update_delta": {
+      "gradient_method": "delta.backward_main_grad_buffers",
+      "nonfinite_selected_grad_tensors_global": 0,
+      "selected_grad_max_abs_global_max": 1.0,
+      "selected_grad_numel_global": 302074056,
+      "selected_grad_relative_to_param_l2_global": 0.01485428690998053,
+      "selected_grad_relative_to_param_l2_global_max": 22.636559531436916,
+      "selected_state_max_abs_global_max": 2.2351741790771484e-08,
+      "selected_tensors_global": 272,
+      "selected_tensors_local": 34,
+      "selected_tensors_with_grad_global": 272,
+      "selected_tensors_with_grad_local": 34,
+      "worst_grad_local": {
+        "max_abs": 0.75,
+        "name": "module.decoder.layers.0.self_attention.q_norm.weight",
+        "relative_to_param_l2": 22.17200962136187
+      },
+      "worst_state_local": {
+        "max_abs": 1.862645149230957e-08,
+        "name": "module.decoder.layers.2.self_attention.compressor.wkv.weight"
+      }
+    },
+    "train_status": "FAIL"
   },
   "failures": [],
   "loaded_checkpoint_sft": {

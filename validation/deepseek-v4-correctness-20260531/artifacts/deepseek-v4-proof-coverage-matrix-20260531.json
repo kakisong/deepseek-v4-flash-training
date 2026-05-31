@@ -56,14 +56,13 @@
       }
     },
     {
-      "actual_status": "MISSING_INPUT",
-      "expected_status": "MISSING_INPUT",
+      "actual_status": "FAIL_DIAGNOSTIC",
+      "expected_status": "FAIL_DIAGNOSTIC",
       "id": "external_reference_mini_checkpoint_one_step_train_parity",
       "reason_contains": {
-        "SFT loss": true,
-        "external training reference": true,
-        "mini checkpoint": true,
-        "routed MoE": true
+        "full external": true,
+        "routing replay": true,
+        "selected_grad": true
       }
     }
   ],
@@ -275,6 +274,28 @@
       "status": "PROVED_WITH_BF16_TOLERANCE",
       "summary_gates": [
         "mini_checkpoint_correctness_gate"
+      ]
+    },
+    {
+      "claim": "loaded 4-layer mini checkpoint full external forward reference passes with Miles routing replay under BF16 tolerance, while monolithic train delta remains a recorded strict boundary.",
+      "coverage_status": "PASS",
+      "doc_sections": [
+        "Mini Checkpoint Full External Reference"
+      ],
+      "evidence": [
+        "deepseek-v4-mini-external-full-reference-bf16-routing-replay-tolerance-20260531.json",
+        "deepseek-v4-mini-external-full-reference-bf16-routing-replay-train-tolerance-20260531.json",
+        "deepseek-v4-mini-external-full-reference-bf16-router-debug-20260531.json"
+      ],
+      "expected_failing_diagnostic_artifacts": [
+        "deepseek-v4-mini-external-full-reference-bf16-routing-replay-train-tolerance-20260531.json",
+        "deepseek-v4-mini-external-full-reference-bf16-router-debug-20260531.json"
+      ],
+      "failures": [],
+      "id": "mini_checkpoint_external_full_reference",
+      "status": "PROVED_WITH_ROUTING_REPLAY_BF16_TOLERANCE",
+      "summary_gates": [
+        "mini_checkpoint_external_full_forward_reference"
       ]
     },
     {
