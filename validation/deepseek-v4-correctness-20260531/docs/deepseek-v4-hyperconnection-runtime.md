@@ -1,8 +1,40 @@
 # DeepSeek-V4 训练正确性验证
 
-本文记录 DeepSeek-V4 训练精度风险的定位、Miles 的实现方式、已引入的修复，以及 2026-05-31 的算子级和端到端验证结果。原始问题来自 Megatron-LM 的 mHC / HyperConnection residual mixing 方向错误，相关上游修复见 [NVIDIA/Megatron-LM PR #4839](https://github.com/NVIDIA/Megatron-LM/pull/4839)。SWIFT 的 DeepSeek-V4 文档也将该问题作为 Megatron-Core 侧必须修复的精度问题处理，见 [SWIFT DeepSeek-V4 Best Practice](https://swift.readthedocs.io/zh-cn/latest/BestPractices/deepseek-v4.html)。
+本文回答一个具体问题：**Miles 当前的 DeepSeek-V4 训练路径有没有 Megatron-LM PR #4839 提到的 HyperConnection 方向错误，以及当前训练数学是否可信。**
+
+原始风险来自 Megatron-LM 的 mHC / HyperConnection residual mixing 方向错误，相关上游修复见 [NVIDIA/Megatron-LM PR #4839](https://github.com/NVIDIA/Megatron-LM/pull/4839)。SWIFT 的 DeepSeek-V4 文档也将该问题作为 Megatron-Core 侧必须修复的精度问题处理，见 [SWIFT DeepSeek-V4 Best Practice](https://swift.readthedocs.io/zh-cn/latest/BestPractices/deepseek-v4.html)。
 
 本文只关注问题本身、定位方法、Miles 实现、验证结果和证明边界，不依赖本地运行路径。
+
+## 快速阅读
+
+一句话结论：**PR #4839 的 HyperConnection 方向问题没有在 Miles 当前 DeepSeek-V4 路径复现；核心算子、训练步、optimizer update 和两个 1-layer external training reference gate 已经通过验证。完整模型真实非注入 forward 的 strict logprob parity 仍未关闭，但剩余差异已被定位并纳入 BF16 容差边界。**
+
+建议按这个顺序读：
+
+1. 先看 [结论](#结论)：知道现在能证明什么、不能证明什么。
+2. 再看 [问题背景](#问题背景) 和 [Miles 如何实现](#miles-如何实现)：理解为什么 Megatron 的修复不一定等于 Miles 必须引入同一份代码。
+3. 如果只关心验证是否可信，看 [算子数学验证](#算子数学验证)、[External Training Reference](#external-training-reference)、[Proof Ledger](#proof-ledger)。
+4. 如果关心剩余差异，看 [Official Forward BF16 Tolerance](#official-forward-bf16-tolerance)、[Mini Checkpoint Drift Probe](#mini-checkpoint-drift-probe)、[最终判断](#最终判断)。
+
+读本文时需要区分三类结论：
+
+| 结论类型 | 含义 | 本文如何处理 |
+| --- | --- | --- |
+| `PASS` | 对应 verifier 通过，可以作为正向证据。 | 作为已证明项。 |
+| `FAIL` | strict parity 或诊断检查失败。 | 不改写成通过；用于定位边界。 |
+| `MISSING_INPUT` | 还缺更完整 reference 或输入条件。 | 记录为未证明，不当作训练链路新失败。 |
+
+几个常见术语：
+
+| 术语 | 简单解释 |
+| --- | --- |
+| HC / mHC / HyperConnection | DeepSeek-V4 用来混合多个 residual stream 的结构。本文关注它的矩阵方向是否写反。 |
+| parity | 两个实现输出是否一致。strict parity 通常要求非常接近甚至 bitwise；BF16 tolerance 则允许合理浮点误差。 |
+| reference | 用来对照的“标准答案”。本文既有 official inference reference，也有脚本里手写的 PyTorch 训练态公式 reference。 |
+| replay | 把某一层或某个中间 tensor 固定住重跑，用来判断误差从哪里开始出现。 |
+| external training reference | 不调用 Megatron `TransformerBlock.forward()` 的手写训练公式，用来验证 Miles/Megatron 模块的 forward/backward/update。 |
+| `compress_ratio=128` / c128 | 一条 deterministic compressed-KV attention 验证路径。它验证 compressor 数学和 KV 拼接，但不覆盖 `compress_ratio=4` indexer 选择路径。 |
 
 ## External References
 
@@ -17,25 +49,42 @@ Miles 的正确性结论仍以本仓库 artifact 为准：operator math、trace 
 
 当前结论是 **PARTIAL_PROOF**：
 
-1. Megatron PR #4839 的 HyperConnection 方向问题没有在 Miles DeepSeek-V4 当前路径复现。Miles 没有走 Megatron upstream `HyperConnectionModule`，而是走自己的 DeepSeek-V4 HC 实现；算子验证证明 Miles post-mix 等价于 `H_res.T @ residual`，并明显不同于错误的 `H_res @ residual`。
-2. 算子级数学验证已通过：HyperConnection、RoPE out-of-place / inverse / backward、official-compatible KV QAT、dense/sparse PyTorch attention、TileLang sparse MLA forward/backward 都为 PASS。
-3. Attention、Grouped MLP、EP=8 all-to-all dispatcher 和 TransformerBlock 训练步验证已通过：dense、sparse、tilelang 三个 attention backend 在模块级和 block 级的 forward / backward / 一步 SGD update 都在阈值内；mini checkpoint 真实 attention 输入上的 local forward/backward/update replay 已通过；完整 SFT one-step 在 routing replay + attention-output straight-through replay 下也已通过；TE grouped expert 在 DeepSeek-V4 生产 hidden / FFN 维度下与逐 expert BF16 公式 bitwise exact；EP=8 all-to-all dispatch/combine 的 forward/backward/update 与直接 reference bitwise exact。
-4. official inference attention trace replay 已通过：layer-0 attention 的 q/kv/topk/attention core/output projection 均已白盒对齐到 BF16 生产容差内；Miles attention core 对自己的 sparse replay 是 bitwise exact。
-5. layer-0 loaded weight mapping 已覆盖 attention、router、hash tid2eid、shared experts、256 个 routed experts、final layernorm 和 output head，全部 `exact_equal=True`。
-6. mini checkpoint 端到端 forward / SFT one-step 都能执行，输出和梯度 finite；在消除 routing 分叉并用 straight-through 方式消除 attention forward value drift 后，完整 SFT one-step loss/gradient/update parity 通过；但真实非注入 forward 的 strict backend parity 和 official full-forward strict logprob parity 仍未通过。
-7. official-vs-Miles full-forward BF16 容差标准已通过：strict official/reference forward parity 仍记录为 FAIL，但 sparse/tilelang 的 relative_l2、mean_abs、p99_abs 和 max_abs 均落在独立声明的 BF16 forward envelope 内。
-8. external training-reference 1-layer gate 已通过两条路径：脚本内显式 PyTorch 训练态公式 reference 与 Megatron/Miles 1-layer non-compressed DeepSeek-V4 TransformerBlock、以及 deterministic `compress_ratio=128` compressed-attention TransformerBlock，都在 forward、loss、input gradient、参数梯度和一步 SGD update 上对齐。
-9. 端到端 BF16 容差检查已通过：真实非注入 forward / train step 仍不满足 strict parity，但落在声明的 BF16 runtime envelope 内；消除已定位的 attention forward-value drift 后，完整 SFT one-step loss exact，梯度和更新仍在阈值内。
-10. Optimizer 路径和 AdamW 第一步更新数学已验证：Miles DeepSeek-V4 训练路径走 Megatron optimizer，DeepSeek-V4 runner 使用 Adam 超参；AdamW 第一步 reference 公式、闭式公式、zero-grad weight decay 和最坏 sign-flip 更新上界均通过。
-11. 修复项 regression guard 已通过：当前源码仍包含 non-RoPE KV QAT、official-compatible in-place `act_quant`、FP32 QAT scale、compressor no-overlap write 和 trace gating。
-12. Proof coverage matrix 已通过：用户目标被拆成明确 proof requirements，每项都有 artifact 和文档章节支撑；诊断性 FAIL artifact 与真正缺口被区分处理。
-13. 环境 provenance 已通过：文档记录的 GPU、driver、CUDA、Python、PyTorch、Megatron-Core、Transformer Engine、TileLang 等版本与 `operator_math` artifact 中的实际验证环境一致。
-14. 外部引用 provenance 已通过：Megatron-LM PR #4839 和 SWIFT 文档的用途被限定为问题来源和验证方法参考，Miles 正确性仍以本仓库 artifact 为准。
-15. 证明账本一致性检查已通过：`deepseek-v4-proof-ledger-20260531.json` 对所有关键 artifact 的状态、误差下降、bitwise replay、训练步阈值、non-compressed / deterministic c128 external training reference、official forward BF16 tolerance、BF16 tolerance envelope、optimizer update math、修复项 source guard、coverage matrix、environment provenance、external reference provenance 和剩余 gap 定位做了机器校验，未发现失败项。
+这不是“所有端到端 strict parity 都已经 bitwise 对齐”的结论。它的意思是：关键风险点和训练数学已经被拆开验证，剩余未关闭项也被明确标出来，没有把诊断性失败写成通过。
 
-因此，我们可以证明：**当前已覆盖的 HC、RoPE、QAT、attention dense/sparse/tilelang、local grouped expert、EP=8 all-to-all dispatch/combine、模块训练步、block 训练步、mini checkpoint attention I/O 训练步、以及消除 attention 前向值漂移后的完整 SFT one-step 训练链路这些核心数学和训练算子是正确的；但还不能宣称完整 Miles 训练框架已经与 official/reference 在真实非注入 forward 下端到端 strict parity 完全等价。** 剩余差异已被定位为 BF16/FP8 training runtime 与 official inference runtime 的数值漂移，在完整模型中经过 MoE routing / output head 后放大。
+最重要的结论可以压缩成四条：
+
+1. **PR #4839 的 HC 方向问题没有在 Miles 当前路径复现。** Miles 当前 DeepSeek-V4 没有直接走 Megatron upstream `HyperConnectionModule`，而是走 Miles 自己的 HC 实现；算子验证证明 Miles post-mix 等价于 `H_res.T @ residual`，并明显不同于错误的 `H_res @ residual`。
+2. **核心训练数学已经通过分层验证。** 已覆盖 HC、RoPE、official-compatible KV QAT、dense/sparse/tilelang attention、Grouped MLP、EP=8 all-to-all dispatcher、TransformerBlock 训练步、optimizer update、fix regression guards。
+3. **external training reference 已经完成第一层闭环。** 手写 PyTorch 训练态公式 reference 已经分别对齐 1-layer non-compressed block 和 deterministic `compress_ratio=128` compressed-attention block；forward/loss exact，梯度和一步更新在声明阈值内。
+4. **完整模型 strict parity 仍然是边界项。** mini checkpoint 和 official-vs-Miles 的真实非注入 forward strict logprob parity 仍记录为 `FAIL`；当前证据把它定位为 BF16/FP8 training runtime 与 official inference runtime 的数值漂移，并通过 BF16 tolerance envelope 约束，而不是把它改写成 strict pass。
+
+按问题拆开看：
+
+| 问题 | 当前答案 | 主要证据 |
+| --- | --- | --- |
+| Miles 是否需要直接引入 Megatron PR #4839 的 HC 修复？ | 当前路径不需要直接引入同一份修复，因为 Miles 没走 upstream HC；但必须保留 HC 方向回归验证。 | `operator_math` 中的 HC orientation check。 |
+| Miles 的 HC 方向是否正确？ | 正确，等价于 `H_res.T @ residual`。 | `deepseek-v4-operator-math-20260531.json`。 |
+| 训练相关算子是否正确？ | 已覆盖的算子和训练步通过。 | attention / block training-step、Grouped MLP、EP=8 dispatcher、optimizer update artifacts。 |
+| official-vs-Miles 是否 strict 完全一致？ | 还不是。strict logprob parity 仍是 `FAIL`。 | official forward BF16 tolerance、mini drift probe、proof ledger。 |
+| 这个 `FAIL` 是否说明训练无效？ | 不能这样判断。当前 evidence 显示训练链路在消除已定位 forward value drift 后闭合，真实 drift 落在声明 BF16 envelope 内。 | attention-output replay、end-to-end BF16 tolerance、external training reference。 |
+| 还有什么没证明？ | `compress_ratio=4` indexer path、routed MoE、loaded 4-layer mini checkpoint、SFT loss 的完整 external reference one-step train parity 仍是 `MISSING_INPUT`。 | proof summary / coverage matrix / proof ledger。 |
+
+因此，我们可以证明：**当前已覆盖的 HC、RoPE、QAT、attention dense/sparse/tilelang、local grouped expert、EP=8 all-to-all dispatch/combine、模块训练步、block 训练步、mini checkpoint attention I/O 训练步、以及消除 attention 前向值漂移后的完整 SFT one-step 训练链路这些核心数学和训练算子是正确的。**
+
+同时也要保留边界：**还不能宣称完整 Miles 训练框架已经与 official/reference 在真实非注入 forward 下端到端 strict parity 完全等价。** 剩余差异已被定位为 BF16/FP8 training runtime 与 official inference runtime 的数值漂移，在完整模型中经过 MoE routing / output head 后放大。
 
 机器可读摘要见 `docs/en/advanced/deepseek-v4-proof-summary-20260531.json`。
+
+后面的章节是详细证据。常用入口如下：
+
+| 想确认什么 | 看哪里 |
+| --- | --- |
+| HC 方向是否和 PR #4839 修复后一致 | [算子数学验证](#算子数学验证) |
+| Miles 是否使用 upstream Megatron HC | [Miles 如何实现](#miles-如何实现) |
+| QAT / RoPE / sparse attention / TileLang 是否正确 | [算子数学验证](#算子数学验证)、[Attention Trace Replay](#attention-trace-replay) |
+| 训练步 forward/backward/update 是否闭合 | [模块训练步验证](#模块训练步验证)、[TransformerBlock 训练步验证](#transformerblock-训练步验证)、[External Training Reference](#external-training-reference) |
+| official strict parity 为什么仍没过 | [Official Forward BF16 Tolerance](#official-forward-bf16-tolerance)、[Mini Checkpoint Drift Probe](#mini-checkpoint-drift-probe) |
+| 证据链有没有自相矛盾 | [Proof Coverage Matrix](#proof-coverage-matrix)、[Proof Ledger](#proof-ledger) |
 
 ## 问题背景
 
