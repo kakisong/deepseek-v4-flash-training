@@ -10,14 +10,16 @@ training-time math:
 * block HyperConnection expand/head
 * layer HyperConnection pre/post for attention and MLP
 * RMSNorms
-* non-compressed DeepSeek-V4 attention with dense masked reference attention
+* non-compressed or deterministic compressed DeepSeek-V4 attention with dense
+  masked reference attention
 * Q/KV LoRA projections, RoPE, KV QAT, output projection
 * standard GELU MLP
 * backward gradients and one manual SGD update
 
-The reference intentionally starts with ``compress_ratio=0`` and non-MoE MLP so
-that the gate is mathematically tight.  Compressed attention, routed MoE, and
-loaded mini-checkpoint SFT are separate extensions after this gate is stable.
+The reference currently covers ``compress_ratio=0`` and a deterministic
+``compress_ratio=128`` compressed-KV path with a non-MoE MLP so that each gate
+is mathematically tight.  The ``compress_ratio=4`` indexer path, routed MoE, and
+loaded mini-checkpoint SFT are separate extensions after these gates are stable.
 """
 
 from __future__ import annotations
@@ -86,7 +88,9 @@ def _init_method(tensor: torch.Tensor) -> torch.Tensor:
     return torch.nn.init.normal_(tensor, mean=0.0, std=0.02)
 
 
-def _build_config() -> TransformerConfig:
+def _build_config(compress_ratio: int) -> TransformerConfig:
+    if compress_ratio not in (0, 128):
+        raise ValueError(f"supported external-reference compress ratios are 0 and 128, got {compress_ratio}")
     config = TransformerConfig(
         tensor_model_parallel_size=1,
         pipeline_model_parallel_size=1,
@@ -111,7 +115,7 @@ def _build_config() -> TransformerConfig:
         dsv4_hc_mult=4,
         dsv4_hc_sinkhorn_iters=2,
         dsv4_hc_eps=1e-6,
-        dsv4_compress_ratios=[0],
+        dsv4_compress_ratios=[compress_ratio],
         dsv4_compress_rope_theta=160000,
         dsv4_o_groups=8,
         dsv4_o_lora_rank=1024,
@@ -236,6 +240,48 @@ def _window_topk(batch: int, seqlen: int, window_size: int, device: torch.device
     return topk
 
 
+def _compress_topk(batch: int, seqlen: int, ratio: int, offset: int, device: torch.device) -> torch.Tensor:
+    groups = seqlen // ratio
+    matrix = torch.arange(groups, device=device, dtype=torch.int32).repeat(seqlen, 1)
+    invalid = matrix >= (torch.arange(1, seqlen + 1, device=device, dtype=torch.int32).unsqueeze(1) // ratio)
+    matrix = torch.where(invalid, -1, matrix + offset)
+    return matrix.unsqueeze(0).expand(batch, -1, -1)
+
+
+def _compressor_reference(
+    x_sbd: torch.Tensor,
+    params: dict[str, torch.Tensor],
+    freqs_cis: torch.Tensor,
+    *,
+    config: TransformerConfig,
+    ratio: int,
+) -> torch.Tensor:
+    x = x_sbd.permute(1, 0, 2).contiguous()
+    bsz, seqlen, _ = x.shape
+    if seqlen < ratio or seqlen % ratio != 0:
+        raise ValueError(
+            "compressed reference requires seqlen >= ratio and divisible by ratio: "
+            f"seqlen={seqlen} ratio={ratio}"
+        )
+
+    prefix = "layers.0.self_attention.compressor."
+    head_dim = config.kv_lora_rank
+    rd = config.qk_pos_emb_head_dim
+    nope_dim = head_dim - rd
+
+    x_fp32 = x.float()
+    kv = F.linear(x_fp32, params[prefix + "wkv.weight"].float())
+    score = F.linear(x_fp32, params[prefix + "wgate.weight"].float())
+    kv = kv.unflatten(1, (-1, ratio))
+    score = score.unflatten(1, (-1, ratio)) + params[prefix + "ape"].float()
+    kv = (kv * score.softmax(dim=2)).sum(dim=2)
+    kv = _rmsnorm(kv.to(x_sbd.dtype), params[prefix + "norm.weight"], config.layernorm_epsilon)
+    kv = torch.cat([kv[..., :-rd], apply_rotary_emb(kv[..., -rd:], freqs_cis[:seqlen:ratio])], dim=-1)
+    if os.environ.get("MEGATRON_USE_KV_QAT", "0") == "1":
+        kv = torch.cat([fp8_simulate_qat(kv[..., :nope_dim].contiguous(), 64), kv[..., nope_dim:]], dim=-1)
+    return kv
+
+
 def _dense_attention_reference(
     q: torch.Tensor,
     kv: torch.Tensor,
@@ -264,7 +310,8 @@ def _dense_attention_reference(
 def _attention_reference(
     x_sbd: torch.Tensor,
     params: dict[str, torch.Tensor],
-    freqs_cis: torch.Tensor,
+    attention_freqs_cis: torch.Tensor,
+    compressor_freqs_cis: torch.Tensor | None,
     *,
     config: TransformerConfig,
 ) -> torch.Tensor:
@@ -280,15 +327,22 @@ def _attention_reference(
     q = F.linear(q, params["layers.0.self_attention.wq_b.weight"])
     q = q.unflatten(-1, (n_heads, head_dim))
     q = q * torch.rsqrt(q.square().mean(-1, keepdim=True) + config.layernorm_epsilon)
-    q = torch.cat([q[..., :-rd], apply_rotary_emb(q[..., -rd:], freqs_cis[:seqlen])], dim=-1)
+    q = torch.cat([q[..., :-rd], apply_rotary_emb(q[..., -rd:], attention_freqs_cis[:seqlen])], dim=-1)
 
     kv = F.linear(x, params["layers.0.self_attention.wkv.weight"])
     kv = _rmsnorm(kv, params["layers.0.self_attention.kv_norm.weight"], config.layernorm_epsilon)
-    kv = torch.cat([kv[..., :-rd], apply_rotary_emb(kv[..., -rd:], freqs_cis[:seqlen])], dim=-1)
+    kv = torch.cat([kv[..., :-rd], apply_rotary_emb(kv[..., -rd:], attention_freqs_cis[:seqlen])], dim=-1)
     if os.environ.get("MEGATRON_USE_KV_QAT", "0") == "1":
         kv = torch.cat([fp8_simulate_qat(kv[..., :nope_dim].contiguous(), 64), kv[..., nope_dim:]], dim=-1)
 
     topk = _window_topk(bsz, seqlen, config.dsv4_window_size, x.device)
+    ratio = int(config.dsv4_compress_ratios[0]) if config.dsv4_compress_ratios else 0
+    if ratio:
+        if compressor_freqs_cis is None:
+            raise ValueError("compressor freqs_cis is required for compressed reference")
+        kv_compress = _compressor_reference(x_sbd, params, compressor_freqs_cis, config=config, ratio=ratio)
+        topk = torch.cat([topk, _compress_topk(bsz, seqlen, ratio, offset=seqlen, device=x.device)], dim=-1)
+        kv = torch.cat([kv, kv_compress], dim=1)
     o = _dense_attention_reference(
         q,
         kv,
@@ -296,7 +350,7 @@ def _attention_reference(
         topk,
         head_dim**-0.5,
     )
-    o = torch.cat([o[..., :-rd], apply_rotary_emb(o[..., -rd:], freqs_cis[:seqlen], inverse=True)], dim=-1)
+    o = torch.cat([o[..., :-rd], apply_rotary_emb(o[..., -rd:], attention_freqs_cis[:seqlen], inverse=True)], dim=-1)
     o = o.view(bsz, seqlen, config.dsv4_o_groups, -1)
     wo_a = params["layers.0.self_attention.wo_a.weight"].view(config.dsv4_o_groups, config.dsv4_o_lora_rank, -1)
     o = torch.einsum("bsgd,grd->bsgr", o, wo_a)
@@ -314,7 +368,8 @@ def _mlp_reference(x_sbd: torch.Tensor, params: dict[str, torch.Tensor], *, conf
 def _block_reference(
     hidden_states: torch.Tensor,
     params: dict[str, torch.Tensor],
-    freqs_cis: torch.Tensor,
+    attention_freqs_cis: torch.Tensor,
+    compressor_freqs_cis: torch.Tensor | None,
     *,
     config: TransformerConfig,
 ) -> torch.Tensor:
@@ -333,7 +388,7 @@ def _block_reference(
         norm_eps=config.layernorm_epsilon,
     )
     x_attn = _rmsnorm(x_attn, params["layers.0.input_layernorm.weight"], config.layernorm_epsilon)
-    attn_out = _attention_reference(x_attn, params, freqs_cis, config=config)
+    attn_out = _attention_reference(x_attn, params, attention_freqs_cis, compressor_freqs_cis, config=config)
     x = _hc_post(attn_out, residual, attn_post, attn_comb)
 
     residual = x
@@ -432,7 +487,8 @@ def _run_megatron(
 
 def _run_reference(
     params: dict[str, torch.Tensor],
-    freqs_cis: torch.Tensor,
+    attention_freqs_cis: torch.Tensor,
+    compressor_freqs_cis: torch.Tensor | None,
     hidden_states: torch.Tensor,
     upstream_grad: torch.Tensor,
     *,
@@ -440,7 +496,7 @@ def _run_reference(
     lr: float,
 ) -> dict[str, Any]:
     x = hidden_states.detach().clone().requires_grad_(True)
-    output = _block_reference(x, params, freqs_cis, config=config)
+    output = _block_reference(x, params, attention_freqs_cis, compressor_freqs_cis, config=config)
     loss = (output.float() * upstream_grad.float()).mean()
     loss.backward()
     grads = {
@@ -499,24 +555,46 @@ def main() -> int:
     parser.add_argument("--json-output", type=Path)
     parser.add_argument("--seqlen", type=int, default=8)
     parser.add_argument("--batch-size", type=int, default=1)
+    parser.add_argument("--compress-ratio", type=int, choices=[0, 128], default=0)
     parser.add_argument("--lr", type=float, default=1e-4)
-    parser.add_argument("--max-loss-abs", type=float, default=0.0)
-    parser.add_argument("--max-output-abs", type=float, default=0.0)
-    parser.add_argument("--max-input-grad-abs", type=float, default=0.0)
-    parser.add_argument("--max-grad-abs", type=float, default=1e-7)
-    parser.add_argument("--max-state-abs", type=float, default=0.0)
+    parser.add_argument("--max-loss-abs", type=float, default=None)
+    parser.add_argument("--max-output-abs", type=float, default=None)
+    parser.add_argument("--max-input-grad-abs", type=float, default=None)
+    parser.add_argument("--max-grad-abs", type=float, default=None)
+    parser.add_argument("--max-state-abs", type=float, default=None)
     args = parser.parse_args()
+
+    if args.max_loss_abs is None:
+        args.max_loss_abs = 0.0
+    if args.max_output_abs is None:
+        args.max_output_abs = 0.0
+    if args.max_input_grad_abs is None:
+        args.max_input_grad_abs = 0.0 if args.compress_ratio == 0 else 1e-7
+    if args.max_grad_abs is None:
+        args.max_grad_abs = 1e-7 if args.compress_ratio == 0 else 5e-7
+    if args.max_state_abs is None:
+        args.max_state_abs = 0.0 if args.compress_ratio == 0 else 1e-9
 
     _init_distributed()
     try:
         torch.manual_seed(SEED)
         torch.cuda.manual_seed_all(SEED)
         os.environ["MEGATRON_SPARSE_ATTN_IMPL"] = "dense"
-        config = _build_config()
+        if args.compress_ratio and (args.seqlen < args.compress_ratio or args.seqlen % args.compress_ratio != 0):
+            raise ValueError(
+                f"--seqlen must be >= --compress-ratio and divisible by it: "
+                f"seqlen={args.seqlen} compress_ratio={args.compress_ratio}"
+            )
+        config = _build_config(args.compress_ratio)
         block = _build_block(config)
         _initialize_synthetic_state(block)
         reference_params = _clone_param_dict(block)
-        freqs_cis = block.layers[0].self_attention.freqs_cis.detach()
+        attention_freqs_cis = block.layers[0].self_attention.freqs_cis.detach()
+        compressor_freqs_cis = (
+            block.layers[0].self_attention.compressor.freqs_cis.detach()
+            if args.compress_ratio
+            else None
+        )
         num_parameters = sum(param.numel() for param in block.parameters())
 
         hidden_states = torch.randn(
@@ -531,7 +609,8 @@ def main() -> int:
         megatron = _run_megatron(block, hidden_states, upstream_grad, lr=args.lr)
         reference = _run_reference(
             reference_params,
-            freqs_cis,
+            attention_freqs_cis,
+            compressor_freqs_cis,
             hidden_states,
             upstream_grad,
             config=config,
@@ -555,7 +634,7 @@ def main() -> int:
             "status": "PASS" if not failures else "FAIL",
             "scope": (
                 "external PyTorch training reference vs Megatron/Miles DeepSeek-V4 "
-                "one-layer non-compressed TransformerBlock"
+                f"one-layer compress_ratio={args.compress_ratio} TransformerBlock"
             ),
             "reference": "explicit PyTorch formula reference outside the Megatron module forward graph",
             "config": {
@@ -563,7 +642,7 @@ def main() -> int:
                 "hidden_size": config.hidden_size,
                 "num_attention_heads": config.num_attention_heads,
                 "ffn_hidden_size": config.ffn_hidden_size,
-                "compress_ratio": 0,
+                "compress_ratio": args.compress_ratio,
                 "dsv4_hc_mult": config.dsv4_hc_mult,
                 "dsv4_hc_sinkhorn_iters": config.dsv4_hc_sinkhorn_iters,
                 "normalization": config.normalization,
@@ -584,9 +663,9 @@ def main() -> int:
             "comparison": comparison,
             "failures": failures,
             "boundary": (
-                "This closes the first external training-reference gate for a one-layer "
-                "non-compressed DeepSeek-V4 training block. Compressed attention, routed MoE, "
-                "and loaded mini-checkpoint SFT are intentionally left as follow-up extensions."
+                "This closes an external training-reference gate for a one-layer "
+                "DeepSeek-V4 training block. Routed MoE and loaded mini-checkpoint SFT "
+                "are intentionally left as follow-up extensions."
             ),
         }
         print(json.dumps(payload, indent=2, sort_keys=True))

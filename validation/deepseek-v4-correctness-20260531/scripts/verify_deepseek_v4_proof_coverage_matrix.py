@@ -183,6 +183,17 @@ def _main() -> int:
             "status": "PROVED_WITH_BOUNDED_FORWARD_DRIFT",
         },
         {
+            "id": "external_training_reference_1layer",
+            "claim": "One-layer non-MoE DeepSeek-V4 training blocks pass explicit PyTorch external-reference forward/backward/update parity for non-compressed and deterministic compress_ratio=128 compressed attention.",
+            "evidence": [
+                "deepseek-v4-external-training-reference-1layer-20260531.json",
+                "deepseek-v4-external-training-reference-1layer-c128-20260531.json",
+            ],
+            "summary_gates": ["external_training_reference_1layer"],
+            "doc_sections": ["External Training Reference"],
+            "status": "PROVED",
+        },
+        {
             "id": "bf16_tolerance_envelope",
             "claim": "real non-injected forward/train drift is inside the declared BF16 runtime tolerance envelope.",
             "evidence": ["deepseek-v4-end-to-end-bf16-tolerance-20260531.json"],
@@ -240,7 +251,7 @@ def _main() -> int:
         {
             "id": "external_reference_mini_checkpoint_one_step_train_parity",
             "expected_status": "MISSING_INPUT",
-            "reason_must_contain": ["official/reference", "forward parity"],
+            "reason_must_contain": ["external training reference", "compress_ratio=4", "mini checkpoint"],
         },
     ]
 

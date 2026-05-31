@@ -89,6 +89,14 @@ def _main() -> int:
             "deepseek-v4-mini-train-step-attention-output-replay-qatsim-20260531.json",
             "PASS",
         ),
+        "external_training_reference_1layer": (
+            "deepseek-v4-external-training-reference-1layer-20260531.json",
+            "PASS",
+        ),
+        "external_training_reference_1layer_c128": (
+            "deepseek-v4-external-training-reference-1layer-c128-20260531.json",
+            "PASS",
+        ),
         "end_to_end_bf16_tolerance": (
             "deepseek-v4-end-to-end-bf16-tolerance-20260531.json",
             "PASS",
@@ -295,6 +303,65 @@ def _main() -> int:
             "official_forward_bf16_tolerance.external_train_precondition",
         )
 
+    def _record_external_ref_bounds(gate_key: str, artifact: str, expected_ratio: int) -> None:
+        external_ref = _load(base, artifact)
+        comp = external_ref["comparison"]
+        gates[gate_key] = {
+            "artifact": artifact,
+            "compress_ratio": external_ref["config"]["compress_ratio"],
+            "loss_abs": comp["loss_abs"],
+            "output_max_abs": comp["output"]["max_abs"],
+            "input_grad_max_abs": comp["input_grad"]["max_abs"],
+            "grad_max_abs": comp["grad"]["max_abs"],
+            "state_after_step_max_abs": comp["state_after_step"]["max_abs"],
+            "num_common_grad_tensors": comp["num_common_grad_tensors"],
+            "boundary": external_ref["boundary"],
+        }
+        _check(
+            external_ref["config"]["compress_ratio"] == expected_ratio,
+            failures,
+            f"{gate_key}.compress_ratio",
+        )
+        _check(comp["loss_abs"] <= external_ref["thresholds"]["max_loss_abs"], failures, f"{gate_key}.loss")
+        _check(
+            comp["output"]["max_abs"] <= external_ref["thresholds"]["max_output_abs"],
+            failures,
+            f"{gate_key}.output",
+        )
+        _check(
+            comp["input_grad"]["max_abs"] <= external_ref["thresholds"]["max_input_grad_abs"],
+            failures,
+            f"{gate_key}.input_grad",
+        )
+        _check(
+            comp["grad"]["max_abs"] <= external_ref["thresholds"]["max_grad_abs"],
+            failures,
+            f"{gate_key}.grad",
+        )
+        _check(
+            comp["state_after_step"]["max_abs"] <= external_ref["thresholds"]["max_state_abs"],
+            failures,
+            f"{gate_key}.state_after_step",
+        )
+        _check(
+            comp["num_common_grad_tensors"] > 0
+            and not comp["missing_reference_grad_tensors"]
+            and not comp["extra_reference_grad_tensors"],
+            failures,
+            f"{gate_key}.grad_tensor_sets",
+        )
+
+    _record_external_ref_bounds(
+        "external_training_reference_1layer_bounds",
+        "deepseek-v4-external-training-reference-1layer-20260531.json",
+        0,
+    )
+    _record_external_ref_bounds(
+        "external_training_reference_1layer_c128_bounds",
+        "deepseek-v4-external-training-reference-1layer-c128-20260531.json",
+        128,
+    )
+
     payload = {
         "date": "2026-05-31",
         "scope": "DeepSeek-V4 proof ledger consistency check",
@@ -304,9 +371,11 @@ def _main() -> int:
         "failures": failures,
         "conclusion": (
             "Recorded artifacts consistently prove the covered HC/QAT/attention/MLP/MoE/"
-            "training-step gates, validate the official forward BF16 tolerance gate, and "
-            "localize the remaining real-forward strict parity failure to BF16 attention "
-            "forward-value drift amplified by the full model."
+            "training-step gates, validate the non-compressed and deterministic compressed "
+            "external training-reference gates and "
+            "the official forward BF16 tolerance gate, and localize the remaining "
+            "real-forward strict parity failure to BF16 attention forward-value drift "
+            "amplified by the full model."
             if not failures
             else "Recorded artifacts are not mutually sufficient for the proof ledger."
         ),

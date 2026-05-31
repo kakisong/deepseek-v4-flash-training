@@ -12,23 +12,23 @@
   "comparison": {
     "extra_reference_grad_tensors": [],
     "grad": {
-      "max_abs": 5.960464477539063e-08,
-      "name": "final_layernorm.weight",
-      "relative_l2_gap": 0.0
+      "max_abs": 2.384185791015625e-07,
+      "name": "layers.0.mlp.linear_fc1.weight",
+      "relative_l2_gap": 1.0019821206075363e-07
     },
     "input_grad": {
-      "exact_equal": true,
-      "max_abs": 0.0,
-      "mean_abs": 0.0,
-      "p99_abs": 0.0,
-      "relative_l2_gap": 0.0
+      "exact_equal": false,
+      "max_abs": 2.9802322387695312e-08,
+      "mean_abs": 4.604987779988079e-10,
+      "p99_abs": 7.450580596923828e-09,
+      "relative_l2_gap": 1.2372152085049493e-06
     },
     "loss_abs": 0.0,
     "missing_reference_grad_tensors": [],
-    "num_common_grad_tensors": 13,
-    "num_common_state_tensors": 22,
-    "num_megatron_grad_tensors": 13,
-    "num_reference_grad_tensors": 13,
+    "num_common_grad_tensors": 17,
+    "num_common_state_tensors": 26,
+    "num_megatron_grad_tensors": 17,
+    "num_reference_grad_tensors": 17,
     "output": {
       "exact_equal": true,
       "max_abs": 0.0,
@@ -37,13 +37,13 @@
       "relative_l2_gap": 0.0
     },
     "state_after_step": {
-      "max_abs": 0.0,
-      "name": "",
+      "max_abs": 4.656612873077393e-10,
+      "name": "layers.0.self_attention.compressor.wkv.weight",
       "relative_l2_gap": 0.0
     }
   },
   "config": {
-    "compress_ratio": 0,
+    "compress_ratio": 128,
     "dsv4_hc_mult": 4,
     "dsv4_hc_sinkhorn_iters": 2,
     "ffn_hidden_size": 1024,
@@ -59,17 +59,17 @@
     "lr": 0.0001,
     "rule": "sgd"
   },
-  "num_parameters": 57488963,
+  "num_parameters": 61749315,
   "reference": "explicit PyTorch formula reference outside the Megatron module forward graph",
-  "scope": "external PyTorch training reference vs Megatron/Miles DeepSeek-V4 one-layer compress_ratio=0 TransformerBlock",
+  "scope": "external PyTorch training reference vs Megatron/Miles DeepSeek-V4 one-layer compress_ratio=128 TransformerBlock",
   "seed": 20260531,
-  "seqlen": 8,
+  "seqlen": 256,
   "status": "PASS",
   "thresholds": {
-    "max_grad_abs": 1e-07,
-    "max_input_grad_abs": 0.0,
+    "max_grad_abs": 5e-07,
+    "max_input_grad_abs": 1e-07,
     "max_loss_abs": 0.0,
     "max_output_abs": 0.0,
-    "max_state_abs": 0.0
+    "max_state_abs": 1e-09
   }
 }
