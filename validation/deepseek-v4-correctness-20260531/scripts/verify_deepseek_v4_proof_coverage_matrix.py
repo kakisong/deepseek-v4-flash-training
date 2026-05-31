@@ -189,10 +189,19 @@ def _main() -> int:
             "evidence": [
                 "deepseek-v4-mini-checkpoint-correctness-gate-20260531.json",
                 "deepseek-v4-mini-checkpoint-correctness-rerun-sft-attention-output-replay-20260531.json",
+                "deepseek-v4-sft-loss-reference-20260531.json",
             ],
             "summary_gates": ["mini_checkpoint_correctness_gate"],
             "doc_sections": ["Mini Checkpoint Correctness Gate"],
             "status": "PROVED_WITH_BF16_TOLERANCE",
+        },
+        {
+            "id": "sft_loss_explicit_reference",
+            "claim": "loaded mini checkpoint SFT loss matches an explicit PyTorch log_softmax/gather/loss_mask reference.",
+            "evidence": ["deepseek-v4-sft-loss-reference-20260531.json"],
+            "summary_gates": ["sft_loss_explicit_reference"],
+            "doc_sections": ["SFT Loss Explicit Reference"],
+            "status": "PROVED",
         },
         {
             "id": "external_training_reference_1layer",
@@ -264,7 +273,7 @@ def _main() -> int:
         {
             "id": "external_reference_mini_checkpoint_one_step_train_parity",
             "expected_status": "MISSING_INPUT",
-            "reason_must_contain": ["external training reference", "routed MoE", "mini checkpoint"],
+            "reason_must_contain": ["external training reference", "routed MoE", "mini checkpoint", "SFT loss"],
         },
     ]
 
@@ -323,6 +332,7 @@ def _main() -> int:
         "megatron-core",
         "transformer-engine",
         "tilelang",
+        "SFT loss explicit reference",
     ]
     doc_checks = {phrase: (phrase in doc) for phrase in doc_required_phrases}
     for phrase, present in doc_checks.items():

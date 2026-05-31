@@ -1,0 +1,274 @@
+{
+  "attention_impl": "dense",
+  "checkpoint": "checkpoints",
+  "date": "2026-05-31",
+  "failures": [],
+  "global_summary": {
+    "logprob_max_abs_global_max": 1.9073486328125e-06,
+    "logprob_mean_abs_global_max": 1.2926849990435585e-07,
+    "loss_abs_global_max": 0.0,
+    "num_logprob_tokens_global_sum": 3216,
+    "token_count_abs_global_max": 0.0
+  },
+  "max_samples": 1,
+  "per_rank": [
+    {
+      "explicit_loss_sum": 6789.53515625,
+      "explicit_token_count": 402.0,
+      "failures": [],
+      "logprob_gap": {
+        "max_abs": 1.9073486328125e-06,
+        "mean_abs": 1.2926849990435585e-07,
+        "numel": 402,
+        "p99_abs": 1.9073486328125e-06,
+        "relative_l2_gap": 0.0
+      },
+      "loss_abs": 0.0,
+      "loss_log": {
+        "count": 402.0,
+        "loss": 6789.53515625
+      },
+      "miles_loss": 6789.53515625,
+      "miles_token_count": 402,
+      "per_sample": [
+        {
+          "explicit_loss_sum": 6789.53515625,
+          "loss_tokens": 402.0,
+          "response_length": 402,
+          "sample": 0,
+          "total_length": 505
+        }
+      ],
+      "rank": 0,
+      "token_count_abs": 0.0
+    },
+    {
+      "explicit_loss_sum": 6789.53515625,
+      "explicit_token_count": 402.0,
+      "failures": [],
+      "logprob_gap": {
+        "max_abs": 1.9073486328125e-06,
+        "mean_abs": 1.2926849990435585e-07,
+        "numel": 402,
+        "p99_abs": 1.9073486328125e-06,
+        "relative_l2_gap": 0.0
+      },
+      "loss_abs": 0.0,
+      "loss_log": {
+        "count": 402.0,
+        "loss": 6789.53515625
+      },
+      "miles_loss": 6789.53515625,
+      "miles_token_count": 402,
+      "per_sample": [
+        {
+          "explicit_loss_sum": 6789.53515625,
+          "loss_tokens": 402.0,
+          "response_length": 402,
+          "sample": 0,
+          "total_length": 505
+        }
+      ],
+      "rank": 1,
+      "token_count_abs": 0.0
+    },
+    {
+      "explicit_loss_sum": 6789.53515625,
+      "explicit_token_count": 402.0,
+      "failures": [],
+      "logprob_gap": {
+        "max_abs": 1.9073486328125e-06,
+        "mean_abs": 1.2926849990435585e-07,
+        "numel": 402,
+        "p99_abs": 1.9073486328125e-06,
+        "relative_l2_gap": 0.0
+      },
+      "loss_abs": 0.0,
+      "loss_log": {
+        "count": 402.0,
+        "loss": 6789.53515625
+      },
+      "miles_loss": 6789.53515625,
+      "miles_token_count": 402,
+      "per_sample": [
+        {
+          "explicit_loss_sum": 6789.53515625,
+          "loss_tokens": 402.0,
+          "response_length": 402,
+          "sample": 0,
+          "total_length": 505
+        }
+      ],
+      "rank": 2,
+      "token_count_abs": 0.0
+    },
+    {
+      "explicit_loss_sum": 6789.53515625,
+      "explicit_token_count": 402.0,
+      "failures": [],
+      "logprob_gap": {
+        "max_abs": 1.9073486328125e-06,
+        "mean_abs": 1.2926849990435585e-07,
+        "numel": 402,
+        "p99_abs": 1.9073486328125e-06,
+        "relative_l2_gap": 0.0
+      },
+      "loss_abs": 0.0,
+      "loss_log": {
+        "count": 402.0,
+        "loss": 6789.53515625
+      },
+      "miles_loss": 6789.53515625,
+      "miles_token_count": 402,
+      "per_sample": [
+        {
+          "explicit_loss_sum": 6789.53515625,
+          "loss_tokens": 402.0,
+          "response_length": 402,
+          "sample": 0,
+          "total_length": 505
+        }
+      ],
+      "rank": 3,
+      "token_count_abs": 0.0
+    },
+    {
+      "explicit_loss_sum": 6789.53515625,
+      "explicit_token_count": 402.0,
+      "failures": [],
+      "logprob_gap": {
+        "max_abs": 1.9073486328125e-06,
+        "mean_abs": 1.2926849990435585e-07,
+        "numel": 402,
+        "p99_abs": 1.9073486328125e-06,
+        "relative_l2_gap": 0.0
+      },
+      "loss_abs": 0.0,
+      "loss_log": {
+        "count": 402.0,
+        "loss": 6789.53515625
+      },
+      "miles_loss": 6789.53515625,
+      "miles_token_count": 402,
+      "per_sample": [
+        {
+          "explicit_loss_sum": 6789.53515625,
+          "loss_tokens": 402.0,
+          "response_length": 402,
+          "sample": 0,
+          "total_length": 505
+        }
+      ],
+      "rank": 4,
+      "token_count_abs": 0.0
+    },
+    {
+      "explicit_loss_sum": 6789.53515625,
+      "explicit_token_count": 402.0,
+      "failures": [],
+      "logprob_gap": {
+        "max_abs": 1.9073486328125e-06,
+        "mean_abs": 1.2926849990435585e-07,
+        "numel": 402,
+        "p99_abs": 1.9073486328125e-06,
+        "relative_l2_gap": 0.0
+      },
+      "loss_abs": 0.0,
+      "loss_log": {
+        "count": 402.0,
+        "loss": 6789.53515625
+      },
+      "miles_loss": 6789.53515625,
+      "miles_token_count": 402,
+      "per_sample": [
+        {
+          "explicit_loss_sum": 6789.53515625,
+          "loss_tokens": 402.0,
+          "response_length": 402,
+          "sample": 0,
+          "total_length": 505
+        }
+      ],
+      "rank": 5,
+      "token_count_abs": 0.0
+    },
+    {
+      "explicit_loss_sum": 6789.53515625,
+      "explicit_token_count": 402.0,
+      "failures": [],
+      "logprob_gap": {
+        "max_abs": 1.9073486328125e-06,
+        "mean_abs": 1.2926849990435585e-07,
+        "numel": 402,
+        "p99_abs": 1.9073486328125e-06,
+        "relative_l2_gap": 0.0
+      },
+      "loss_abs": 0.0,
+      "loss_log": {
+        "count": 402.0,
+        "loss": 6789.53515625
+      },
+      "miles_loss": 6789.53515625,
+      "miles_token_count": 402,
+      "per_sample": [
+        {
+          "explicit_loss_sum": 6789.53515625,
+          "loss_tokens": 402.0,
+          "response_length": 402,
+          "sample": 0,
+          "total_length": 505
+        }
+      ],
+      "rank": 6,
+      "token_count_abs": 0.0
+    },
+    {
+      "explicit_loss_sum": 6789.53515625,
+      "explicit_token_count": 402.0,
+      "failures": [],
+      "logprob_gap": {
+        "max_abs": 1.9073486328125e-06,
+        "mean_abs": 1.2926849990435585e-07,
+        "numel": 402,
+        "p99_abs": 1.9073486328125e-06,
+        "relative_l2_gap": 0.0
+      },
+      "loss_abs": 0.0,
+      "loss_log": {
+        "count": 402.0,
+        "loss": 6789.53515625
+      },
+      "miles_loss": 6789.53515625,
+      "miles_token_count": 402,
+      "per_sample": [
+        {
+          "explicit_loss_sum": 6789.53515625,
+          "loss_tokens": 402.0,
+          "response_length": 402,
+          "sample": 0,
+          "total_length": 505
+        }
+      ],
+      "rank": 7,
+      "token_count_abs": 0.0
+    }
+  ],
+  "reference_formula": "sum(-log_softmax(response_logits)[target_token] * loss_mask)",
+  "rollout_data_name": "1_0.pt",
+  "runtime": {
+    "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
+    "CUDA_DEVICE_MAX_CONNECTIONS": "1",
+    "MEGATRON_USE_KV_QAT": "1",
+    "NCCL_ALGO": "Ring",
+    "deterministic_mode": true
+  },
+  "scope": "4-layer DeepSeek-V4 mini checkpoint SFT loss explicit PyTorch reference",
+  "seed": 20260531,
+  "status": "PASS",
+  "thresholds": {
+    "max_logprob_abs": 0.002,
+    "max_logprob_mean_abs": 2e-05,
+    "max_loss_abs": 0.002
+  },
+  "world_size": 8
+}

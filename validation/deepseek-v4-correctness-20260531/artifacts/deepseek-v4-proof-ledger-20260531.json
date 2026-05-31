@@ -1,6 +1,6 @@
 {
-  "artifacts_dir_name": "advanced",
-  "conclusion": "Recorded artifacts consistently prove the covered HC/QAT/attention/MLP/MoE/training-step gates, validate the non-compressed, c4 indexer, and deterministic compressed external training-reference gates, validate the mini-checkpoint correctness gate, and the official forward BF16 tolerance gate, and localize the remaining real-forward strict parity failure to BF16 attention forward-value drift amplified by the full model.",
+  "artifacts_dir_name": "artifacts",
+  "conclusion": "Recorded artifacts consistently prove the covered HC/QAT/attention/MLP/MoE/training-step gates, validate the non-compressed, c4 indexer, and deterministic compressed external training-reference gates, validate the SFT loss explicit reference and mini-checkpoint correctness gate, and the official forward BF16 tolerance gate, and localize the remaining real-forward strict parity failure to BF16 attention forward-value drift amplified by the full model.",
   "date": "2026-05-31",
   "failures": [],
   "gates": {
@@ -125,6 +125,14 @@
       "rerun_selected_state_abs_max": 9.5367431640625e-07,
       "rerun_status": "PASS",
       "rerun_world_size": 8,
+      "sft_loss_reference": {
+        "logprob_max_abs_global_max": 1.9073486328125e-06,
+        "logprob_mean_abs_global_max": 1.2926849990435585e-07,
+        "loss_abs_global_max": 0.0,
+        "reference_formula": "sum(-log_softmax(response_logits)[target_token] * loss_mask)",
+        "token_count_abs_global_max": 0.0,
+        "world_size": 8
+      },
       "strict_boundaries": {
         "not_reclassified_as_strict_pass": true,
         "real_non_injected_forward_strict_status": "FAIL",
@@ -246,6 +254,25 @@
     "sft_attention_output_replay": {
       "artifact": "deepseek-v4-mini-train-step-attention-output-replay-qatsim-20260531.json",
       "status": "PASS"
+    },
+    "sft_loss_explicit_reference": {
+      "artifact": "deepseek-v4-sft-loss-reference-20260531.json",
+      "status": "PASS"
+    },
+    "sft_loss_explicit_reference_bounds": {
+      "artifact": "deepseek-v4-sft-loss-reference-20260531.json",
+      "logprob_max_abs_global_max": 1.9073486328125e-06,
+      "logprob_mean_abs_global_max": 1.2926849990435585e-07,
+      "loss_abs_global_max": 0.0,
+      "num_logprob_tokens_global_sum": 3216,
+      "reference_formula": "sum(-log_softmax(response_logits)[target_token] * loss_mask)",
+      "thresholds": {
+        "max_logprob_abs": 0.002,
+        "max_logprob_mean_abs": 2e-05,
+        "max_loss_abs": 0.002
+      },
+      "token_count_abs_global_max": 0.0,
+      "world_size": 8
     },
     "sparse_activation_localization": {
       "all_attention_exact": true,

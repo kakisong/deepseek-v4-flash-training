@@ -1,5 +1,5 @@
 {
-  "conclusion": "Megatron PR #4839 is not needed for the current Miles DeepSeek-V4 path because Miles implements its own HC and the HC math matches the fixed H_res.T formula. The QAT dimension and official-compatible in-place QAT fixes are applied, and operator, attention-module, attention-trace replay, MLP expert replay, grouped-MLP training math, EP=8 all-to-all dispatch math, and transformer-block training-step gates now pass. Full mini-checkpoint forward and SFT one-step execute with finite values. Mini forward and SFT one-step routing replay show that MoE routing flips are a major drift amplifier. Mini activation replay proves that once dense layer outputs or final layernorm output are injected, sparse/tilelang reproduce dense logprobs bitwise, ruling out final layernorm/output-head/logprob postprocessing as the remaining backend drift source. Mini sublayer replay further shows that injecting all dense attention outputs alone is sufficient for bitwise dense logprobs, while injecting all dense MLP outputs is not, localizing remaining backend drift to attention module output differences. Mini attention-layer replay shows layer 0 attention is the largest early contributor and attention-prefix injection monotonically reduces mismatches to zero. Mini attention I/O replay confirms that this is same-input attention backend BF16 output drift, not merely upstream input-state drift. Mini attention I/O local training-step replay passes on real checkpoint attention inputs and proves the attention forward/backward/manual-update surface remains within BF16 training thresholds. Complete SFT one-step with attention-output straight-through replay also passes after removing the localized attention forward-value drift, with exact loss parity and selected update drift below threshold. A dedicated mini checkpoint correctness gate now passes under the declared BF16 training tolerance by composing the loaded 4-layer checkpoint SFT rerun, routed MoE math, EP=8 dispatch math, attention I/O training-step bounds, c0/c4/c128 external attention references, optimizer math, and the BF16 envelope. The external training-reference 1-layer gate now passes for non-compressed attention, compress_ratio=4 indexer attention, and deterministic compress_ratio=128 compressed attention: an explicit PyTorch formula reference matches Megatron/Miles on forward, loss, input gradient, selected parameter gradients, and one SGD update within each path's declared thresholds. However real non-injected SFT loss and forward logprob strict parity still fail without activation injection, so the result is a BF16-tolerant mini-checkpoint training correctness proof, not a strict bitwise/full-logprob proof. A proof ledger consistency check now machine-validates the artifact chain and found no failures. An explicit end-to-end BF16 tolerance verifier now passes and documents the bounded real-forward/train-step drift envelope without reclassifying strict parity as passed. A dedicated official-vs-Miles BF16 forward tolerance verifier also passes and records the official-inference strict parity boundary. Optimizer path and AdamW first-step update math are now verified as a separate PASS gate. Source regression guards for the precision fixes are now verified and included in the proof ledger. A proof coverage matrix now maps the user-requested proof areas to artifact-backed evidence and machine-checks the remaining strict gates as explicit boundaries. Environment provenance is now machine-checked against the operator-math runtime artifact. External reference provenance now records the bounded use of Megatron-LM PR #4839 and SWIFT documentation.",
+  "conclusion": "Megatron PR #4839 is not needed for the current Miles DeepSeek-V4 path because Miles implements its own HC and the HC math matches the fixed H_res.T formula. The QAT dimension and official-compatible in-place QAT fixes are applied, and operator, attention-module, attention-trace replay, MLP expert replay, grouped-MLP training math, EP=8 all-to-all dispatch math, and transformer-block training-step gates now pass. Full mini-checkpoint forward and SFT one-step execute with finite values. Mini forward and SFT one-step routing replay show that MoE routing flips are a major drift amplifier. Mini activation replay proves that once dense layer outputs or final layernorm output are injected, sparse/tilelang reproduce dense logprobs bitwise, ruling out final layernorm/output-head/logprob postprocessing as the remaining backend drift source. Mini sublayer replay further shows that injecting all dense attention outputs alone is sufficient for bitwise dense logprobs, while injecting all dense MLP outputs is not, localizing remaining backend drift to attention module output differences. Mini attention-layer replay shows layer 0 attention is the largest early contributor and attention-prefix injection monotonically reduces mismatches to zero. Mini attention I/O replay confirms that this is same-input attention backend BF16 output drift, not merely upstream input-state drift. Mini attention I/O local training-step replay passes on real checkpoint attention inputs and proves the attention forward/backward/manual-update surface remains within BF16 training thresholds. Complete SFT one-step with attention-output straight-through replay also passes after removing the localized attention forward-value drift, with exact loss parity and selected update drift below threshold. A dedicated mini checkpoint correctness gate now passes under the declared BF16 training tolerance by composing the loaded 4-layer checkpoint SFT rerun, an explicit PyTorch SFT loss reference, routed MoE math, EP=8 dispatch math, attention I/O training-step bounds, c0/c4/c128 external attention references, optimizer math, and the BF16 envelope. The external training-reference 1-layer gate now passes for non-compressed attention, compress_ratio=4 indexer attention, and deterministic compress_ratio=128 compressed attention: an explicit PyTorch formula reference matches Megatron/Miles on forward, loss, input gradient, selected parameter gradients, and one SGD update within each path's declared thresholds. However real non-injected SFT loss and forward logprob strict parity still fail without activation injection, so the result is a BF16-tolerant mini-checkpoint training correctness proof, not a strict bitwise/full-logprob proof. A proof ledger consistency check now machine-validates the artifact chain and found no failures. An explicit end-to-end BF16 tolerance verifier now passes and documents the bounded real-forward/train-step drift envelope without reclassifying strict parity as passed. A dedicated official-vs-Miles BF16 forward tolerance verifier also passes and records the official-inference strict parity boundary. Optimizer path and AdamW first-step update math are now verified as a separate PASS gate. Source regression guards for the precision fixes are now verified and included in the proof ledger. A proof coverage matrix now maps the user-requested proof areas to artifact-backed evidence and machine-checks the remaining strict gates as explicit boundaries. Environment provenance is now machine-checked against the operator-math runtime artifact. External reference provenance now records the bounded use of Megatron-LM PR #4839 and SWIFT documentation.",
   "date": "2026-05-31",
   "not_proved": [
     {
@@ -99,7 +99,7 @@
         "deepseek-v4-external-reference-provenance-20260531.json"
       ],
       "gate": "external_reference_mini_checkpoint_one_step_train_parity",
-      "reason": "the mini checkpoint correctness gate now passes under the declared BF16 training tolerance and covers loaded 4-layer checkpoint execution, routed MoE evidence, SFT loss replay, attention I/O training-step bounds, and optimizer math through composed artifacts. What remains missing is a single monolithic external training reference written in PyTorch that reimplements the full 4-layer checkpoint, routed MoE, and SFT loss end to end; this is still MISSING_INPUT and not a new training-link failure.",
+      "reason": "the mini checkpoint correctness gate now passes under the declared BF16 training tolerance and covers loaded 4-layer checkpoint execution, explicit PyTorch SFT loss reference, routed MoE evidence, SFT loss replay, attention I/O training-step bounds, and optimizer math through composed artifacts. What remains missing is a single monolithic external training reference written in PyTorch that reimplements the full 4-layer checkpoint, routed MoE, and SFT loss end to end; this is still MISSING_INPUT and not a new training-link failure.",
       "status": "MISSING_INPUT"
     }
   ],
@@ -447,18 +447,33 @@
     },
     {
       "covers": [
+        "loaded 4-layer mini checkpoint dense forward logits on the fixed SFT batch",
+        "explicit PyTorch SFT loss formula: sum(-log_softmax(response_logits)[target_token] * loss_mask)",
+        "Miles loss_function / fused CE loss equals explicit reference loss with loss_abs_global_max=0.0",
+        "token count matches exactly at 402 response loss tokens on each rank",
+        "per-token logprob max_abs=1.9073486328125e-06 and mean_abs=1.2926849990435585e-07 against explicit log_softmax/gather reference",
+        "8-rank run with TP=1, CP=1, EP=8, loaded 4-layer checkpoint and compress ratios [0, 0, 4, 128]"
+      ],
+      "evidence": "deepseek-v4-sft-loss-reference-20260531.json",
+      "gate": "sft_loss_explicit_reference",
+      "status": "PASS"
+    },
+    {
+      "covers": [
         "framework-level mini checkpoint training correctness under the declared BF16 tolerance",
         "loaded 4-layer mini checkpoint and fixed SFT batch rerun on 8 ranks",
         "routed MoE evidence from official MLP replay, TE grouped MLP math, and EP=8 all-to-all dispatch math",
         "complete SFT attention-output replay with exact dense/sparse/tilelang loss parity",
         "max selected_grad_rel_gap=2.1286144848309263e-05 and max selected_state_abs=9.5367431640625e-07 in the rerun artifact",
+        "explicit PyTorch SFT loss reference matches Miles loss exactly with token count exact and logprob max_abs=1.9073486328125e-06",
         "attention I/O training-step output/input-gradient/state bounds on real checkpoint attention inputs",
         "c0/c4/c128 external attention training references plus optimizer update math and end-to-end BF16 envelope",
         "explicitly records real non-injected forward and SFT strict parity as FAIL boundaries rather than reclassifying them"
       ],
       "evidence": [
         "deepseek-v4-mini-checkpoint-correctness-gate-20260531.json",
-        "deepseek-v4-mini-checkpoint-correctness-rerun-sft-attention-output-replay-20260531.json"
+        "deepseek-v4-mini-checkpoint-correctness-rerun-sft-attention-output-replay-20260531.json",
+        "deepseek-v4-sft-loss-reference-20260531.json"
       ],
       "gate": "mini_checkpoint_correctness_gate",
       "status": "PASS"
@@ -554,6 +569,7 @@
         "checks each requirement has artifact evidence and documented sections",
         "distinguishes proved artifacts from expected-failing diagnostic artifacts",
         "checks the mini checkpoint correctness gate has artifact evidence and a documented section",
+        "checks the SFT loss explicit reference has artifact evidence and is wired into the mini checkpoint correctness gate",
         "checks remaining strict gates keep their expected open statuses and reason boundaries",
         "checks required environment/version documentation is present",
         "checks proof artifacts and document do not contain local absolute paths"
@@ -582,6 +598,7 @@
         "machine-checks attention I/O training-step output/input-grad/state bounds",
         "machine-checks SFT attention-output straight-through replay has exact loss parity and gradient/update bounds",
         "machine-checks mini checkpoint correctness gate bounds and strict boundary recording",
+        "machine-checks SFT loss explicit reference loss/logprob/token-count bounds",
         "machine-checks non-compressed, c4 indexer, and deterministic c128 external training reference bounds"
       ],
       "evidence": "deepseek-v4-proof-ledger-20260531.json",

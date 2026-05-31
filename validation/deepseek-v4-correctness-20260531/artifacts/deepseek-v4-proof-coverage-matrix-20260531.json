@@ -4,6 +4,7 @@
   "doc_checks": {
     "CUDA toolkit": true,
     "NVIDIA driver": true,
+    "SFT loss explicit reference": true,
     "megatron-core": true,
     "tilelang": true,
     "transformer-engine": true,
@@ -59,6 +60,7 @@
       "expected_status": "MISSING_INPUT",
       "id": "external_reference_mini_checkpoint_one_step_train_parity",
       "reason_contains": {
+        "SFT loss": true,
         "external training reference": true,
         "mini checkpoint": true,
         "routed MoE": true
@@ -259,13 +261,30 @@
       ],
       "evidence": [
         "deepseek-v4-mini-checkpoint-correctness-gate-20260531.json",
-        "deepseek-v4-mini-checkpoint-correctness-rerun-sft-attention-output-replay-20260531.json"
+        "deepseek-v4-mini-checkpoint-correctness-rerun-sft-attention-output-replay-20260531.json",
+        "deepseek-v4-sft-loss-reference-20260531.json"
       ],
       "failures": [],
       "id": "mini_checkpoint_correctness_gate",
       "status": "PROVED_WITH_BF16_TOLERANCE",
       "summary_gates": [
         "mini_checkpoint_correctness_gate"
+      ]
+    },
+    {
+      "claim": "loaded mini checkpoint SFT loss matches an explicit PyTorch log_softmax/gather/loss_mask reference.",
+      "coverage_status": "PASS",
+      "doc_sections": [
+        "SFT Loss Explicit Reference"
+      ],
+      "evidence": [
+        "deepseek-v4-sft-loss-reference-20260531.json"
+      ],
+      "failures": [],
+      "id": "sft_loss_explicit_reference",
+      "status": "PROVED",
+      "summary_gates": [
+        "sft_loss_explicit_reference"
       ]
     },
     {

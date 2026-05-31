@@ -123,6 +123,14 @@
     }
   },
   "scope": "DeepSeek-V4 4-layer mini checkpoint framework-level training correctness gate",
+  "sft_loss_reference": {
+    "logprob_max_abs_global_max": 1.9073486328125e-06,
+    "logprob_mean_abs_global_max": 1.2926849990435585e-07,
+    "loss_abs_global_max": 0.0,
+    "reference_formula": "sum(-log_softmax(response_logits)[target_token] * loss_mask)",
+    "token_count_abs_global_max": 0.0,
+    "world_size": 8
+  },
   "status": "PASS",
   "strict_boundaries": {
     "not_reclassified_as_strict_pass": true,

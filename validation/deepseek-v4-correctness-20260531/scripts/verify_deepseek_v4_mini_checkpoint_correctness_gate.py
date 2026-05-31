@@ -109,6 +109,7 @@ def main() -> int:
     attn_replay_train = _load(base, attn_replay_artifact)
     attention_io_train = _load(base, "deepseek-v4-mini-attention-io-training-step-qatsim-20260531.json")
     e2e_tolerance = _load(base, "deepseek-v4-end-to-end-bf16-tolerance-20260531.json")
+    sft_loss_reference = _load(base, "deepseek-v4-sft-loss-reference-20260531.json")
     grouped_mlp = _load(base, "deepseek-v4-grouped-mlp-math-20260531.json")
     moe_dispatch = _load(base, "deepseek-v4-moe-ep8-dispatch-math-20260531.json")
     mlp_replay = _load(base, "deepseek-v4-mlp-expert-replay-qatsim-0415-20260531.json")
@@ -120,6 +121,7 @@ def main() -> int:
     }
 
     _check(_status(e2e_tolerance) == "PASS", failures, "end_to_end_bf16_tolerance.status")
+    _check(_status(sft_loss_reference) == "PASS", failures, "sft_loss_reference.status")
     _check(_status(optimizer) == "PASS", failures, "optimizer_update_math.status")
 
     strict_forward = {
@@ -221,6 +223,38 @@ def main() -> int:
         "attention_io_training_step.state_bound",
     )
 
+    sft_loss_reference_bounds = {
+        "loss_abs_global_max": sft_loss_reference["global_summary"]["loss_abs_global_max"],
+        "logprob_max_abs_global_max": sft_loss_reference["global_summary"]["logprob_max_abs_global_max"],
+        "logprob_mean_abs_global_max": sft_loss_reference["global_summary"]["logprob_mean_abs_global_max"],
+        "token_count_abs_global_max": sft_loss_reference["global_summary"]["token_count_abs_global_max"],
+        "world_size": sft_loss_reference["world_size"],
+        "reference_formula": sft_loss_reference["reference_formula"],
+    }
+    _check(sft_loss_reference_bounds["world_size"] == 8, failures, "sft_loss_reference.world_size")
+    _check(
+        sft_loss_reference_bounds["loss_abs_global_max"] <= sft_loss_reference["thresholds"]["max_loss_abs"],
+        failures,
+        "sft_loss_reference.loss",
+    )
+    _check(
+        sft_loss_reference_bounds["logprob_max_abs_global_max"]
+        <= sft_loss_reference["thresholds"]["max_logprob_abs"],
+        failures,
+        "sft_loss_reference.logprob_max",
+    )
+    _check(
+        sft_loss_reference_bounds["logprob_mean_abs_global_max"]
+        <= sft_loss_reference["thresholds"]["max_logprob_mean_abs"],
+        failures,
+        "sft_loss_reference.logprob_mean",
+    )
+    _check(
+        sft_loss_reference_bounds["token_count_abs_global_max"] == 0.0,
+        failures,
+        "sft_loss_reference.token_count",
+    )
+
     _check(_status(grouped_mlp) == "PASS", failures, "grouped_mlp_math.status")
     _check(_all_case_status(grouped_mlp), failures, "grouped_mlp_math.all_cases")
     _check(_status(moe_dispatch) == "PASS", failures, "moe_ep8_dispatch_math.status")
@@ -306,6 +340,7 @@ def main() -> int:
         },
         "real_non_injected_train_bf16_bounds": real_train_bounds,
         "attention_io_training_step_bounds": attention_io_bounds,
+        "sft_loss_reference": sft_loss_reference_bounds,
         "moe_evidence": {
             "grouped_mlp_math_status": _status(grouped_mlp),
             "moe_ep8_dispatch_math_status": _status(moe_dispatch),
