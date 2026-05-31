@@ -1,0 +1,38 @@
+{
+  "a_impl": "dense",
+  "a_routing_replay": {
+    "file_name": "deepseek-v4-mini-forward-routing-dense-qatsim-20260531.pt",
+    "num_recorded_tensors": 1,
+    "num_replays": 4,
+    "stage": "record"
+  },
+  "atol": 0.02,
+  "b_impl": "sparse",
+  "b_routing_replay": {
+    "file_name": "deepseek-v4-mini-forward-routing-dense-qatsim-20260531.pt",
+    "num_recorded_tensors": 1,
+    "num_replays": 4,
+    "stage": "replay_forward"
+  },
+  "label": "dense_record_vs_sparse_routing_replay",
+  "max_abs": 0.255859375,
+  "mean_abs": 0.030136708170175552,
+  "mismatches": 84,
+  "num_samples": 1,
+  "num_tokens": 402,
+  "p50_abs": 0.015871047973632812,
+  "p95_abs": 0.11663676053285599,
+  "p99_abs": 0.13741271197795868,
+  "relative_l2_gap": 3.5204090861329362e-06,
+  "rtol": 0.002,
+  "samples": [
+    {
+      "max_abs": 0.255859375,
+      "mean_abs": 0.030136708170175552,
+      "mismatches": 84,
+      "sample": 0,
+      "tokens": 402
+    }
+  ],
+  "status": "FAIL"
+}

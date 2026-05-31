@@ -1,0 +1,70 @@
+{
+  "checkpoint": "4-layer DeepSeek-V4 release mini checkpoint",
+  "comparison": {
+    "atol": 0.02,
+    "label": "official_inference_vs_miles_sparse_fresh",
+    "max_abs": 0.7808723449707031,
+    "mean_abs": 0.11966323107481003,
+    "miles_attention_impl": "sparse",
+    "mismatches": 278,
+    "num_samples": 1,
+    "num_tokens": 402,
+    "p50_abs": 0.09035968780517578,
+    "p95_abs": 0.35130196809768677,
+    "p99_abs": 0.5184847712516785,
+    "relative_l2_gap": 3.9530346637728364e-05,
+    "rtol": 0.002,
+    "samples": [
+      {
+        "max_abs": 0.7808723449707031,
+        "mean_abs": 0.11966323107481003,
+        "mismatches": 278,
+        "sample": 0,
+        "tokens": 402
+      }
+    ],
+    "status": "FAIL"
+  },
+  "conversion": {
+    "ape_hotfix_enabled": false,
+    "converted_official_tensors": 3176,
+    "loaded_megatron_tensors": 108
+  },
+  "conversion_probe": {
+    "ape_hotfix_enabled_comparison": "worse than disabled for this official inference checkpoint mapping",
+    "ape_hotfix_enabled_max_abs": 0.7760791778564453,
+    "ape_hotfix_enabled_mean_abs": 0.13412153720855713,
+    "ape_hotfix_enabled_mismatches": 291,
+    "ape_hotfix_enabled_relative_l2_gap": 4.9724148251106826e-05
+  },
+  "miles_summary": {
+    "max": -0.00849703699350357,
+    "mean": -17.219518661499023,
+    "min": -40.3046875,
+    "num_samples": 1,
+    "num_tokens": 402,
+    "sha256": "5849655cf5c0f6dbb6eed6326d1104e86f45b260798b04b749890ac6eedc09be"
+  },
+  "official_summary": {
+    "max": -0.008711784146726131,
+    "mean": -17.205698013305664,
+    "min": -40.57524490356445,
+    "num_samples": 1,
+    "num_tokens": 402,
+    "sha256": "9c696b764a42ad591b0090837a01fea9f1fd33cd2839a91703f555b49a05857a"
+  },
+  "reference": "DeepSeek-V4 official inference Transformer",
+  "rollout": {
+    "max_total_length": 505,
+    "num_samples": 1,
+    "num_tokens": 402
+  },
+  "runtime": {
+    "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
+    "CUDA_DEVICE_MAX_CONNECTIONS": "1",
+    "MEGATRON_USE_KV_QAT": "1",
+    "NCCL_ALGO": "Ring",
+    "deterministic_mode": true
+  },
+  "seed": 20260531
+}

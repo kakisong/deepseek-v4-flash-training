@@ -1,0 +1,242 @@
+{
+  "cases": [
+    {
+      "batch_size": 1,
+      "comparisons": [
+        {
+          "input_grad_max_abs": 2.384185791015625e-07,
+          "input_grad_rel_gap": 1.1304006230616892e-05,
+          "label": "dense_vs_sparse",
+          "loss_abs": 5.888869054615498e-06,
+          "output_max_abs": 0.0078125,
+          "output_rel_gap": 7.601256335698636e-06,
+          "state_after_step_max_abs": 1.4901161193847656e-08,
+          "state_after_step_max_abs_name": "wkv.weight",
+          "state_after_step_max_rel_gap": 0.0
+        },
+        {
+          "input_grad_max_abs": 2.384185791015625e-07,
+          "input_grad_rel_gap": 1.3281884318261383e-05,
+          "label": "dense_vs_tilelang",
+          "loss_abs": 3.748689778149128e-06,
+          "output_max_abs": 0.0078125,
+          "output_rel_gap": 8.39824476683848e-06,
+          "state_after_step_max_abs": 1.4901161193847656e-08,
+          "state_after_step_max_abs_name": "wkv.weight",
+          "state_after_step_max_rel_gap": 0.0
+        },
+        {
+          "input_grad_max_abs": 2.384185791015625e-07,
+          "input_grad_rel_gap": 8.417043026787141e-06,
+          "label": "sparse_vs_tilelang",
+          "loss_abs": 2.1401792764663696e-06,
+          "output_max_abs": 0.0078125,
+          "output_rel_gap": 5.501720735545668e-06,
+          "state_after_step_max_abs": 3.725290298461914e-09,
+          "state_after_step_max_abs_name": "wo_a.weight",
+          "state_after_step_max_rel_gap": 0.0
+        }
+      ],
+      "compress_ratio": 0,
+      "dsv4_o_lora_rank": 1024,
+      "head_dim": 512,
+      "hidden_size": 4096,
+      "impls": {
+        "dense": {
+          "loss": -0.0013518987689167261,
+          "max_param_grad_norm": 0.07920622080564499,
+          "num_params_with_grad": 8,
+          "params_without_grad": []
+        },
+        "sparse": {
+          "loss": -0.0013577876379713416,
+          "max_param_grad_norm": 0.07918594032526016,
+          "num_params_with_grad": 8,
+          "params_without_grad": []
+        },
+        "tilelang": {
+          "loss": -0.0013556474586948752,
+          "max_param_grad_norm": 0.0791970044374466,
+          "num_params_with_grad": 8,
+          "params_without_grad": []
+        }
+      },
+      "local_heads": 8,
+      "lr": 0.0001,
+      "name": "DeepSeekV4Attention_compress_0",
+      "normalization": "RMSNorm",
+      "rope_head_dim": 64,
+      "seqlen": 16
+    },
+    {
+      "batch_size": 1,
+      "comparisons": [
+        {
+          "input_grad_max_abs": 5.960464477539063e-08,
+          "input_grad_rel_gap": 1.6565532073187228e-05,
+          "label": "dense_vs_sparse",
+          "loss_abs": 3.26341250911355e-07,
+          "output_max_abs": 0.0078125,
+          "output_rel_gap": 9.619950127381927e-06,
+          "state_after_step_max_abs": 9.313225746154785e-10,
+          "state_after_step_max_abs_name": "wq_b.weight",
+          "state_after_step_max_rel_gap": 5.794284363425106e-07
+        },
+        {
+          "input_grad_max_abs": 5.960464477539063e-08,
+          "input_grad_rel_gap": 1.8263452729927465e-05,
+          "label": "dense_vs_tilelang",
+          "loss_abs": 6.882473826408386e-07,
+          "output_max_abs": 0.0078125,
+          "output_rel_gap": 1.0503663422589682e-05,
+          "state_after_step_max_abs": 9.313225746154785e-10,
+          "state_after_step_max_abs_name": "wq_b.weight",
+          "state_after_step_max_rel_gap": 1.0303290226554296e-06
+        },
+        {
+          "input_grad_max_abs": 5.960464477539063e-08,
+          "input_grad_rel_gap": 1.1394889658622454e-05,
+          "label": "sparse_vs_tilelang",
+          "loss_abs": 1.0145886335521936e-06,
+          "output_max_abs": 0.0078125,
+          "output_rel_gap": 6.086286261974827e-06,
+          "state_after_step_max_abs": 9.313225746154785e-10,
+          "state_after_step_max_abs_name": "compressor.wkv.weight",
+          "state_after_step_max_rel_gap": 1.0300724501144387e-06
+        }
+      ],
+      "compress_ratio": 4,
+      "dsv4_o_lora_rank": 1024,
+      "head_dim": 512,
+      "hidden_size": 4096,
+      "impls": {
+        "dense": {
+          "loss": -0.0004052598960697651,
+          "max_param_grad_norm": 0.016044752672314644,
+          "num_params_with_grad": 12,
+          "params_without_grad": [
+            "indexer.linear_wq_b.weight",
+            "indexer.linear_weights_proj.weight",
+            "indexer.compressor.ape",
+            "indexer.compressor.wkv.weight",
+            "indexer.compressor.wgate.weight",
+            "indexer.compressor.norm.weight"
+          ]
+        },
+        "sparse": {
+          "loss": -0.00040493355481885374,
+          "max_param_grad_norm": 0.01604345627129078,
+          "num_params_with_grad": 12,
+          "params_without_grad": [
+            "indexer.linear_wq_b.weight",
+            "indexer.linear_weights_proj.weight",
+            "indexer.compressor.ape",
+            "indexer.compressor.wkv.weight",
+            "indexer.compressor.wgate.weight",
+            "indexer.compressor.norm.weight"
+          ]
+        },
+        "tilelang": {
+          "loss": -0.00040594814345240593,
+          "max_param_grad_norm": 0.01604323647916317,
+          "num_params_with_grad": 12,
+          "params_without_grad": [
+            "indexer.linear_wq_b.weight",
+            "indexer.linear_weights_proj.weight",
+            "indexer.compressor.ape",
+            "indexer.compressor.wkv.weight",
+            "indexer.compressor.wgate.weight",
+            "indexer.compressor.norm.weight"
+          ]
+        }
+      },
+      "local_heads": 8,
+      "lr": 0.0001,
+      "name": "DeepSeekV4Attention_compress_4",
+      "normalization": "RMSNorm",
+      "rope_head_dim": 64,
+      "seqlen": 128
+    },
+    {
+      "batch_size": 1,
+      "comparisons": [
+        {
+          "input_grad_max_abs": 2.9802322387695312e-08,
+          "input_grad_rel_gap": 1.6068295329296767e-05,
+          "label": "dense_vs_sparse",
+          "loss_abs": 4.665344022214413e-08,
+          "output_max_abs": 0.0078125,
+          "output_rel_gap": 1.0426441455546609e-05,
+          "state_after_step_max_abs": 9.313225746154785e-10,
+          "state_after_step_max_abs_name": "compressor.wkv.weight",
+          "state_after_step_max_rel_gap": 1.2567490983439455e-05
+        },
+        {
+          "input_grad_max_abs": 2.9802322387695312e-08,
+          "input_grad_rel_gap": 1.775954464522389e-05,
+          "label": "dense_vs_tilelang",
+          "loss_abs": 9.07937646843493e-07,
+          "output_max_abs": 0.0078125,
+          "output_rel_gap": 1.1138838760471614e-05,
+          "state_after_step_max_abs": 9.313225746154785e-10,
+          "state_after_step_max_abs_name": "compressor.wkv.weight",
+          "state_after_step_max_rel_gap": 1.3521099497815214e-05
+        },
+        {
+          "input_grad_max_abs": 2.9802322387695312e-08,
+          "input_grad_rel_gap": 1.046470919519038e-05,
+          "label": "sparse_vs_tilelang",
+          "loss_abs": 8.612842066213489e-07,
+          "output_max_abs": 0.0078125,
+          "output_rel_gap": 6.346333949580618e-06,
+          "state_after_step_max_abs": 9.313225746154785e-10,
+          "state_after_step_max_abs_name": "compressor.wkv.weight",
+          "state_after_step_max_rel_gap": 5.085152766426404e-06
+        }
+      ],
+      "compress_ratio": 128,
+      "dsv4_o_lora_rank": 1024,
+      "head_dim": 512,
+      "hidden_size": 4096,
+      "impls": {
+        "dense": {
+          "loss": 0.00013558984210249037,
+          "max_param_grad_norm": 0.010753696784377098,
+          "num_params_with_grad": 12,
+          "params_without_grad": []
+        },
+        "sparse": {
+          "loss": 0.0001356364955427125,
+          "max_param_grad_norm": 0.010754636488854885,
+          "num_params_with_grad": 12,
+          "params_without_grad": []
+        },
+        "tilelang": {
+          "loss": 0.00013649777974933386,
+          "max_param_grad_norm": 0.010754566639661789,
+          "num_params_with_grad": 12,
+          "params_without_grad": []
+        }
+      },
+      "local_heads": 8,
+      "lr": 0.0001,
+      "name": "DeepSeekV4Attention_compress_128",
+      "normalization": "RMSNorm",
+      "rope_head_dim": 64,
+      "seqlen": 256
+    }
+  ],
+  "failures": [],
+  "notes": [
+    "compress_ratio=128 uses seqlen=256 so the compressed-KV path contains valid compressed tokens.",
+    "All cases run with MEGATRON_USE_KV_QAT=1 and MILES_DSV4_CKPT_VERSION=0415."
+  ],
+  "seed": 20260531,
+  "status": "PASS",
+  "thresholds": {
+    "max_input_grad_abs": 2e-06,
+    "max_output_abs": 0.04,
+    "max_rel_gap": 5e-05,
+    "max_state_abs": 1e-07
+  }
+}

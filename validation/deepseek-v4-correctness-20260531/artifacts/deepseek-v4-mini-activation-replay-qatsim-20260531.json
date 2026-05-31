@@ -1,0 +1,878 @@
+{
+  "backend_cases": [
+    {
+      "activation_replay": {
+        "replay_modules": [],
+        "replay_stats": {},
+        "stage": "off"
+      },
+      "case": "off",
+      "compare_to_dense": {
+        "exact_equal": false,
+        "max_abs": 0.255859375,
+        "mean_abs": 0.030136708170175552,
+        "mismatches": 84,
+        "num_tokens": 402,
+        "p50_abs": 0.015871047973632812,
+        "p95_abs": 0.11663676053285599,
+        "p99_abs": 0.13741271197795868,
+        "relative_l2_gap": 3.490060837885167e-06,
+        "status": "FAIL"
+      },
+      "impl": "sparse",
+      "routing_replay": {
+        "file_name": "dsv4-mini-routing.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.008543252013623714,
+        "mean": -16.89225196838379,
+        "min": -40.4453125,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "41969834efd943f342176c30db32a0018aec255821961308a39771a76a14e818"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.layers.0"
+        ],
+        "replay_stats": {
+          "module.decoder.layers.0": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.125,
+            "pre_replay_mean_abs": 0.00021753447072114795,
+            "pre_replay_nonzero_abs_count": 2165526,
+            "shape": [
+              512,
+              1,
+              4,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "prefix1",
+      "compare_to_dense": {
+        "exact_equal": false,
+        "max_abs": 0.25,
+        "mean_abs": 0.015565270557999611,
+        "mismatches": 33,
+        "num_tokens": 402,
+        "p50_abs": 0.004185676574707031,
+        "p95_abs": 0.06992443650960922,
+        "p99_abs": 0.11235504597425461,
+        "relative_l2_gap": 1.5783617770548375e-06,
+        "status": "FAIL"
+      },
+      "impl": "sparse",
+      "routing_replay": {
+        "file_name": "dsv4-mini-routing.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.008524577133357525,
+        "mean": -16.888132095336914,
+        "min": -40.46484375,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "4d8c53453889d945db52d7e74404c6dd6735124d2c9ecda1fc59f347af9fe220"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.layers.0",
+          "module.decoder.layers.1"
+        ],
+        "replay_stats": {
+          "module.decoder.layers.0": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.125,
+            "pre_replay_mean_abs": 0.00021753447072114795,
+            "pre_replay_nonzero_abs_count": 2165526,
+            "shape": [
+              512,
+              1,
+              4,
+              4096
+            ]
+          },
+          "module.decoder.layers.1": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.25,
+            "pre_replay_mean_abs": 9.503308683633804e-05,
+            "pre_replay_nonzero_abs_count": 2258562,
+            "shape": [
+              512,
+              1,
+              4,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "prefix2",
+      "compare_to_dense": {
+        "exact_equal": false,
+        "max_abs": 0.248046875,
+        "mean_abs": 0.014432772994041443,
+        "mismatches": 27,
+        "num_tokens": 402,
+        "p50_abs": 0.0033922195434570312,
+        "p95_abs": 0.06568317860364914,
+        "p99_abs": 0.12301933765411377,
+        "relative_l2_gap": 1.5176156631380167e-06,
+        "status": "FAIL"
+      },
+      "impl": "sparse",
+      "routing_replay": {
+        "file_name": "dsv4-mini-routing.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.008301514200866222,
+        "mean": -16.888221740722656,
+        "min": -40.46875,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "01c3f2988fdd699ced8337832c1c7f6ff72053db9dd8ca56fc6fe04b73d8bd8a"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.layers.0",
+          "module.decoder.layers.1",
+          "module.decoder.layers.2"
+        ],
+        "replay_stats": {
+          "module.decoder.layers.0": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.125,
+            "pre_replay_mean_abs": 0.00021753447072114795,
+            "pre_replay_nonzero_abs_count": 2165526,
+            "shape": [
+              512,
+              1,
+              4,
+              4096
+            ]
+          },
+          "module.decoder.layers.1": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.25,
+            "pre_replay_mean_abs": 9.503308683633804e-05,
+            "pre_replay_nonzero_abs_count": 2258562,
+            "shape": [
+              512,
+              1,
+              4,
+              4096
+            ]
+          },
+          "module.decoder.layers.2": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.25,
+            "pre_replay_mean_abs": 8.706966764293611e-05,
+            "pre_replay_nonzero_abs_count": 2359909,
+            "shape": [
+              512,
+              1,
+              4,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "prefix3",
+      "compare_to_dense": {
+        "exact_equal": false,
+        "max_abs": 0.12876510620117188,
+        "mean_abs": 0.008787469938397408,
+        "mismatches": 14,
+        "num_tokens": 402,
+        "p50_abs": 0.0011410713195800781,
+        "p95_abs": 0.03917451575398445,
+        "p99_abs": 0.09391536563634872,
+        "relative_l2_gap": 5.462808200240588e-07,
+        "status": "FAIL"
+      },
+      "impl": "sparse",
+      "routing_replay": {
+        "file_name": "dsv4-mini-routing.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.00830872543156147,
+        "mean": -16.890045166015625,
+        "min": -40.47265625,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "effc9de275c6d0ecf1714df2ae31d333e01e8dcb34d69a54237f9849592ea9cf"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.layers.0",
+          "module.decoder.layers.1",
+          "module.decoder.layers.2",
+          "module.decoder.layers.3"
+        ],
+        "replay_stats": {
+          "module.decoder.layers.0": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.125,
+            "pre_replay_mean_abs": 0.00021753447072114795,
+            "pre_replay_nonzero_abs_count": 2165526,
+            "shape": [
+              512,
+              1,
+              4,
+              4096
+            ]
+          },
+          "module.decoder.layers.1": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.25,
+            "pre_replay_mean_abs": 9.503308683633804e-05,
+            "pre_replay_nonzero_abs_count": 2258562,
+            "shape": [
+              512,
+              1,
+              4,
+              4096
+            ]
+          },
+          "module.decoder.layers.2": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.25,
+            "pre_replay_mean_abs": 8.706966764293611e-05,
+            "pre_replay_nonzero_abs_count": 2359909,
+            "shape": [
+              512,
+              1,
+              4,
+              4096
+            ]
+          },
+          "module.decoder.layers.3": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.125,
+            "pre_replay_mean_abs": 0.00010943686356768012,
+            "pre_replay_nonzero_abs_count": 2703639,
+            "shape": [
+              512,
+              1,
+              4,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "prefix4",
+      "compare_to_dense": {
+        "exact_equal": true,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "mismatches": 0,
+        "num_tokens": 402,
+        "p50_abs": 0.0,
+        "p95_abs": 0.0,
+        "p99_abs": 0.0,
+        "relative_l2_gap": 0.0,
+        "status": "PASS"
+      },
+      "impl": "sparse",
+      "routing_replay": {
+        "file_name": "dsv4-mini-routing.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.008309789933264256,
+        "mean": -16.889389038085938,
+        "min": -40.47265625,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "7877e2afc5c84cfc21904fbfac14cc8916ca18104109f6242263ba9eb2107b24"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.final_layernorm"
+        ],
+        "replay_stats": {
+          "module.decoder.final_layernorm": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.0234375,
+            "pre_replay_mean_abs": 0.001368710887618363,
+            "pre_replay_nonzero_abs_count": 1450580,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "final_ln",
+      "compare_to_dense": {
+        "exact_equal": true,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "mismatches": 0,
+        "num_tokens": 402,
+        "p50_abs": 0.0,
+        "p95_abs": 0.0,
+        "p99_abs": 0.0,
+        "relative_l2_gap": 0.0,
+        "status": "PASS"
+      },
+      "impl": "sparse",
+      "routing_replay": {
+        "file_name": "dsv4-mini-routing.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.008309789933264256,
+        "mean": -16.889389038085938,
+        "min": -40.47265625,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "7877e2afc5c84cfc21904fbfac14cc8916ca18104109f6242263ba9eb2107b24"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [],
+        "replay_stats": {},
+        "stage": "off"
+      },
+      "case": "off",
+      "compare_to_dense": {
+        "exact_equal": false,
+        "max_abs": 0.2412109375,
+        "mean_abs": 0.028718464076519012,
+        "mismatches": 75,
+        "num_tokens": 402,
+        "p50_abs": 0.015524864196777344,
+        "p95_abs": 0.11070670187473297,
+        "p99_abs": 0.143231600522995,
+        "relative_l2_gap": 3.2778709475600465e-06,
+        "status": "FAIL"
+      },
+      "impl": "tilelang",
+      "routing_replay": {
+        "file_name": "dsv4-mini-routing.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.00967492163181305,
+        "mean": -16.89072036743164,
+        "min": -40.44921875,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "d553b999f6b31d25dfb52c41c4f58cb9b0a47fef51148aadf4efba0fda1f3944"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.layers.0"
+        ],
+        "replay_stats": {
+          "module.decoder.layers.0": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.125,
+            "pre_replay_mean_abs": 0.00022424192866310477,
+            "pre_replay_nonzero_abs_count": 2184904,
+            "shape": [
+              512,
+              1,
+              4,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "prefix1",
+      "compare_to_dense": {
+        "exact_equal": false,
+        "max_abs": 0.25,
+        "mean_abs": 0.015592050738632679,
+        "mismatches": 31,
+        "num_tokens": 402,
+        "p50_abs": 0.005211830139160156,
+        "p95_abs": 0.07647154480218887,
+        "p99_abs": 0.11353328824043274,
+        "relative_l2_gap": 1.4569989524870763e-06,
+        "status": "FAIL"
+      },
+      "impl": "tilelang",
+      "routing_replay": {
+        "file_name": "dsv4-mini-routing.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.008515831083059311,
+        "mean": -16.88748550415039,
+        "min": -40.4609375,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "c598cf182ba089ed382dcaf428d644c4b630bad7d29e8be54ed220c4413aee1d"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.layers.0",
+          "module.decoder.layers.1"
+        ],
+        "replay_stats": {
+          "module.decoder.layers.0": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.125,
+            "pre_replay_mean_abs": 0.00022424192866310477,
+            "pre_replay_nonzero_abs_count": 2184904,
+            "shape": [
+              512,
+              1,
+              4,
+              4096
+            ]
+          },
+          "module.decoder.layers.1": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.25,
+            "pre_replay_mean_abs": 9.731460886541754e-05,
+            "pre_replay_nonzero_abs_count": 2298986,
+            "shape": [
+              512,
+              1,
+              4,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "prefix2",
+      "compare_to_dense": {
+        "exact_equal": false,
+        "max_abs": 0.25,
+        "mean_abs": 0.012565052136778831,
+        "mismatches": 22,
+        "num_tokens": 402,
+        "p50_abs": 0.0031638145446777344,
+        "p95_abs": 0.06249990314245224,
+        "p99_abs": 0.11012905836105347,
+        "relative_l2_gap": 1.1230053565958187e-06,
+        "status": "FAIL"
+      },
+      "impl": "tilelang",
+      "routing_replay": {
+        "file_name": "dsv4-mini-routing.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.008304587565362453,
+        "mean": -16.888593673706055,
+        "min": -40.484375,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "101d27f9e23a7d3b7fff99fe86fd22c01bfd95d1b870227824c0521400de28f3"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.layers.0",
+          "module.decoder.layers.1",
+          "module.decoder.layers.2"
+        ],
+        "replay_stats": {
+          "module.decoder.layers.0": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.125,
+            "pre_replay_mean_abs": 0.00022424192866310477,
+            "pre_replay_nonzero_abs_count": 2184904,
+            "shape": [
+              512,
+              1,
+              4,
+              4096
+            ]
+          },
+          "module.decoder.layers.1": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.25,
+            "pre_replay_mean_abs": 9.731460886541754e-05,
+            "pre_replay_nonzero_abs_count": 2298986,
+            "shape": [
+              512,
+              1,
+              4,
+              4096
+            ]
+          },
+          "module.decoder.layers.2": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.25,
+            "pre_replay_mean_abs": 8.817163325147703e-05,
+            "pre_replay_nonzero_abs_count": 2370856,
+            "shape": [
+              512,
+              1,
+              4,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "prefix3",
+      "compare_to_dense": {
+        "exact_equal": false,
+        "max_abs": 0.1324310302734375,
+        "mean_abs": 0.009016213938593864,
+        "mismatches": 17,
+        "num_tokens": 402,
+        "p50_abs": 0.0009522438049316406,
+        "p95_abs": 0.04140624403953552,
+        "p99_abs": 0.10531044751405716,
+        "relative_l2_gap": 6.676312116482563e-07,
+        "status": "FAIL"
+      },
+      "impl": "tilelang",
+      "routing_replay": {
+        "file_name": "dsv4-mini-routing.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.00813303142786026,
+        "mean": -16.891447067260742,
+        "min": -40.46875,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "439a7e37aed17c30b3e430e3cf28d121a8fcb7e9ce14c30056da021b9abf03ea"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.layers.0",
+          "module.decoder.layers.1",
+          "module.decoder.layers.2",
+          "module.decoder.layers.3"
+        ],
+        "replay_stats": {
+          "module.decoder.layers.0": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.125,
+            "pre_replay_mean_abs": 0.00022424192866310477,
+            "pre_replay_nonzero_abs_count": 2184904,
+            "shape": [
+              512,
+              1,
+              4,
+              4096
+            ]
+          },
+          "module.decoder.layers.1": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.25,
+            "pre_replay_mean_abs": 9.731460886541754e-05,
+            "pre_replay_nonzero_abs_count": 2298986,
+            "shape": [
+              512,
+              1,
+              4,
+              4096
+            ]
+          },
+          "module.decoder.layers.2": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.25,
+            "pre_replay_mean_abs": 8.817163325147703e-05,
+            "pre_replay_nonzero_abs_count": 2370856,
+            "shape": [
+              512,
+              1,
+              4,
+              4096
+            ]
+          },
+          "module.decoder.layers.3": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.25,
+            "pre_replay_mean_abs": 0.00011127278412459418,
+            "pre_replay_nonzero_abs_count": 2744536,
+            "shape": [
+              512,
+              1,
+              4,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "prefix4",
+      "compare_to_dense": {
+        "exact_equal": true,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "mismatches": 0,
+        "num_tokens": 402,
+        "p50_abs": 0.0,
+        "p95_abs": 0.0,
+        "p99_abs": 0.0,
+        "relative_l2_gap": 0.0,
+        "status": "PASS"
+      },
+      "impl": "tilelang",
+      "routing_replay": {
+        "file_name": "dsv4-mini-routing.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.008309789933264256,
+        "mean": -16.889389038085938,
+        "min": -40.47265625,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "7877e2afc5c84cfc21904fbfac14cc8916ca18104109f6242263ba9eb2107b24"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.final_layernorm"
+        ],
+        "replay_stats": {
+          "module.decoder.final_layernorm": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.0234375,
+            "pre_replay_mean_abs": 0.0013741262955591083,
+            "pre_replay_nonzero_abs_count": 1450920,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "final_ln",
+      "compare_to_dense": {
+        "exact_equal": true,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "mismatches": 0,
+        "num_tokens": 402,
+        "p50_abs": 0.0,
+        "p95_abs": 0.0,
+        "p99_abs": 0.0,
+        "relative_l2_gap": 0.0,
+        "status": "PASS"
+      },
+      "impl": "tilelang",
+      "routing_replay": {
+        "file_name": "dsv4-mini-routing.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.008309789933264256,
+        "mean": -16.889389038085938,
+        "min": -40.47265625,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "7877e2afc5c84cfc21904fbfac14cc8916ca18104109f6242263ba9eb2107b24"
+      }
+    }
+  ],
+  "claims": {
+    "final_layernorm_output_replay_exactly_recovers_dense_logprobs_for_sparse_and_tilelang": true,
+    "output_head_and_logprob_path_are_not_the_source_after_final_hidden_is_identical": true,
+    "prefix4_dense_layer_output_replay_exactly_recovers_dense_logprobs_for_sparse_and_tilelang": true,
+    "remaining_no_replay_drift_is_generated_before_or_inside_the_four_transformer_layers": true
+  },
+  "date": "2026-05-31",
+  "reference": {
+    "activation_replay": {
+      "rank0_num_recorded_modules": 5,
+      "record_modules": [
+        "module.decoder.layers.0",
+        "module.decoder.layers.1",
+        "module.decoder.layers.2",
+        "module.decoder.layers.3",
+        "module.decoder.final_layernorm"
+      ],
+      "stage": "record"
+    },
+    "impl": "dense",
+    "routing_replay": {
+      "file_name": "dsv4-mini-routing.pt",
+      "num_recorded_tensors": 1,
+      "num_replays": 4,
+      "record_summary": {
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "rank": 0
+      },
+      "stage": "record"
+    },
+    "summary": {
+      "max": -0.008309789933264256,
+      "mean": -16.889389038085938,
+      "min": -40.47265625,
+      "num_samples": 1,
+      "num_tokens": 402,
+      "sha256": "7877e2afc5c84cfc21904fbfac14cc8916ca18104109f6242263ba9eb2107b24"
+    }
+  },
+  "scope": "4-layer DeepSeek-V4 mini checkpoint activation replay across dense/sparse/tilelang backends",
+  "sparse_vs_tilelang": [
+    {
+      "case": "off",
+      "compare": {
+        "exact_equal": false,
+        "max_abs": 0.18173837661743164,
+        "mean_abs": 0.023490911349654198,
+        "mismatches": 59,
+        "num_tokens": 402,
+        "p50_abs": 0.011959075927734375,
+        "p95_abs": 0.09727238863706589,
+        "p99_abs": 0.12454071640968323,
+        "relative_l2_gap": 2.3368788033550913e-06,
+        "status": "FAIL"
+      }
+    },
+    {
+      "case": "prefix1",
+      "compare": {
+        "exact_equal": false,
+        "max_abs": 0.12418460845947266,
+        "mean_abs": 0.01518903486430645,
+        "mismatches": 33,
+        "num_tokens": 402,
+        "p50_abs": 0.003773212432861328,
+        "p95_abs": 0.07007759809494019,
+        "p99_abs": 0.11116789281368256,
+        "relative_l2_gap": 1.2750074497303032e-06,
+        "status": "FAIL"
+      }
+    },
+    {
+      "case": "prefix2",
+      "compare": {
+        "exact_equal": false,
+        "max_abs": 0.2509765625,
+        "mean_abs": 0.014677598141133785,
+        "mismatches": 33,
+        "num_tokens": 402,
+        "p50_abs": 0.003000497817993164,
+        "p95_abs": 0.0699118971824646,
+        "p99_abs": 0.12703925371170044,
+        "relative_l2_gap": 1.7301707633254892e-06,
+        "status": "FAIL"
+      }
+    },
+    {
+      "case": "prefix3",
+      "compare": {
+        "exact_equal": false,
+        "max_abs": 0.12872886657714844,
+        "mean_abs": 0.008736250922083855,
+        "mismatches": 18,
+        "num_tokens": 402,
+        "p50_abs": 0.0009136199951171875,
+        "p95_abs": 0.04079677164554596,
+        "p99_abs": 0.09512516856193542,
+        "relative_l2_gap": 6.069174263156896e-07,
+        "status": "FAIL"
+      }
+    },
+    {
+      "case": "prefix4",
+      "compare": {
+        "exact_equal": true,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "mismatches": 0,
+        "num_tokens": 402,
+        "p50_abs": 0.0,
+        "p95_abs": 0.0,
+        "p99_abs": 0.0,
+        "relative_l2_gap": 0.0,
+        "status": "PASS"
+      }
+    },
+    {
+      "case": "final_ln",
+      "compare": {
+        "exact_equal": true,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "mismatches": 0,
+        "num_tokens": 402,
+        "p50_abs": 0.0,
+        "p95_abs": 0.0,
+        "p99_abs": 0.0,
+        "relative_l2_gap": 0.0,
+        "status": "PASS"
+      }
+    }
+  ],
+  "status": "PASS_WITH_LOCALIZED_DRIFT",
+  "thresholds": {
+    "atol": 0.02,
+    "rtol": 0.002
+  }
+}

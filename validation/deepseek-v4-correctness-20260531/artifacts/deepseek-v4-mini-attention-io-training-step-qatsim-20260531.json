@@ -1,0 +1,1902 @@
+{
+  "attention_io_name": "dsv4-mini-attnio.pt",
+  "checkpoint": "checkpoints",
+  "date": "2026-05-31",
+  "failures": [],
+  "impls": [
+    "dense",
+    "sparse",
+    "tilelang"
+  ],
+  "manual_sgd_lr": 1e-07,
+  "modules": [
+    "module.decoder.layers.0.self_attention",
+    "module.decoder.layers.1.self_attention",
+    "module.decoder.layers.2.self_attention",
+    "module.decoder.layers.3.self_attention"
+  ],
+  "per_rank": [
+    {
+      "failures": [],
+      "layers": {
+        "module.decoder.layers.0.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 9.5367431640625e-07,
+              "input_grad_rel_gap_global_max": 1.6825835084111063e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 6.7711807787418365e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.3348022392722925e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 9.5367431640625e-07,
+              "input_grad_rel_gap_global_max": 1.8816537366905806e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 8.473638445138931e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.3858121403309553e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 7.152557373046875e-07,
+              "input_grad_rel_gap_global_max": 8.462748672943832e-06,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 1.7024576663970947e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 3.825832462833745e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": 0.0016575021436437964,
+              "max_grad_abs": 0.00016708912153262645,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": 0.0016507309628650546,
+              "max_grad_abs": 0.00016686489107087255,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": 0.0016490285051986575,
+              "max_grad_abs": 0.00016696355305612087,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.1.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.2055951863931824e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 5.1157549023628235e-06,
+              "output_max_abs_global_max": 0.03515625,
+              "output_rel_gap_global_max": 5.647201265834845e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.601028332209875e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 1.3293465599417686e-06,
+              "output_max_abs_global_max": 0.03515625,
+              "output_rel_gap_global_max": 6.117827858642677e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.1608927137363168e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 3.786408342421055e-06,
+              "output_max_abs_global_max": 0.03125,
+              "output_rel_gap_global_max": 3.388311192287219e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": 0.0012068680953234434,
+              "max_grad_abs": 9.151545236818492e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": 0.0012017523404210806,
+              "max_grad_abs": 9.173725266009569e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": 0.0012055387487635016,
+              "max_grad_abs": 9.15311902645044e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.2.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 2.6065915087025715e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 1.2879609130322933e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.4298539834922686e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 2.8061398839485108e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 2.8536305762827396e-07,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.4476013600717152e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 3.5762786865234375e-07,
+              "input_grad_rel_gap_global_max": 1.1474376283460153e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 1.0025978554040194e-06,
+              "output_max_abs_global_max": 0.03125,
+              "output_rel_gap_global_max": 4.08536784657354e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": -0.0003979750908911228,
+              "max_grad_abs": 0.0002801319642458111,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": -0.0003966871299780905,
+              "max_grad_abs": 0.0002788036363199353,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": -0.00039768972783349454,
+              "max_grad_abs": 0.00027939374558627605,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.3.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.2448478948767772e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 2.1960295271128416e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 5.697566650697539e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.725373406846753e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 4.782457835972309e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 6.1045183067376385e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.2886152300439768e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 2.5864283088594675e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 3.5270255962505104e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": -0.00044846098171547055,
+              "max_grad_abs": 7.845557411201298e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": -0.0004506570112425834,
+              "max_grad_abs": 7.839551835786551e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": -0.00045324343955144286,
+              "max_grad_abs": 7.839157478883862e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            }
+          }
+        }
+      },
+      "rank": 0
+    },
+    {
+      "failures": [],
+      "layers": {
+        "module.decoder.layers.0.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 9.5367431640625e-07,
+              "input_grad_rel_gap_global_max": 1.6825835084111063e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 6.7711807787418365e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.3348022392722925e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 9.5367431640625e-07,
+              "input_grad_rel_gap_global_max": 1.8816537366905806e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 8.473638445138931e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.3858121403309553e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 7.152557373046875e-07,
+              "input_grad_rel_gap_global_max": 8.462748672943832e-06,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 1.7024576663970947e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 3.825832462833745e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": 0.0016575021436437964,
+              "max_grad_abs": 0.00016708912153262645,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": 0.0016507309628650546,
+              "max_grad_abs": 0.00016686489107087255,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": 0.0016490285051986575,
+              "max_grad_abs": 0.00016696355305612087,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.1.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.2055951863931824e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 5.1157549023628235e-06,
+              "output_max_abs_global_max": 0.03515625,
+              "output_rel_gap_global_max": 5.647201265834845e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.601028332209875e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 1.3293465599417686e-06,
+              "output_max_abs_global_max": 0.03515625,
+              "output_rel_gap_global_max": 6.117827858642677e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.1608927137363168e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 3.786408342421055e-06,
+              "output_max_abs_global_max": 0.03125,
+              "output_rel_gap_global_max": 3.388311192287219e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": 0.0012068680953234434,
+              "max_grad_abs": 9.151545236818492e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": 0.0012017523404210806,
+              "max_grad_abs": 9.173725266009569e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": 0.0012055387487635016,
+              "max_grad_abs": 9.153497376246378e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.2.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 2.6065915087025715e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 1.2879609130322933e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.4298539834922686e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 2.8061398839485108e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 2.8536305762827396e-07,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.4476013600717152e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 3.5762786865234375e-07,
+              "input_grad_rel_gap_global_max": 1.1474376283460153e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 1.0025978554040194e-06,
+              "output_max_abs_global_max": 0.03125,
+              "output_rel_gap_global_max": 4.08536784657354e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": -0.0003979750908911228,
+              "max_grad_abs": 0.0002801319642458111,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": -0.0003966871299780905,
+              "max_grad_abs": 0.0002788036363199353,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": -0.00039768972783349454,
+              "max_grad_abs": 0.00027939374558627605,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.3.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.2448478948767772e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 2.1960295271128416e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 5.697566650697539e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.725373406846753e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 4.782457835972309e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 6.1045183067376385e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.2886152300439768e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 2.5864283088594675e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 3.5270255962505104e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": -0.00044846098171547055,
+              "max_grad_abs": 7.845557411201298e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": -0.0004506570112425834,
+              "max_grad_abs": 7.839551835786551e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": -0.00045324343955144286,
+              "max_grad_abs": 7.839157478883862e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            }
+          }
+        }
+      },
+      "rank": 1
+    },
+    {
+      "failures": [],
+      "layers": {
+        "module.decoder.layers.0.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 9.5367431640625e-07,
+              "input_grad_rel_gap_global_max": 1.6825835084111063e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 6.7711807787418365e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.3348022392722925e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 9.5367431640625e-07,
+              "input_grad_rel_gap_global_max": 1.8816537366905806e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 8.473638445138931e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.3858121403309553e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 7.152557373046875e-07,
+              "input_grad_rel_gap_global_max": 8.462748672943832e-06,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 1.7024576663970947e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 3.825832462833745e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": 0.0016575021436437964,
+              "max_grad_abs": 0.00016708912153262645,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": 0.0016507309628650546,
+              "max_grad_abs": 0.00016686489107087255,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": 0.0016490285051986575,
+              "max_grad_abs": 0.00016696355305612087,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.1.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.2055951863931824e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 5.1157549023628235e-06,
+              "output_max_abs_global_max": 0.03515625,
+              "output_rel_gap_global_max": 5.647201265834845e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.601028332209875e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 1.3293465599417686e-06,
+              "output_max_abs_global_max": 0.03515625,
+              "output_rel_gap_global_max": 6.117827858642677e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.1608927137363168e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 3.786408342421055e-06,
+              "output_max_abs_global_max": 0.03125,
+              "output_rel_gap_global_max": 3.388311192287219e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": 0.0012068680953234434,
+              "max_grad_abs": 9.151545236818492e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": 0.0012017523404210806,
+              "max_grad_abs": 9.173725266009569e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": 0.0012055387487635016,
+              "max_grad_abs": 9.15311902645044e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.2.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 2.6065915087025715e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 1.2879609130322933e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.4298539834922686e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 2.8061398839485108e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 2.8536305762827396e-07,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.4476013600717152e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 3.5762786865234375e-07,
+              "input_grad_rel_gap_global_max": 1.1474376283460153e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 1.0025978554040194e-06,
+              "output_max_abs_global_max": 0.03125,
+              "output_rel_gap_global_max": 4.08536784657354e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": -0.0003979750908911228,
+              "max_grad_abs": 0.0002801319642458111,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": -0.0003966871299780905,
+              "max_grad_abs": 0.0002788036363199353,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": -0.00039768972783349454,
+              "max_grad_abs": 0.00027939374558627605,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.3.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.2448478948767772e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 2.1960295271128416e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 5.697566650697539e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.725373406846753e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 4.782457835972309e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 6.1045183067376385e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.2886152300439768e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 2.5864283088594675e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 3.5270255962505104e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": -0.00044846098171547055,
+              "max_grad_abs": 7.845557411201298e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": -0.0004506570112425834,
+              "max_grad_abs": 7.839551835786551e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": -0.00045324343955144286,
+              "max_grad_abs": 7.839157478883862e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            }
+          }
+        }
+      },
+      "rank": 2
+    },
+    {
+      "failures": [],
+      "layers": {
+        "module.decoder.layers.0.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 9.5367431640625e-07,
+              "input_grad_rel_gap_global_max": 1.6825835084111063e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 6.7711807787418365e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.3348022392722925e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 9.5367431640625e-07,
+              "input_grad_rel_gap_global_max": 1.8816537366905806e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 8.473638445138931e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.3858121403309553e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 7.152557373046875e-07,
+              "input_grad_rel_gap_global_max": 8.462748672943832e-06,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 1.7024576663970947e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 3.825832462833745e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": 0.0016575021436437964,
+              "max_grad_abs": 0.00016708912153262645,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": 0.0016507309628650546,
+              "max_grad_abs": 0.00016686489107087255,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": 0.0016490285051986575,
+              "max_grad_abs": 0.00016696355305612087,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.1.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.2055951863931824e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 5.1157549023628235e-06,
+              "output_max_abs_global_max": 0.03515625,
+              "output_rel_gap_global_max": 5.647201265834845e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.601028332209875e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 1.3293465599417686e-06,
+              "output_max_abs_global_max": 0.03515625,
+              "output_rel_gap_global_max": 6.117827858642677e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.1608927137363168e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 3.786408342421055e-06,
+              "output_max_abs_global_max": 0.03125,
+              "output_rel_gap_global_max": 3.388311192287219e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": 0.0012068680953234434,
+              "max_grad_abs": 9.151545236818492e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": 0.0012017523404210806,
+              "max_grad_abs": 9.173725266009569e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": 0.0012055387487635016,
+              "max_grad_abs": 9.153497376246378e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.2.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 2.6065915087025715e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 1.2879609130322933e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.4298539834922686e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 2.8061398839485108e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 2.8536305762827396e-07,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.4476013600717152e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 3.5762786865234375e-07,
+              "input_grad_rel_gap_global_max": 1.1474376283460153e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 1.0025978554040194e-06,
+              "output_max_abs_global_max": 0.03125,
+              "output_rel_gap_global_max": 4.08536784657354e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": -0.0003979750908911228,
+              "max_grad_abs": 0.0002801319642458111,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": -0.0003966871299780905,
+              "max_grad_abs": 0.0002788036363199353,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": -0.00039768972783349454,
+              "max_grad_abs": 0.00027939374558627605,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.3.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.2448478948767772e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 2.1960295271128416e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 5.697566650697539e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.725373406846753e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 4.782457835972309e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 6.1045183067376385e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.2886152300439768e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 2.5864283088594675e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 3.5270255962505104e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": -0.00044846098171547055,
+              "max_grad_abs": 7.845557411201298e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": -0.0004506570112425834,
+              "max_grad_abs": 7.839551835786551e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": -0.00045324343955144286,
+              "max_grad_abs": 7.839157478883862e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            }
+          }
+        }
+      },
+      "rank": 3
+    },
+    {
+      "failures": [],
+      "layers": {
+        "module.decoder.layers.0.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 9.5367431640625e-07,
+              "input_grad_rel_gap_global_max": 1.6825835084111063e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 6.7711807787418365e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.3348022392722925e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 9.5367431640625e-07,
+              "input_grad_rel_gap_global_max": 1.8816537366905806e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 8.473638445138931e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.3858121403309553e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 7.152557373046875e-07,
+              "input_grad_rel_gap_global_max": 8.462748672943832e-06,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 1.7024576663970947e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 3.825832462833745e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": 0.0016575021436437964,
+              "max_grad_abs": 0.00016708912153262645,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": 0.0016507309628650546,
+              "max_grad_abs": 0.00016686489107087255,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": 0.0016490285051986575,
+              "max_grad_abs": 0.00016696355305612087,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.1.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.2055951863931824e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 5.1157549023628235e-06,
+              "output_max_abs_global_max": 0.03515625,
+              "output_rel_gap_global_max": 5.647201265834845e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.601028332209875e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 1.3293465599417686e-06,
+              "output_max_abs_global_max": 0.03515625,
+              "output_rel_gap_global_max": 6.117827858642677e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.1608927137363168e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 3.786408342421055e-06,
+              "output_max_abs_global_max": 0.03125,
+              "output_rel_gap_global_max": 3.388311192287219e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": 0.0012068680953234434,
+              "max_grad_abs": 9.151545236818492e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": 0.0012017523404210806,
+              "max_grad_abs": 9.173725266009569e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": 0.0012055387487635016,
+              "max_grad_abs": 9.15311902645044e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.2.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 2.6065915087025715e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 1.2879609130322933e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.4298539834922686e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 2.8061398839485108e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 2.8536305762827396e-07,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.4476013600717152e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 3.5762786865234375e-07,
+              "input_grad_rel_gap_global_max": 1.1474376283460153e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 1.0025978554040194e-06,
+              "output_max_abs_global_max": 0.03125,
+              "output_rel_gap_global_max": 4.08536784657354e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": -0.0003979750908911228,
+              "max_grad_abs": 0.0002801319642458111,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": -0.0003966871299780905,
+              "max_grad_abs": 0.0002788036363199353,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": -0.00039768972783349454,
+              "max_grad_abs": 0.00027939374558627605,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.3.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.2448478948767772e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 2.1960295271128416e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 5.697566650697539e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.725373406846753e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 4.782457835972309e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 6.1045183067376385e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.2886152300439768e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 2.5864283088594675e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 3.5270255962505104e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": -0.00044846098171547055,
+              "max_grad_abs": 7.845557411201298e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": -0.0004506570112425834,
+              "max_grad_abs": 7.839551835786551e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": -0.00045324343955144286,
+              "max_grad_abs": 7.839157478883862e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            }
+          }
+        }
+      },
+      "rank": 4
+    },
+    {
+      "failures": [],
+      "layers": {
+        "module.decoder.layers.0.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 9.5367431640625e-07,
+              "input_grad_rel_gap_global_max": 1.6825835084111063e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 6.7711807787418365e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.3348022392722925e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 9.5367431640625e-07,
+              "input_grad_rel_gap_global_max": 1.8816537366905806e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 8.473638445138931e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.3858121403309553e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 7.152557373046875e-07,
+              "input_grad_rel_gap_global_max": 8.462748672943832e-06,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 1.7024576663970947e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 3.825832462833745e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": 0.0016575021436437964,
+              "max_grad_abs": 0.00016708912153262645,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": 0.0016507309628650546,
+              "max_grad_abs": 0.00016686489107087255,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": 0.0016490285051986575,
+              "max_grad_abs": 0.00016696355305612087,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.1.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.2055951863931824e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 5.1157549023628235e-06,
+              "output_max_abs_global_max": 0.03515625,
+              "output_rel_gap_global_max": 5.647201265834845e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.601028332209875e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 1.3293465599417686e-06,
+              "output_max_abs_global_max": 0.03515625,
+              "output_rel_gap_global_max": 6.117827858642677e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.1608927137363168e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 3.786408342421055e-06,
+              "output_max_abs_global_max": 0.03125,
+              "output_rel_gap_global_max": 3.388311192287219e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": 0.0012068680953234434,
+              "max_grad_abs": 9.151545236818492e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": 0.0012017523404210806,
+              "max_grad_abs": 9.173725266009569e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": 0.0012055387487635016,
+              "max_grad_abs": 9.15311902645044e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.2.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 2.6065915087025715e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 1.2879609130322933e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.4298539834922686e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 2.8061398839485108e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 2.8536305762827396e-07,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.4476013600717152e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 3.5762786865234375e-07,
+              "input_grad_rel_gap_global_max": 1.1474376283460153e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 1.0025978554040194e-06,
+              "output_max_abs_global_max": 0.03125,
+              "output_rel_gap_global_max": 4.08536784657354e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": -0.0003979750908911228,
+              "max_grad_abs": 0.0002801319642458111,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": -0.0003966871299780905,
+              "max_grad_abs": 0.0002788036363199353,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": -0.00039768972783349454,
+              "max_grad_abs": 0.00027939374558627605,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.3.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.2448478948767772e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 2.1960295271128416e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 5.697566650697539e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.725373406846753e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 4.782457835972309e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 6.1045183067376385e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.2886152300439768e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 2.5864283088594675e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 3.5270255962505104e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": -0.00044846098171547055,
+              "max_grad_abs": 7.845557411201298e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": -0.0004506570112425834,
+              "max_grad_abs": 7.839551835786551e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": -0.00045324343955144286,
+              "max_grad_abs": 7.839157478883862e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            }
+          }
+        }
+      },
+      "rank": 5
+    },
+    {
+      "failures": [],
+      "layers": {
+        "module.decoder.layers.0.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 9.5367431640625e-07,
+              "input_grad_rel_gap_global_max": 1.6825835084111063e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 6.7711807787418365e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.3348022392722925e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 9.5367431640625e-07,
+              "input_grad_rel_gap_global_max": 1.8816537366905806e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 8.473638445138931e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.3858121403309553e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 7.152557373046875e-07,
+              "input_grad_rel_gap_global_max": 8.462748672943832e-06,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 1.7024576663970947e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 3.825832462833745e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": 0.0016575021436437964,
+              "max_grad_abs": 0.00016708912153262645,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": 0.0016507309628650546,
+              "max_grad_abs": 0.00016686489107087255,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": 0.0016490285051986575,
+              "max_grad_abs": 0.00016696355305612087,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.1.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.2055951863931824e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 5.1157549023628235e-06,
+              "output_max_abs_global_max": 0.03515625,
+              "output_rel_gap_global_max": 5.647201265834845e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.601028332209875e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 1.3293465599417686e-06,
+              "output_max_abs_global_max": 0.03515625,
+              "output_rel_gap_global_max": 6.117827858642677e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.1608927137363168e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 3.786408342421055e-06,
+              "output_max_abs_global_max": 0.03125,
+              "output_rel_gap_global_max": 3.388311192287219e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": 0.0012068680953234434,
+              "max_grad_abs": 9.151545236818492e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": 0.0012017523404210806,
+              "max_grad_abs": 9.173725266009569e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": 0.0012055387487635016,
+              "max_grad_abs": 9.153497376246378e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.2.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 2.6065915087025715e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 1.2879609130322933e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.4298539834922686e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 2.8061398839485108e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 2.8536305762827396e-07,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.4476013600717152e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 3.5762786865234375e-07,
+              "input_grad_rel_gap_global_max": 1.1474376283460153e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 1.0025978554040194e-06,
+              "output_max_abs_global_max": 0.03125,
+              "output_rel_gap_global_max": 4.08536784657354e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": -0.0003979750908911228,
+              "max_grad_abs": 0.0002801319642458111,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": -0.0003966871299780905,
+              "max_grad_abs": 0.0002788036363199353,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": -0.00039768972783349454,
+              "max_grad_abs": 0.00027939374558627605,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.3.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.2448478948767772e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 2.1960295271128416e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 5.697566650697539e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.725373406846753e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 4.782457835972309e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 6.1045183067376385e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.2886152300439768e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 2.5864283088594675e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 3.5270255962505104e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": -0.00044846098171547055,
+              "max_grad_abs": 7.845557411201298e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": -0.0004506570112425834,
+              "max_grad_abs": 7.839551835786551e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": -0.00045324343955144286,
+              "max_grad_abs": 7.839157478883862e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            }
+          }
+        }
+      },
+      "rank": 6
+    },
+    {
+      "failures": [],
+      "layers": {
+        "module.decoder.layers.0.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 9.5367431640625e-07,
+              "input_grad_rel_gap_global_max": 1.6825835084111063e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 6.7711807787418365e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.3348022392722925e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 9.5367431640625e-07,
+              "input_grad_rel_gap_global_max": 1.8816537366905806e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 8.473638445138931e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.3858121403309553e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 7.152557373046875e-07,
+              "input_grad_rel_gap_global_max": 8.462748672943832e-06,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 1.7024576663970947e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 3.825832462833745e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": 0.0016575021436437964,
+              "max_grad_abs": 0.00016708912153262645,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": 0.0016507309628650546,
+              "max_grad_abs": 0.00016686489107087255,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": 0.0016490285051986575,
+              "max_grad_abs": 0.00016696355305612087,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.1.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.2055951863931824e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 5.1157549023628235e-06,
+              "output_max_abs_global_max": 0.03515625,
+              "output_rel_gap_global_max": 5.647201265834845e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.601028332209875e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 1.3293465599417686e-06,
+              "output_max_abs_global_max": 0.03515625,
+              "output_rel_gap_global_max": 6.117827858642677e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 1.1608927137363168e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 3.786408342421055e-06,
+              "output_max_abs_global_max": 0.03125,
+              "output_rel_gap_global_max": 3.388311192287219e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": 0.0012068680953234434,
+              "max_grad_abs": 9.151545236818492e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": 0.0012017523404210806,
+              "max_grad_abs": 9.173725266009569e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": 0.0012055387487635016,
+              "max_grad_abs": 9.153497376246378e-05,
+              "num_params_with_grad": 8,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.2.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 2.6065915087025715e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 1.2879609130322933e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.4298539834922686e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 4.76837158203125e-07,
+              "input_grad_rel_gap_global_max": 2.8061398839485108e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 2.8536305762827396e-07,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 1.4476013600717152e-05,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 3.5762786865234375e-07,
+              "input_grad_rel_gap_global_max": 1.1474376283460153e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 1.0025978554040194e-06,
+              "output_max_abs_global_max": 0.03125,
+              "output_rel_gap_global_max": 4.08536784657354e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": -0.0003979750908911228,
+              "max_grad_abs": 0.0002801319642458111,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": -0.0003966871299780905,
+              "max_grad_abs": 0.0002788036363199353,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": -0.00039768972783349454,
+              "max_grad_abs": 0.00027939374558627605,
+              "num_params_with_grad": 18,
+              "params_without_grad": []
+            }
+          }
+        },
+        "module.decoder.layers.3.self_attention": {
+          "comparisons": [
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.2448478948767772e-05,
+              "label": "dense_vs_sparse",
+              "loss_abs_global_max": 2.1960295271128416e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 5.697566650697539e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.725373406846753e-05,
+              "label": "dense_vs_tilelang",
+              "loss_abs_global_max": 4.782457835972309e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 6.1045183067376385e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            },
+            {
+              "input_grad_max_abs_global_max": 2.384185791015625e-07,
+              "input_grad_rel_gap_global_max": 1.2886152300439768e-05,
+              "label": "sparse_vs_tilelang",
+              "loss_abs_global_max": 2.5864283088594675e-06,
+              "output_max_abs_global_max": 0.0625,
+              "output_rel_gap_global_max": 3.5270255962505104e-06,
+              "state_after_step_max_abs_global_max": 0.0,
+              "state_after_step_max_abs_name_rank_local": "",
+              "state_after_step_max_rel_gap_global_max": 0.0
+            }
+          ],
+          "impls": {
+            "dense": {
+              "loss": -0.00044846098171547055,
+              "max_grad_abs": 7.845557411201298e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            },
+            "sparse": {
+              "loss": -0.0004506570112425834,
+              "max_grad_abs": 7.839551835786551e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            },
+            "tilelang": {
+              "loss": -0.00045324343955144286,
+              "max_grad_abs": 7.839157478883862e-05,
+              "num_params_with_grad": 12,
+              "params_without_grad": []
+            }
+          }
+        }
+      },
+      "rank": 7
+    }
+  ],
+  "scope": "4-layer DeepSeek-V4 mini checkpoint attention I/O local training-step replay",
+  "seed": 20260531,
+  "status": "PASS",
+  "thresholds": {
+    "max_input_grad_abs": 0.01,
+    "max_output_abs": 0.0625,
+    "max_rel_gap": 0.0005,
+    "max_state_abs": 2e-05
+  },
+  "world_size": 8
+}

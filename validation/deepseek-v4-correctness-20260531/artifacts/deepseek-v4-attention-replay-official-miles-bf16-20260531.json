@@ -1,0 +1,116 @@
+{
+  "core": [
+    {
+      "label": "official_core_vs_miles_core",
+      "max_abs": 0.03125,
+      "mean_abs": 0.000111129877041094,
+      "mismatches": 461,
+      "numel": 16777216,
+      "p95_abs": 0.00048828125,
+      "relative_gap": 8.223558616293758e-07,
+      "shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "status": "FAIL"
+    }
+  ],
+  "label": "official_vs_miles_attention_replay_from_each_trace",
+  "projected": [
+    {
+      "label": "projected_replay_official_vs_miles",
+      "max_abs": 0.0625,
+      "mean_abs": 0.002629934810101986,
+      "mismatches": 3487,
+      "numel": 2097152,
+      "p95_abs": 0.0078125,
+      "relative_gap": 4.086017477922255e-06,
+      "shape": [
+        1,
+        512,
+        4096
+      ],
+      "status": "FAIL"
+    },
+    {
+      "label": "projected_official_replay_vs_official_trace_wo_b",
+      "max_abs": 0.03125,
+      "mean_abs": 1.933080238814e-05,
+      "mismatches": 30,
+      "numel": 2097152,
+      "p95_abs": 0.0,
+      "relative_gap": 8.512503801849647e-08,
+      "shape": [
+        1,
+        512,
+        4096
+      ],
+      "status": "FAIL"
+    },
+    {
+      "label": "projected_miles_replay_vs_miles_trace_wo_b",
+      "max_abs": 0.21630859375,
+      "mean_abs": 0.024377964437007904,
+      "mismatches": 979189,
+      "numel": 2097152,
+      "p95_abs": 0.0625,
+      "relative_gap": 0.00017967249002048824,
+      "shape": [
+        1,
+        512,
+        4096
+      ],
+      "status": "FAIL"
+    },
+    {
+      "label": "actual_trace_official_wo_b_vs_miles_wo_b",
+      "max_abs": 0.22216796875,
+      "mean_abs": 0.0244059506803751,
+      "mismatches": 980024,
+      "numel": 2097152,
+      "p95_abs": 0.0625,
+      "relative_gap": 0.00018001257276645255,
+      "shape": [
+        1,
+        512,
+        4096
+      ],
+      "status": "FAIL"
+    }
+  ],
+  "qkv": [
+    {
+      "label": "q_after_rope",
+      "max_abs": 0.0625,
+      "mean_abs": 2.612938260426745e-06,
+      "mismatches": 18,
+      "numel": 16777216,
+      "p95_abs": 0.0,
+      "relative_gap": 0.0,
+      "shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "status": "FAIL"
+    },
+    {
+      "label": "kv_after_rope_qat",
+      "max_abs": 0.00390625,
+      "mean_abs": 7.776179700158536e-08,
+      "mismatches": 0,
+      "numel": 262144,
+      "p95_abs": 0.0,
+      "relative_gap": -7.162319204390144e-08,
+      "shape": [
+        1,
+        512,
+        512
+      ],
+      "status": "PASS"
+    }
+  ]
+}

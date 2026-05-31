@@ -1,0 +1,550 @@
+{
+  "conclusion": "Megatron PR #4839 is not needed for the current Miles DeepSeek-V4 path because Miles implements its own HC and the HC math matches the fixed H_res.T formula. The QAT dimension and official-compatible in-place QAT fixes are applied, and operator, attention-module, attention-trace replay, MLP expert replay, grouped-MLP training math, EP=8 all-to-all dispatch math, and transformer-block training-step gates now pass. Full mini-checkpoint forward and SFT one-step execute with finite values. Mini forward and SFT one-step routing replay show that MoE routing flips are a major drift amplifier. Mini activation replay proves that once dense layer outputs or final layernorm output are injected, sparse/tilelang reproduce dense logprobs bitwise, ruling out final layernorm/output-head/logprob postprocessing as the remaining backend drift source. Mini sublayer replay further shows that injecting all dense attention outputs alone is sufficient for bitwise dense logprobs, while injecting all dense MLP outputs is not, localizing remaining backend drift to attention module output differences. Mini attention-layer replay shows layer 0 attention is the largest early contributor and attention-prefix injection monotonically reduces mismatches to zero. Mini attention I/O replay confirms that this is same-input attention backend BF16 output drift, not merely upstream input-state drift. Mini attention I/O local training-step replay passes on real checkpoint attention inputs and proves the attention forward/backward/manual-update surface remains within BF16 training thresholds. Complete SFT one-step with attention-output straight-through replay also passes after removing the localized attention forward-value drift, with exact loss parity and selected update drift below threshold. However real non-injected SFT loss and forward logprob strict parity still fail without activation injection. The current state is therefore not yet a complete framework-level proof. A proof ledger consistency check now machine-validates the artifact chain and found no failures. An explicit end-to-end BF16 tolerance verifier now passes and documents the bounded real-forward/train-step drift envelope without reclassifying strict parity as passed. A dedicated official-vs-Miles BF16 forward tolerance verifier also passes and machine-records that external one-step train parity remains gated by strict official/reference forward parity. Optimizer path and AdamW first-step update math are now verified as a separate PASS gate. Source regression guards for the precision fixes are now verified and included in the proof ledger. A proof coverage matrix now maps the user-requested proof areas to artifact-backed evidence and machine-checks the remaining strict gates as explicit boundaries. Environment provenance is now machine-checked against the operator-math runtime artifact. External reference provenance now records the bounded use of Megatron-LM PR #4839 and SWIFT documentation.",
+  "date": "2026-05-31",
+  "not_proved": [
+    {
+      "evidence": [
+        "deepseek-v4-mini-forward-compare-20260531.json",
+        "deepseek-v4-mini-forward-routing-replay-dense-vs-sparse-qatsim-20260531.json",
+        "deepseek-v4-mini-forward-routing-replay-dense-vs-tilelang-qatsim-20260531.json",
+        "deepseek-v4-mini-forward-routing-replay-sparse-vs-tilelang-qatsim-20260531.json",
+        "deepseek-v4-mini-activation-replay-qatsim-20260531.json",
+        "deepseek-v4-mini-sublayer-activation-replay-qatsim-20260531.json",
+        "deepseek-v4-mini-attention-layer-replay-qatsim-20260531.json",
+        "deepseek-v4-mini-attention-io-replay-qatsim-20260531.json",
+        "deepseek-v4-proof-ledger-20260531.json",
+        "deepseek-v4-end-to-end-bf16-tolerance-20260531.json",
+        "deepseek-v4-fix-regression-guards-20260531.json",
+        "deepseek-v4-proof-coverage-matrix-20260531.json",
+        "deepseek-v4-environment-provenance-20260531.json",
+        "deepseek-v4-external-reference-provenance-20260531.json"
+      ],
+      "gate": "strict_mini_backend_logprob_parity",
+      "reason": "with deterministic runtime enabled, strict rtol=0.002, atol=0.02 pairwise logprob comparisons still fail. Routing replay separates the discrete MoE assignment flip from continuous drift: dense-vs-sparse improves from 205/402 mismatches, max_abs=0.5140819549560547, mean_abs=0.07136902213096619, relative_l2_gap=1.547721555139603e-05 to 84/402 mismatches, max_abs=0.255859375, mean_abs=0.030136708170175552, relative_l2_gap=3.5204090861329362e-06; dense-vs-tilelang improves from 200/402 to 75/402; sparse-vs-tilelang improves from 201/402 to 59/402. Activation replay further proves the post-layer path: injecting dense layer 0..3 outputs or dense final_layernorm output into sparse/tilelang produces bitwise-exact dense logprobs, while injecting only earlier prefixes reduces but does not eliminate drift. Sublayer replay localizes the remaining backend drift to attention module outputs: injecting all dense attention outputs makes sparse/tilelang bitwise exact, while injecting all dense MLP outputs does not. Layerwise attention replay shows layer 0 attention is the largest early contributor, and attention-prefix injection monotonically reduces mismatches to zero. Attention I/O replay then removes input-state drift from the comparison: even with dense attention inputs replayed, sparse/tilelang attention outputs differ from dense by at most 0.0625 and layer 0 has the largest mean_abs. Therefore MLP, HC, final layernorm, output head, and logprob code are not the source once attention outputs are identical; strict mini forward remains unproved because the real non-injected attention backend path still has BF16 output drift. The proof ledger machine-checks this localization chain: routing replay reduces all pairwise relative_l2 gaps by 4.39x-6.37x, all-attention activation replay restores dense logprobs bitwise for sparse/tilelang while MLP-only replay does not, and attention I/O replay bounds same-input attention output drift at <= 0.0625. Under the explicit BF16 tolerance envelope, the real non-injected backend forward remains bounded: all pairwise relative_l2 gaps are <= 2e-05, mean_abs <= 0.08, and p99_abs <= 0.37.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": [
+        "deepseek-v4-mini-train-step-qatsim-0415-20260531.json",
+        "deepseek-v4-mini-train-step-routing-replay-qatsim-20260531.json",
+        "deepseek-v4-mini-attention-io-training-step-qatsim-20260531.json",
+        "deepseek-v4-mini-train-step-attention-output-replay-qatsim-20260531.json",
+        "deepseek-v4-proof-ledger-20260531.json",
+        "deepseek-v4-end-to-end-bf16-tolerance-20260531.json",
+        "deepseek-v4-optimizer-update-math-20260531.json",
+        "deepseek-v4-proof-coverage-matrix-20260531.json",
+        "deepseek-v4-environment-provenance-20260531.json",
+        "deepseek-v4-external-reference-provenance-20260531.json"
+      ],
+      "gate": "strict_mini_checkpoint_train_step_backend_parity",
+      "reason": "same-environment QAT/0415 train-step execution is finite, and selected_grad_max_rel_gap plus selected_state_max_abs pass their strict thresholds for dense-vs-sparse, dense-vs-tilelang, and sparse-vs-tilelang. However real non-injected loss_abs_global_max still fails: without routing replay the gaps are 1.5947265625, 0.703125, and 0.8916015625; with dense routing replay they improve to 1.1494140625, 0.5341796875, and 0.615234375, still far above max_loss_abs=0.02. A separate attention I/O local training-step replay on real mini-checkpoint attention inputs passes: output max_abs <= 0.0625, input_grad max_abs <= 9.5367431640625e-07, relative gaps <= 2.8061398839485108e-05, and manual SGD state_after_step max_abs == 0.0 across dense/sparse/tilelang. Complete SFT one-step with dense routing replay plus attention-output straight-through replay also passes: loss_abs_global_max=0.0, selected_grad_max_rel_gap <= 2.1433698600525908e-05, and selected_state_max_abs=4.76837158203125e-07. This proves the complete training chain after the already-localized attention forward-value drift is removed, but the strict gate remains open for the real non-injected forward because complete SFT loss still amplifies accumulated BF16 forward drift. The proof ledger machine-checks that the complete SFT attention-output straight-through replay has exact loss parity and selected gradient/update bounds, so the open strict gate is specifically the real non-injected forward path. Under the same BF16 tolerance envelope, real non-injected selected_grad_max_rel_gap is <= 5e-04 and selected_state_max_abs is <= 2e-05; after attention-output replay, complete SFT loss parity is exact. Optimizer update math is separately verified: the DeepSeek-V4 runner uses Adam hyperparameters, Miles train step calls Megatron optimizer.step(), and first-step AdamW selected-update math has a worst-case adaptive update disagreement of about 2e-06, below the selected-state threshold.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": [
+        "deepseek-v4-official-full-forward-1layer-bf16-qatsim-0415-20260531.json",
+        "deepseek-v4-official-full-forward-1layer-bf16-tilelang-qatsim-0415-20260531.json",
+        "deepseek-v4-attention-trace-replay-qatsim-0415-20260531.json",
+        "deepseek-v4-head-replay-qatsim-0415-20260531.json",
+        "deepseek-v4-mlp-trace-compare-qatsim-0415-20260531.json",
+        "deepseek-v4-mlp-expert-replay-qatsim-0415-20260531.json",
+        "deepseek-v4-loaded-weight-mapping-1layer-mlp-qatsim-20260531.json",
+        "deepseek-v4-official-runtime-precision-variants-qatsim-0415-20260531.json",
+        "deepseek-v4-end-to-end-bf16-tolerance-20260531.json",
+        "deepseek-v4-official-forward-bf16-tolerance-20260531.json",
+        "deepseek-v4-fix-regression-guards-20260531.json",
+        "deepseek-v4-proof-coverage-matrix-20260531.json",
+        "deepseek-v4-environment-provenance-20260531.json",
+        "deepseek-v4-external-reference-provenance-20260531.json"
+      ],
+      "gate": "official_reference_mini_checkpoint_forward_parity",
+      "reason": "after QAT fixes, 1-layer BF16 official-vs-Miles sparse improves to 63/402 mismatches, max_abs=0.16042709350585938, mean_abs=0.03158159181475639, relative_l2_gap=2.313715897095392e-06; tilelang is same order with 71/402 mismatches and relative_l2_gap=2.4187967853084302e-06. Attention trace replay passes. Loaded weight mapping now covers embedding, attention, pre-MLP layernorm, router, hash tid2eid, shared experts, all 256 routed expert fc1/fc2 tensors, final layernorm, and output layer with exact_equal=True and nonzero_abs_count=0. MLP trace compare shows layer-0 hash router expert indices are exact_equal, router selected weights have 0 mismatches, and shared experts have 0 mismatches, while routed expert aggregation still drifts. MLP expert replay proves official routed expert formula plus shared expert exactly reproduces official ffn output, and Megatron BF16 activation replay is closer to Miles MLP output than official FP32 activation replay, so the remaining MLP difference is localized past routing indices and both Miles/official weight conversion. Grouped MLP math verification proves local TEGroupedMLP forward/backward/update is bitwise exact against an explicit per-expert BF16 formula at production hidden/FFN dimensions, so the remaining full-forward drift is not explained by a local TEGroupedMLP GEMM/SwiGLU/probability-application formula error. Runtime precision variants show strict drift is sensitive to official FP32-vs-Megatron-like BF16 execution choices: the all-BF16 variant reduces sparse mismatches from 63 to 53 and mean_abs from 0.03158159181475639 to 0.023050455376505852, although strict parity still fails. Head replay proves official saved logprobs are exact from official final hidden + FP32 head, while Miles saved logprobs are replayed by Miles final hidden + BF16 head matmul with 0 mismatches and max_abs=1.9073486328125e-06. The remaining strict logprob failure therefore contains full MoE training-runtime/final-hidden drift plus FP32-vs-BF16 output head precision drift, and is past the verified attention-core/local-expert/math gates. The official forward BF16 tolerance verifier checks the 1-layer official-vs-Miles sparse/tilelang drift against relative_l2_gap <= 5e-06, mean_abs <= 0.04, p99_abs <= 0.15, and max_abs <= 0.20, while preserving the fact that strict rtol/atol parity still fails. Source regression guards now confirm the QAT and compressor fixes remain present, so the remaining official-vs-Miles strict drift is not due to reverting those known precision fixes.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": [
+        "deepseek-v4-layerwise-moe-dense-vs-sparse-20260531.json",
+        "deepseek-v4-layerwise-moe-routing-replay-20260531.json",
+        "deepseek-v4-layerwise-moe-routerfp32-20260531.json",
+        "deepseek-v4-moe-ep8-dispatch-math-20260531.json",
+        "deepseek-v4-mini-forward-routing-replay-dense-vs-sparse-qatsim-20260531.json",
+        "deepseek-v4-mini-forward-routing-replay-dense-vs-tilelang-qatsim-20260531.json",
+        "deepseek-v4-mini-forward-routing-replay-sparse-vs-tilelang-qatsim-20260531.json",
+        "deepseek-v4-mini-activation-replay-qatsim-20260531.json",
+        "deepseek-v4-mini-sublayer-activation-replay-qatsim-20260531.json",
+        "deepseek-v4-mini-attention-layer-replay-qatsim-20260531.json",
+        "deepseek-v4-mini-attention-io-replay-qatsim-20260531.json",
+        "deepseek-v4-mini-attention-io-training-step-qatsim-20260531.json",
+        "deepseek-v4-mini-train-step-attention-output-replay-qatsim-20260531.json",
+        "deepseek-v4-proof-ledger-20260531.json",
+        "deepseek-v4-end-to-end-bf16-tolerance-20260531.json",
+        "deepseek-v4-optimizer-update-math-20260531.json",
+        "deepseek-v4-fix-regression-guards-20260531.json",
+        "deepseek-v4-proof-coverage-matrix-20260531.json",
+        "deepseek-v4-environment-provenance-20260531.json",
+        "deepseek-v4-external-reference-provenance-20260531.json"
+      ],
+      "gate": "production_ep8_moe_path_strict_parity",
+      "reason": "layer 0/1/2 router assignment maps are exact-equal, but layer 3 router assignment differs and routed experts shape changes; routing replay removes the discrete layerwise routing mismatch and reduces full mini-forward backend logprob drift by about 4-7x in relative_l2_gap. Independent EP=8 all-to-all dispatch math passes bitwise for forward/backward/update, including an empty receiving expert and top-3 multi-route. Activation replay shows that after dense layer 0..3 outputs or dense final_layernorm output are injected, sparse and tilelang reproduce dense logprobs bitwise; therefore the post-transformer output path is ruled out for backend drift. Sublayer replay shows all dense attention outputs are sufficient to recover bitwise dense logprobs, while all dense MLP outputs are not. Layerwise attention replay shows the attention drift is cumulative: injecting layer 0 alone strongly reduces mismatches, injecting later single attention layers is insufficient, and injecting attention prefixes monotonically reaches bitwise exact at layer 0..3. Attention I/O replay confirms the drift remains when attention inputs are replayed from dense, with all attention output max_abs <= 0.0625 and finite. Attention I/O local training-step replay further proves that on the same real checkpoint attention inputs, dense/sparse/tilelang input gradients and manual SGD updates remain within threshold. Complete SFT one-step with attention-output straight-through replay passes after removing the localized attention forward-value drift, proving the remaining train-step chain. Strict full mini-forward parity still fails without activation injection, so the remaining production MoE path issue is localized to accumulated continuous BF16 attention-output drift inside transformer layers and real router amplification, not to a standalone all-to-all dispatcher formula error.",
+      "status": "PARTIALLY_LOCALIZED"
+    },
+    {
+      "evidence": [
+        "deepseek-v4-proof-coverage-matrix-20260531.json",
+        "deepseek-v4-official-forward-bf16-tolerance-20260531.json",
+        "deepseek-v4-environment-provenance-20260531.json",
+        "deepseek-v4-external-reference-provenance-20260531.json"
+      ],
+      "gate": "external_reference_mini_checkpoint_one_step_train_parity",
+      "reason": "requires official/reference mini checkpoint forward parity to pass first. The official forward BF16 tolerance gate records external_one_step_train_parity_status=SKIPPED_FORWARD_STRICT_PARITY_REQUIRED because strict official/reference forward parity remains FAIL.",
+      "status": "MISSING_INPUT"
+    }
+  ],
+  "proved": [
+    {
+      "covers": [
+        "Miles DeepSeek-V4 HC post-mix equals H_res.T @ residual",
+        "Megatron-LM PR #4839 fixed native formula",
+        "non-symmetric H_res distinguishes fixed and wrong formulas"
+      ],
+      "evidence": "deepseek-v4-operator-math-20260531.json",
+      "gate": "hyper_connection_pr4839_orientation",
+      "status": "PASS"
+    },
+    {
+      "covers": [
+        "Megatron-LM PR #4839 URL and bounded usage are documented",
+        "SWIFT DeepSeek-V4 Best Practice URL and bounded methodology usage are documented",
+        "external references are not treated as direct Miles correctness evidence",
+        "Miles correctness remains tied to local proof artifacts"
+      ],
+      "evidence": "deepseek-v4-external-reference-provenance-20260531.json",
+      "gate": "external_reference_provenance",
+      "status": "PASS"
+    },
+    {
+      "covers": [
+        "RoPE out-of-place, inverse, gradient, and cache length",
+        "official-compatible KV QAT simulation exact_equal",
+        "dense vs sparse PyTorch attention forward/backward",
+        "TileLang sparse MLA forward/backward production and masked-row cases"
+      ],
+      "evidence": "deepseek-v4-operator-math-20260531.json",
+      "gate": "operator_math",
+      "status": "PASS"
+    },
+    {
+      "covers": [
+        "official inference Attention vs Miles DeepSeekV4Attention",
+        "non-compressed sliding-window attention path",
+        "compress_ratio=4 compressed-KV/indexer attention path",
+        "dense/sparse/tilelang Miles backends"
+      ],
+      "evidence": "deepseek-v4-official-attention-forward-20260531.json",
+      "gate": "official_attention_forward",
+      "status": "PASS"
+    },
+    {
+      "covers": [
+        "embedding exact_equal",
+        "attn_sink exact_equal",
+        "wq_a/q_norm/wq_b exact_equal",
+        "wkv/kv_norm exact_equal",
+        "wo_a/wo_b exact_equal",
+        "pre-MLP layernorm exact_equal",
+        "MLP router weight exact_equal",
+        "MLP hash tid2eid exact_equal",
+        "MLP shared expert fc1/fc2 exact_equal",
+        "MLP routed expert fc1/fc2 exact_equal for 256 experts",
+        "final layernorm exact_equal",
+        "output layer exact_equal"
+      ],
+      "evidence": "deepseek-v4-loaded-weight-mapping-1layer-mlp-qatsim-20260531.json",
+      "gate": "loaded_weight_mapping",
+      "status": "PASS"
+    },
+    {
+      "covers": [
+        "official q_after_rope vs Miles q_after_rope",
+        "official KV QAT vs Miles KV QAT",
+        "window topk exact_equal",
+        "FP32 dense/sparse math replay",
+        "BF16 production replay",
+        "Miles attention_core bitwise exact vs sparse replay",
+        "official attention_core vs sparse replay bounded drift"
+      ],
+      "evidence": "deepseek-v4-attention-trace-replay-qatsim-0415-20260531.json",
+      "gate": "attention_trace_replay",
+      "status": "PASS"
+    },
+    {
+      "covers": [
+        "layer-0 ffn_norm within threshold",
+        "hash router expert indices exact_equal",
+        "router selected weights within threshold",
+        "shared experts within threshold",
+        "routed experts aggregated drift recorded",
+        "ffn output drift recorded"
+      ],
+      "evidence": "deepseek-v4-mlp-trace-compare-qatsim-0415-20260531.json",
+      "gate": "mlp_trace_compare",
+      "status": "PASS_WITH_DRIFT_RECORDED"
+    },
+    {
+      "covers": [
+        "layer-0 official routed expert formula replay plus shared expert exactly reproduces official ffn output",
+        "official and Miles use exact-equal hash expert indices for the replayed sample",
+        "same checkpoint expert fc1/fc2 weights are sufficient to replay official MLP output bitwise",
+        "Megatron BF16 activation replay is closer to Miles MLP output than official FP32 activation replay",
+        "remaining Miles MLP drift is localized to grouped/dispatch BF16 expert execution rather than routing indices or official weight conversion"
+      ],
+      "evidence": "deepseek-v4-mlp-expert-replay-qatsim-0415-20260531.json",
+      "gate": "mlp_expert_replay",
+      "status": "PASS_WITH_DRIFT_RECORDED"
+    },
+    {
+      "covers": [
+        "Megatron/TE TEGroupedMLP local expert forward",
+        "DeepSeek-V4 0415 BF16 SwiGLU activation clamp value 10",
+        "router probability applied after activation and before fc2",
+        "production hidden_size=4096 and moe_ffn_hidden_size=2048",
+        "imbalanced tokens_per_expert including an empty expert",
+        "balanced all-experts-active tokens_per_expert",
+        "input gradients exact_equal under rtol=0 and atol=0",
+        "fc1/fc2 expert weight gradients exact_equal under rtol=0 and atol=0",
+        "one-step SGD updates exact_equal under rtol=0 and atol=0"
+      ],
+      "evidence": "deepseek-v4-grouped-mlp-math-20260531.json",
+      "gate": "grouped_mlp_training_math",
+      "status": "PASS"
+    },
+    {
+      "covers": [
+        "Megatron MoEAlltoAllTokenDispatcher with expert_parallel_size=8",
+        "DeepSeek-V4 hidden_size=4096",
+        "top-1 routing with one empty receiving expert",
+        "top-3 multi-route with all experts active",
+        "forward output exact_equal under rtol=0 and atol=0 on all 8 ranks",
+        "input gradients exact_equal under rtol=0 and atol=0 on all 8 ranks",
+        "per-rank local expert scale/bias gradients exact_equal under rtol=0 and atol=0",
+        "per-rank local expert scale/bias one-step SGD updates exact_equal under rtol=0 and atol=0"
+      ],
+      "evidence": "deepseek-v4-moe-ep8-dispatch-math-20260531.json",
+      "gate": "moe_ep8_alltoall_dispatch_math",
+      "status": "PASS"
+    },
+    {
+      "covers": [
+        "DeepSeekV4Attention forward/backward/update",
+        "compress_ratio=0",
+        "compress_ratio=4",
+        "compress_ratio=128",
+        "input gradients",
+        "parameter gradients",
+        "dense/sparse/tilelang backend parity"
+      ],
+      "evidence": "deepseek-v4-attention-training-step-qatsim-20260531.json",
+      "gate": "attention_training_step",
+      "status": "PASS"
+    },
+    {
+      "covers": [
+        "Megatron TransformerBlock using Miles DeepSeek-V4 spec",
+        "block-level HyperConnection expand/head",
+        "layer-level HyperConnection pre/post around attention and MLP",
+        "two layers with compress_ratio=0 and compress_ratio=4",
+        "MLP and final layernorm",
+        "dense/sparse/tilelang forward/backward/update parity"
+      ],
+      "evidence": "deepseek-v4-transformer-block-training-step-qatsim-20260531.json",
+      "gate": "transformer_block_training_step",
+      "status": "PASS"
+    },
+    {
+      "covers": [
+        "official inference Transformer full-sequence prefill",
+        "Megatron distributed release mini checkpoint to official inference weight mapping",
+        "same fixed rollout response log-probabilities",
+        "Miles sparse and tilelang comparison after QAT fixes",
+        "strict logprob drift quantified",
+        "official output head FP32 replay",
+        "Miles output head BF16 replay",
+        "layer-0 MLP routing and expert drift split",
+        "layer-0 official expert formula replay exactness"
+      ],
+      "evidence": [
+        "deepseek-v4-official-full-forward-1layer-bf16-qatsim-0415-20260531.json",
+        "deepseek-v4-official-full-forward-1layer-bf16-tilelang-qatsim-0415-20260531.json",
+        "deepseek-v4-official-vs-miles-1layer-trace-bf16-qatsim-0415-20260531.json",
+        "deepseek-v4-head-replay-qatsim-0415-20260531.json",
+        "deepseek-v4-mlp-trace-compare-qatsim-0415-20260531.json",
+        "deepseek-v4-mlp-expert-replay-qatsim-0415-20260531.json"
+      ],
+      "gate": "official_full_forward_probe",
+      "status": "RUN_WITH_DRIFT_RECORDED"
+    },
+    {
+      "covers": [
+        "official head FP32 vs BF16 logit matmul variant",
+        "official Expert FP32 activation vs Megatron-like BF16 activation variant",
+        "official router FP32 score vs Megatron-like BF16 score variant",
+        "all-BF16 runtime variant reduces sparse official-vs-Miles mismatches from 63 to 53",
+        "all-BF16 runtime variant reduces sparse mean_abs from 0.03158159181475639 to 0.023050455376505852",
+        "strict official-vs-Miles parity still fails under runtime precision variants"
+      ],
+      "evidence": "deepseek-v4-official-runtime-precision-variants-qatsim-0415-20260531.json",
+      "gate": "official_runtime_precision_variants",
+      "status": "RUN_WITH_DRIFT_RECORDED"
+    },
+    {
+      "covers": [
+        "same mini checkpoint loads in Miles/Megatron",
+        "fixed rollout forward executes",
+        "deterministic runtime makes same-backend dense forward bitwise repeatable",
+        "dense/sparse/tilelang logprobs are finite"
+      ],
+      "evidence": "deepseek-v4-mini-forward-compare-20260531.json",
+      "gate": "mini_checkpoint_forward_execution",
+      "status": "PASS_WITH_DRIFT_RECORDED"
+    },
+    {
+      "covers": [
+        "dense routing top indices recorded and replayed by sparse/tilelang mini forward",
+        "only one score/topk routing tensor is recorded because the first three layers in the 4-layer mini setup are hash-routed",
+        "dense-vs-sparse mismatches drop from 205/402 to 84/402 after routing replay",
+        "dense-vs-tilelang mismatches drop from 200/402 to 75/402 after routing replay",
+        "sparse-vs-tilelang mismatches drop from 201/402 to 59/402 after routing replay",
+        "strict mini forward backend parity still fails after routing replay, proving a remaining continuous numeric drift component"
+      ],
+      "evidence": [
+        "deepseek-v4-mini-forward-routing-replay-dense-vs-sparse-qatsim-20260531.json",
+        "deepseek-v4-mini-forward-routing-replay-dense-vs-tilelang-qatsim-20260531.json",
+        "deepseek-v4-mini-forward-routing-replay-sparse-vs-tilelang-qatsim-20260531.json"
+      ],
+      "gate": "mini_checkpoint_forward_routing_replay",
+      "status": "RUN_WITH_DRIFT_RECORDED"
+    },
+    {
+      "covers": [
+        "dense records per-rank decoder.layers.0..3 and final_layernorm activations",
+        "sparse and tilelang replay dense routing while injecting selected dense activations",
+        "injecting dense layer 0 output reduces dense-vs-sparse mismatches from 84/402 to 33/402 and dense-vs-tilelang mismatches from 75/402 to 31/402",
+        "injecting dense layer 0..2 outputs reduces dense-vs-sparse mismatches to 14/402 and dense-vs-tilelang mismatches to 17/402",
+        "injecting dense layer 0..3 outputs makes sparse and tilelang logprobs bitwise exact with dense",
+        "injecting dense final layernorm output makes sparse and tilelang logprobs bitwise exact with dense",
+        "output head and logprob computation are not the source once final hidden is identical",
+        "remaining no-replay backend drift is generated inside the four transformer layers"
+      ],
+      "evidence": "deepseek-v4-mini-activation-replay-qatsim-20260531.json",
+      "gate": "mini_checkpoint_activation_replay",
+      "status": "PASS_WITH_LOCALIZED_DRIFT"
+    },
+    {
+      "covers": [
+        "dense records per-rank self_attention, MLP, and layer outputs for layers 0..3",
+        "sparse and tilelang replay dense routing while injecting selected dense sublayer activations",
+        "injecting all dense attention outputs makes sparse and tilelang logprobs bitwise exact with dense",
+        "injecting all dense MLP outputs does not make sparse or tilelang logprobs bitwise exact with dense",
+        "injecting layer 0 attention+MLP outputs reduces dense-vs-sparse mismatches from 84/402 to 33/402 and dense-vs-tilelang mismatches from 75/402 to 31/402",
+        "injecting layer 0..2 attention+MLP outputs reduces dense-vs-sparse mismatches to 14/402 and dense-vs-tilelang mismatches to 17/402",
+        "injecting layer 0..3 attention+MLP outputs makes sparse and tilelang logprobs bitwise exact with dense",
+        "remaining no-replay backend forward drift is driven by attention module outputs before downstream MLP, HC, final layernorm, output head, and logprob computation"
+      ],
+      "evidence": "deepseek-v4-mini-sublayer-activation-replay-qatsim-20260531.json",
+      "gate": "mini_checkpoint_sublayer_activation_replay",
+      "status": "PASS_WITH_ATTENTION_DRIFT_LOCALIZED"
+    },
+    {
+      "covers": [
+        "dense records per-rank self_attention outputs for layers 0..3",
+        "sparse and tilelang replay dense routing while injecting single-layer or prefix dense attention outputs",
+        "injecting layer 0 attention output alone reduces dense-vs-sparse mismatches from 84/402 to 33/402",
+        "injecting layer 0 attention output alone reduces dense-vs-tilelang mismatches from 75/402 to 31/402",
+        "single layer 1/2/3 attention output injection is not sufficient to recover dense logprobs",
+        "attention-prefix injection reduces mismatches monotonically for sparse: 84 -> 33 -> 27 -> 14 -> 0",
+        "attention-prefix injection reduces mismatches monotonically for tilelang: 75 -> 31 -> 22 -> 17 -> 0",
+        "all layer 0..3 attention outputs are sufficient to recover bitwise dense logprobs for sparse and tilelang"
+      ],
+      "evidence": "deepseek-v4-mini-attention-layer-replay-qatsim-20260531.json",
+      "gate": "mini_checkpoint_attention_layer_replay",
+      "status": "PASS_WITH_LAYERWISE_ATTENTION_DRIFT_LOCALIZED"
+    },
+    {
+      "covers": [
+        "dense records per-rank attention inputs and outputs for layers 0..3",
+        "sparse and tilelang replay dense routing and replace each attention input with the dense attention input before computing attention",
+        "layer 0 attention input is exact before replay for both sparse and tilelang",
+        "all replayed-dense-input attention outputs are finite",
+        "all replayed-dense-input attention outputs have max_abs <= 0.0625 against dense",
+        "layer 0 has the largest attention-output mean_abs for both sparse and tilelang",
+        "attention output drift remains observable even when attention inputs are replayed from dense"
+      ],
+      "evidence": "deepseek-v4-mini-attention-io-replay-qatsim-20260531.json",
+      "gate": "mini_checkpoint_attention_io_replay",
+      "status": "PASS_WITH_BF16_ATTENTION_IO_DRIFT_RECORDED"
+    },
+    {
+      "covers": [
+        "4-layer mini checkpoint dense-recorded attention inputs replayed into dense/sparse/tilelang attention backends",
+        "same checkpoint attention weights and same synthetic upstream gradient",
+        "attention forward output max_abs <= 0.0625 on all layers/ranks/backend pairs",
+        "attention input gradient max_abs <= 9.5367431640625e-07 and relative gap <= 2.8061398839485108e-05",
+        "manual SGD state_after_step max_abs == 0.0 for dense/sparse/tilelang comparisons",
+        "all covered attention parameters receive finite gradients"
+      ],
+      "evidence": "deepseek-v4-mini-attention-io-training-step-qatsim-20260531.json",
+      "gate": "mini_checkpoint_attention_io_training_step",
+      "status": "PASS"
+    },
+    {
+      "covers": [
+        "same mini SFT checkpoint loads in Miles/Megatron",
+        "fixed training microbatch executes",
+        "dense/sparse/tilelang SFT loss, backward, and one SGD update complete",
+        "dense/sparse/tilelang gradients are finite",
+        "same-environment QAT/0415 baseline records finite loss, finite selected gradients, and finite one-step updates"
+      ],
+      "evidence": [
+        "deepseek-v4-mini-train-step-parity-20260531.json",
+        "deepseek-v4-mini-train-step-qatsim-0415-20260531.json"
+      ],
+      "gate": "mini_checkpoint_sft_one_step_execution",
+      "status": "PASS_WITH_DRIFT_RECORDED"
+    },
+    {
+      "covers": [
+        "dense train-step records score/topk routing tensors and sparse/tilelang replay the dense routing",
+        "recorded routing tensors count is 1 and per-impl replay count is 4, matching the 4-layer mini setup where only the score-routed layer records topk",
+        "selected_grad_max_rel_gap is below the 0.002 threshold for all backend pairs both before and after routing replay",
+        "selected_state_max_abs is below the 2e-05 threshold for all backend pairs both before and after routing replay",
+        "routing replay reduces dense-vs-sparse loss_abs_global_max from 1.5947265625 to 1.1494140625",
+        "routing replay reduces dense-vs-tilelang loss_abs_global_max from 0.703125 to 0.5341796875",
+        "routing replay reduces sparse-vs-tilelang loss_abs_global_max from 0.8916015625 to 0.615234375",
+        "strict train-step loss parity still fails after routing replay"
+      ],
+      "evidence": [
+        "deepseek-v4-mini-train-step-qatsim-0415-20260531.json",
+        "deepseek-v4-mini-train-step-routing-replay-qatsim-20260531.json"
+      ],
+      "gate": "mini_checkpoint_sft_one_step_routing_replay",
+      "status": "RUN_WITH_DRIFT_RECORDED"
+    },
+    {
+      "covers": [
+        "4-layer mini checkpoint complete SFT one-step with dense routing replay",
+        "dense-recorded attention output values replayed into sparse/tilelang with straight-through backend Jacobian",
+        "complete SFT loss exact across dense/sparse/tilelang after attention forward-value drift is removed",
+        "dense-vs-sparse selected_grad_max_rel_gap=1.6638869012597368e-05 and selected_state_max_abs=4.76837158203125e-07",
+        "dense-vs-tilelang selected_grad_max_rel_gap=2.1433698600525908e-05 and selected_state_max_abs=4.76837158203125e-07",
+        "sparse-vs-tilelang selected_grad_max_rel_gap=1.8058738106341288e-05 and selected_state_max_abs=4.76837158203125e-07"
+      ],
+      "evidence": "deepseek-v4-mini-train-step-attention-output-replay-qatsim-20260531.json",
+      "gate": "mini_checkpoint_sft_one_step_attention_output_replay",
+      "status": "PASS"
+    },
+    {
+      "covers": [
+        "layerwise dense vs sparse hooks",
+        "layer 3 MoE router assignment flip",
+        "routing replay removes routed-expert shape mismatch",
+        "fp32 router reduces but does not remove assignment drift"
+      ],
+      "evidence": [
+        "deepseek-v4-layerwise-moe-dense-vs-sparse-20260531.json",
+        "deepseek-v4-layerwise-moe-routing-replay-20260531.json",
+        "deepseek-v4-layerwise-moe-routerfp32-20260531.json"
+      ],
+      "gate": "mini_checkpoint_moe_drift_localization",
+      "status": "RUN_WITH_DRIFT_RECORDED"
+    },
+    {
+      "covers": [
+        "real non-injected mini forward drift is finite and within relative_l2 <= 2e-05, mean_abs <= 0.08, p99_abs <= 0.37",
+        "routing replay reduces forward relative_l2_gap by at least 4x and leaves replay relative_l2_gap <= 4e-06",
+        "real non-injected mini SFT selected_grad_max_rel_gap <= 5e-04 and selected_state_max_abs <= 2e-05",
+        "attention-output straight-through replay gives exact complete SFT loss parity and gradient/update drift below threshold",
+        "official 1-layer sparse/tilelang relative_l2_gap <= 5e-06 and mean_abs <= 0.04",
+        "attention I/O forward and local training-step bounds remain within the declared BF16 envelope"
+      ],
+      "evidence": "deepseek-v4-end-to-end-bf16-tolerance-20260531.json",
+      "gate": "end_to_end_bf16_tolerance_envelope",
+      "status": "PASS"
+    },
+    {
+      "covers": [
+        "official-vs-Miles sparse and tilelang full-forward strict status remains recorded as FAIL",
+        "official-vs-Miles sparse/tilelang relative_l2_gap <= 5e-06",
+        "official-vs-Miles sparse/tilelang mean_abs <= 0.04, p99_abs <= 0.15, max_abs <= 0.20",
+        "runtime precision variants are recorded and the best mean_abs variant is not worse than baseline",
+        "external one-step train parity is explicitly gated by strict official/reference forward parity"
+      ],
+      "evidence": "deepseek-v4-official-forward-bf16-tolerance-20260531.json",
+      "gate": "official_forward_bf16_tolerance",
+      "status": "PASS"
+    },
+    {
+      "covers": [
+        "Miles Megatron training path constructs get_megatron_optimizer with OptimizerConfig",
+        "Miles train step calls optimizer.prepare_grads(), optimizer.step(), and opt_param_scheduler.step()",
+        "DeepSeek-V4 runner uses Adam with lr=1e-6, weight_decay=0.1, beta1=0.9, beta2=0.98",
+        "AdamW first step from zero moments matches the closed-form update within FP32 tolerance",
+        "zero-gradient AdamW step reduces to decoupled weight decay",
+        "worst-case first-step adaptive update disagreement is bounded by about 2*lr and below selected-state threshold"
+      ],
+      "evidence": "deepseek-v4-optimizer-update-math-20260531.json",
+      "gate": "optimizer_update_math",
+      "status": "PASS"
+    },
+    {
+      "covers": [
+        "DeepSeekV4Attention traces are gated by MILES_DSV4_TRACE_INTERNALS",
+        "attention KV QAT applies only to non-RoPE dimensions and preserves RoPE dimensions",
+        "act_quant supports official-compatible inplace simulation with requested scale dtype and FP32 default scales",
+        "QAT simulation uses in-place act_quant with FP32 scales and no ue8m0 scale request",
+        "compressor QAT uses torch.cat to avoid overlapping slice writes and preserves RoPE tail",
+        "linked operator math, attention trace replay, and proof ledger artifacts are still PASS"
+      ],
+      "evidence": "deepseek-v4-fix-regression-guards-20260531.json",
+      "gate": "precision_fix_regression_guards",
+      "status": "PASS"
+    },
+    {
+      "covers": [
+        "maps the user goal to explicit proof requirements",
+        "checks each requirement has artifact evidence and documented sections",
+        "distinguishes proved artifacts from expected-failing diagnostic artifacts",
+        "checks remaining strict gates keep their expected open statuses and reason boundaries",
+        "checks required environment/version documentation is present",
+        "checks proof artifacts and document do not contain local absolute paths"
+      ],
+      "evidence": "deepseek-v4-proof-coverage-matrix-20260531.json",
+      "gate": "proof_coverage_matrix",
+      "status": "PASS"
+    },
+    {
+      "covers": [
+        "documented GPU, driver, CUDA, Python, PyTorch, Megatron-Core, mbridge, Miles, Transformer Engine, and TileLang versions match the operator-math environment artifact",
+        "runtime structure checks for upstream HC absence and DSV4 config support match the environment artifact",
+        "operator math, coverage matrix, and proof ledger linked artifacts remain PASS"
+      ],
+      "evidence": "deepseek-v4-environment-provenance-20260531.json",
+      "gate": "environment_provenance",
+      "status": "PASS"
+    },
+    {
+      "covers": [
+        "machine-checks all key proof artifacts have expected statuses",
+        "machine-checks HC fixed formula diff is small and wrong formula diff is large",
+        "machine-checks routing replay reduces mismatches and relative_l2_gap for all backend pairs",
+        "machine-checks attention activation replay restores dense logprobs bitwise while MLP-only replay does not",
+        "machine-checks attention I/O forward drift is finite and <= 0.0625",
+        "machine-checks attention I/O training-step output/input-grad/state bounds",
+        "machine-checks SFT attention-output straight-through replay has exact loss parity and gradient/update bounds"
+      ],
+      "evidence": "deepseek-v4-proof-ledger-20260531.json",
+      "gate": "proof_ledger_consistency",
+      "status": "PASS"
+    }
+  ],
+  "status": "PARTIAL_PROOF"
+}

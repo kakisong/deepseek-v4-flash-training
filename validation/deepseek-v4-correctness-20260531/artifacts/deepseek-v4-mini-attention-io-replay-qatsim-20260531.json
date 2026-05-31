@@ -1,0 +1,356 @@
+{
+  "backend_summaries": [
+    {
+      "impl": "sparse",
+      "logprob_compare_to_dense_after_input_replay": {
+        "exact_equal": false,
+        "max_abs": 0.2548828125,
+        "mean_abs": 0.03006058558821678,
+        "mismatches": 82,
+        "num_tokens": 402,
+        "relative_l2_gap": 3.39962294537699e-06
+      },
+      "per_layer": [
+        {
+          "input_pre_replay": {
+            "exact_equal_all": true,
+            "finite_all": true,
+            "max_abs_global_max": 0.0,
+            "mean_abs_rank_max": 0.0,
+            "nonzero_abs_count_sum": 0,
+            "p95_abs_rank_max": 0.0,
+            "p99_abs_rank_max": 0.0,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          },
+          "module": "module.decoder.layers.0.self_attention",
+          "output_from_replayed_dense_input": {
+            "exact_equal_all": false,
+            "finite_all": true,
+            "max_abs_global_max": 0.0625,
+            "mean_abs_rank_max": 0.006124485284090042,
+            "nonzero_abs_count_sum": 11385392,
+            "p95_abs_rank_max": 0.015625,
+            "p99_abs_rank_max": 0.0234375,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        },
+        {
+          "input_pre_replay": {
+            "exact_equal_all": false,
+            "finite_all": true,
+            "max_abs_global_max": 0.0029296875,
+            "mean_abs_rank_max": 0.00014455427299253643,
+            "nonzero_abs_count_sum": 10822048,
+            "p95_abs_rank_max": 0.00048828125,
+            "p99_abs_rank_max": 0.000732421875,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          },
+          "module": "module.decoder.layers.1.self_attention",
+          "output_from_replayed_dense_input": {
+            "exact_equal_all": false,
+            "finite_all": true,
+            "max_abs_global_max": 0.03515625,
+            "mean_abs_rank_max": 0.003262903308495879,
+            "nonzero_abs_count_sum": 8963984,
+            "p95_abs_rank_max": 0.01171875,
+            "p99_abs_rank_max": 0.015625,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        },
+        {
+          "input_pre_replay": {
+            "exact_equal_all": false,
+            "finite_all": true,
+            "max_abs_global_max": 0.015625,
+            "mean_abs_rank_max": 0.00023766486265230924,
+            "nonzero_abs_count_sum": 11962896,
+            "p95_abs_rank_max": 0.00069427490234375,
+            "p99_abs_rank_max": 0.0009765625,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          },
+          "module": "module.decoder.layers.2.self_attention",
+          "output_from_replayed_dense_input": {
+            "exact_equal_all": false,
+            "finite_all": true,
+            "max_abs_global_max": 0.0625,
+            "mean_abs_rank_max": 0.004377629607915878,
+            "nonzero_abs_count_sum": 11481584,
+            "p95_abs_rank_max": 0.0146484375,
+            "p99_abs_rank_max": 0.015625,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        },
+        {
+          "input_pre_replay": {
+            "exact_equal_all": false,
+            "finite_all": true,
+            "max_abs_global_max": 0.00390625,
+            "mean_abs_rank_max": 0.0002063169959001243,
+            "nonzero_abs_count_sum": 11909800,
+            "p95_abs_rank_max": 0.00048828125,
+            "p99_abs_rank_max": 0.0009765625,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          },
+          "module": "module.decoder.layers.3.self_attention",
+          "output_from_replayed_dense_input": {
+            "exact_equal_all": false,
+            "finite_all": true,
+            "max_abs_global_max": 0.0625,
+            "mean_abs_rank_max": 0.002733895555138588,
+            "nonzero_abs_count_sum": 9097208,
+            "p95_abs_rank_max": 0.0078125,
+            "p99_abs_rank_max": 0.015625,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        }
+      ],
+      "routing_replay": {
+        "file_name": "dsv4-mini-attnio-routing.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.008565236814320087,
+        "mean": -16.889020919799805,
+        "min": -40.4453125,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "a25d046f258f7c26c57dea2de1814609ff1f66333dabcf1be98b9deaf67c4de3"
+      }
+    },
+    {
+      "impl": "tilelang",
+      "logprob_compare_to_dense_after_input_replay": {
+        "exact_equal": false,
+        "max_abs": 0.1866302490234375,
+        "mean_abs": 0.030133672058582306,
+        "mismatches": 85,
+        "num_tokens": 402,
+        "relative_l2_gap": 3.3688900966666324e-06
+      },
+      "per_layer": [
+        {
+          "input_pre_replay": {
+            "exact_equal_all": true,
+            "finite_all": true,
+            "max_abs_global_max": 0.0,
+            "mean_abs_rank_max": 0.0,
+            "nonzero_abs_count_sum": 0,
+            "p95_abs_rank_max": 0.0,
+            "p99_abs_rank_max": 0.0,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          },
+          "module": "module.decoder.layers.0.self_attention",
+          "output_from_replayed_dense_input": {
+            "exact_equal_all": false,
+            "finite_all": true,
+            "max_abs_global_max": 0.0625,
+            "mean_abs_rank_max": 0.00623230030760169,
+            "nonzero_abs_count_sum": 11463168,
+            "p95_abs_rank_max": 0.015625,
+            "p99_abs_rank_max": 0.0234375,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        },
+        {
+          "input_pre_replay": {
+            "exact_equal_all": false,
+            "finite_all": true,
+            "max_abs_global_max": 0.0029296875,
+            "mean_abs_rank_max": 0.00014524073048960418,
+            "nonzero_abs_count_sum": 10838832,
+            "p95_abs_rank_max": 0.00048828125,
+            "p99_abs_rank_max": 0.000732421875,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          },
+          "module": "module.decoder.layers.1.self_attention",
+          "output_from_replayed_dense_input": {
+            "exact_equal_all": false,
+            "finite_all": true,
+            "max_abs_global_max": 0.03515625,
+            "mean_abs_rank_max": 0.0034180437214672565,
+            "nonzero_abs_count_sum": 9171848,
+            "p95_abs_rank_max": 0.015625,
+            "p99_abs_rank_max": 0.015625,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        },
+        {
+          "input_pre_replay": {
+            "exact_equal_all": false,
+            "finite_all": true,
+            "max_abs_global_max": 0.015625,
+            "mean_abs_rank_max": 0.00024099613074213266,
+            "nonzero_abs_count_sum": 12065912,
+            "p95_abs_rank_max": 0.000732421875,
+            "p99_abs_rank_max": 0.0009765625,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          },
+          "module": "module.decoder.layers.2.self_attention",
+          "output_from_replayed_dense_input": {
+            "exact_equal_all": false,
+            "finite_all": true,
+            "max_abs_global_max": 0.0625,
+            "mean_abs_rank_max": 0.004430384375154972,
+            "nonzero_abs_count_sum": 11522760,
+            "p95_abs_rank_max": 0.015625,
+            "p99_abs_rank_max": 0.015625,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        },
+        {
+          "input_pre_replay": {
+            "exact_equal_all": false,
+            "finite_all": true,
+            "max_abs_global_max": 0.00390625,
+            "mean_abs_rank_max": 0.00020799090270884335,
+            "nonzero_abs_count_sum": 11967008,
+            "p95_abs_rank_max": 0.00048828125,
+            "p99_abs_rank_max": 0.0009765625,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          },
+          "module": "module.decoder.layers.3.self_attention",
+          "output_from_replayed_dense_input": {
+            "exact_equal_all": false,
+            "finite_all": true,
+            "max_abs_global_max": 0.0625,
+            "mean_abs_rank_max": 0.002877437509596348,
+            "nonzero_abs_count_sum": 9316072,
+            "p95_abs_rank_max": 0.0078125,
+            "p99_abs_rank_max": 0.015625,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        }
+      ],
+      "routing_replay": {
+        "file_name": "dsv4-mini-attnio-routing.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.009220518171787262,
+        "mean": -16.890222549438477,
+        "min": -40.44921875,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "52e269bb0fb16141c46b4031f331c6a8b07b540f36e0d07668132a4994f04267"
+      }
+    }
+  ],
+  "claims": {
+    "all_replayed_dense_input_attention_outputs_are_finite": true,
+    "all_replayed_dense_input_attention_outputs_have_max_abs_at_most_0_0625": true,
+    "all_replayed_dense_input_attention_outputs_have_p99_abs_at_most_0_015625": false,
+    "layer0_attention_has_largest_output_mean_abs_for_both_backends": true,
+    "output_drift_is_observed_even_when_attention_inputs_are_replayed_from_dense": true
+  },
+  "date": "2026-05-31",
+  "reference": {
+    "attention_io": {
+      "modules": [
+        "module.decoder.layers.0.self_attention",
+        "module.decoder.layers.1.self_attention",
+        "module.decoder.layers.2.self_attention",
+        "module.decoder.layers.3.self_attention"
+      ],
+      "rank0_num_recorded_modules": 4,
+      "stage": "record"
+    },
+    "impl": "dense",
+    "routing_replay": {
+      "file_name": "dsv4-mini-attnio-routing.pt",
+      "num_recorded_tensors": 1,
+      "num_replays": 4,
+      "record_summary": {
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "rank": 0
+      },
+      "stage": "record"
+    },
+    "summary": {
+      "max": -0.008309789933264256,
+      "mean": -16.889389038085938,
+      "min": -40.47265625,
+      "num_samples": 1,
+      "num_tokens": 402,
+      "sha256": "7877e2afc5c84cfc21904fbfac14cc8916ca18104109f6242263ba9eb2107b24"
+    }
+  },
+  "scope": "4-layer DeepSeek-V4 mini checkpoint attention backend output drift from replayed dense attention inputs",
+  "status": "PASS_WITH_BF16_ATTENTION_IO_DRIFT_RECORDED",
+  "thresholds": {
+    "logprob_atol": 0.02,
+    "logprob_rtol": 0.002,
+    "max_output_abs_allowed": 0.0625,
+    "max_output_p99_abs_observed": 0.0234375
+  }
+}

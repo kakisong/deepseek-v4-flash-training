@@ -1,0 +1,92 @@
+{
+  "cases": [
+    {
+      "batch_size": 1,
+      "comparisons": [
+        {
+          "label": "official_vs_miles_dense",
+          "max_abs": 0.0025634765625,
+          "relative_gap": 0.0003582569625441012
+        },
+        {
+          "label": "official_vs_miles_sparse",
+          "max_abs": 0.0025634765625,
+          "relative_gap": 0.00035859428358919754
+        },
+        {
+          "label": "official_vs_miles_tilelang",
+          "max_abs": 0.0025634765625,
+          "relative_gap": 0.0003584718817472021
+        }
+      ],
+      "compress_ratio": 0,
+      "head_dim": 512,
+      "heads": 64,
+      "hidden_size": 4096,
+      "kv_qat": true,
+      "name": "official_attention_compress_0",
+      "normalization": "RMSNorm",
+      "rope_head_dim": 64,
+      "seqlen": 16,
+      "state_dict_load": {
+        "missing": [
+          "wq_a._extra_state",
+          "q_norm._extra_state",
+          "wkv._extra_state",
+          "kv_norm._extra_state"
+        ],
+        "unexpected": []
+      }
+    },
+    {
+      "batch_size": 1,
+      "comparisons": [
+        {
+          "label": "official_vs_miles_dense",
+          "max_abs": 0.0023193359375,
+          "relative_gap": 0.0003376341914387293
+        },
+        {
+          "label": "official_vs_miles_sparse",
+          "max_abs": 0.0023193359375,
+          "relative_gap": 0.00033782557309336436
+        },
+        {
+          "label": "official_vs_miles_tilelang",
+          "max_abs": 0.0023193359375,
+          "relative_gap": 0.0003378320006168778
+        }
+      ],
+      "compress_ratio": 4,
+      "head_dim": 512,
+      "heads": 64,
+      "hidden_size": 4096,
+      "kv_qat": true,
+      "name": "official_attention_compress_4",
+      "normalization": "RMSNorm",
+      "rope_head_dim": 64,
+      "seqlen": 16,
+      "state_dict_load": {
+        "missing": [
+          "wq_a._extra_state",
+          "q_norm._extra_state",
+          "wkv._extra_state",
+          "kv_norm._extra_state",
+          "indexer.linear_wq_b._extra_state",
+          "indexer.linear_weights_proj._extra_state"
+        ],
+        "unexpected": []
+      }
+    }
+  ],
+  "failures": [],
+  "max_abs": 0.0025634765625,
+  "max_relative_gap": 0.00035859428358919754,
+  "reference": "DeepSeek-V4 official inference Attention",
+  "seed": 20260531,
+  "status": "PASS",
+  "thresholds": {
+    "max_abs": 0.005,
+    "max_rel_gap": 0.001
+  }
+}

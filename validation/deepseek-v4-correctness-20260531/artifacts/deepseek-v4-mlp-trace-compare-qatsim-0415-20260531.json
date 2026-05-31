@@ -1,0 +1,195 @@
+{
+  "comparisons": [
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        1,
+        4096
+      ],
+      "max_abs": 0.015625,
+      "mean_abs": 0.0003744211280718446,
+      "mismatch_limit": 0,
+      "mismatches": 0,
+      "name": "ffn_norm_official_vs_miles",
+      "nonzero_abs_count": 766092,
+      "numel": 2097152,
+      "p95_abs": 0.001953125,
+      "p99_abs": 0.0029296875,
+      "relative_l2_gap": 5.649504986271481e-06,
+      "right_shape": [
+        512,
+        1,
+        4096
+      ],
+      "rtol": 0.002,
+      "status": "PASS"
+    },
+    {
+      "atol": 0.0,
+      "exact_equal": true,
+      "left_shape": [
+        512,
+        256
+      ],
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "mismatch_limit": 0,
+      "mismatches": 0,
+      "name": "router_indices_onehot_official_vs_miles",
+      "nonzero_abs_count": 0,
+      "numel": 131072,
+      "p95_abs": 0.0,
+      "p99_abs": 0.0,
+      "relative_l2_gap": 0.0,
+      "right_shape": [
+        512,
+        256
+      ],
+      "rtol": 0.0,
+      "status": "PASS"
+    },
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        6
+      ],
+      "max_abs": 0.006959676742553711,
+      "mean_abs": 0.000711353961378336,
+      "mismatch_limit": 0,
+      "mismatches": 0,
+      "name": "router_selected_weights_official_vs_miles",
+      "nonzero_abs_count": 3072,
+      "numel": 3072,
+      "p95_abs": 0.0021991103421896696,
+      "p99_abs": 0.0036886350717395544,
+      "relative_l2_gap": 5.760798830745095e-06,
+      "right_shape": [
+        512,
+        6
+      ],
+      "rtol": 0.002,
+      "status": "PASS"
+    },
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        1,
+        4096
+      ],
+      "max_abs": 0.015625,
+      "mean_abs": 0.0006783942808397114,
+      "mismatch_limit": 0,
+      "mismatches": 0,
+      "name": "shared_experts_official_vs_miles",
+      "nonzero_abs_count": 1153304,
+      "numel": 2097152,
+      "p95_abs": 0.001953125,
+      "p99_abs": 0.00390625,
+      "relative_l2_gap": 6.183276526128267e-06,
+      "right_shape": [
+        512,
+        1,
+        4096
+      ],
+      "rtol": 0.002,
+      "status": "PASS"
+    },
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        1,
+        4096
+      ],
+      "max_abs": 0.2509765625,
+      "mean_abs": 0.0013196724466979504,
+      "mismatch_limit": 0,
+      "mismatches": 10775,
+      "name": "routed_experts_aggregated_official_vs_miles",
+      "nonzero_abs_count": 1347373,
+      "numel": 2097152,
+      "p95_abs": 0.00390625,
+      "p99_abs": 0.0078125,
+      "relative_l2_gap": 1.6837643582956474e-05,
+      "right_shape": [
+        512,
+        1,
+        4096
+      ],
+      "rtol": 0.002,
+      "status": "FAIL"
+    },
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        1,
+        4096
+      ],
+      "max_abs": 0.25,
+      "mean_abs": 0.001614017179235816,
+      "mismatch_limit": 0,
+      "mismatches": 10756,
+      "name": "ffn_output_official_vs_miles",
+      "nonzero_abs_count": 1311561,
+      "numel": 2097152,
+      "p95_abs": 0.00390625,
+      "p99_abs": 0.0078125,
+      "relative_l2_gap": 1.4469553881180097e-05,
+      "right_shape": [
+        512,
+        1,
+        4096
+      ],
+      "rtol": 0.002,
+      "status": "FAIL"
+    },
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        1,
+        4096
+      ],
+      "max_abs": 0.0234375,
+      "mean_abs": 0.0010383601766079664,
+      "mismatch_limit": 0,
+      "mismatches": 0,
+      "name": "final_layernorm_official_vs_miles",
+      "nonzero_abs_count": 1300354,
+      "numel": 2097152,
+      "p95_abs": 0.00390625,
+      "p99_abs": 0.00390625,
+      "relative_l2_gap": 1.3905908870626149e-05,
+      "right_shape": [
+        512,
+        1,
+        4096
+      ],
+      "rtol": 0.002,
+      "status": "PASS"
+    }
+  ],
+  "key_checks": {
+    "router_indices_exact": true,
+    "router_weights_within_threshold": true,
+    "shared_experts_within_threshold": true
+  },
+  "miles_logprob_sha256": "f25089859568f244062e78d6ab7b6acc88846e27d91c8fa8e8dd65978fc06a21",
+  "official_logprob_sha256": "b026f8cbfe6fd32ef31eb6f18942798df345cb251ca3e8c7a82f6e9036e65096",
+  "router": {
+    "num_experts": 256,
+    "num_tokens": 512,
+    "topk": 6
+  },
+  "status": "PASS_WITH_DRIFT_RECORDED"
+}

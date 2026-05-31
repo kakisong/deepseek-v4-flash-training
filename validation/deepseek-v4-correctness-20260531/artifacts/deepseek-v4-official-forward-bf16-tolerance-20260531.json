@@ -1,0 +1,137 @@
+{
+  "artifacts_dir_name": "advanced",
+  "bf16_forward_tolerance_status": "PASS",
+  "conclusion": "Official/reference strict forward parity remains open, but the recorded sparse and tilelang official-vs-Miles full-forward drifts satisfy the declared BF16 tolerance standard.  External one-step train parity remains intentionally gated on strict official/reference forward parity.",
+  "date": "2026-05-31",
+  "external_train_precondition": {
+    "actual_status": "FAIL",
+    "external_one_step_train_parity_status": "SKIPPED_FORWARD_STRICT_PARITY_REQUIRED",
+    "reason": "External one-step train parity would compare gradients and updates from a reference forward path.  It is not a sound PASS gate while strict official/reference forward logprob parity still fails.",
+    "required_gate": "official_reference_mini_checkpoint_forward_parity",
+    "required_status": "PASS",
+    "status": "NOT_MET"
+  },
+  "failures": [],
+  "forward_checks": [
+    {
+      "artifact": "deepseek-v4-official-full-forward-1layer-bf16-qatsim-0415-20260531.json",
+      "atol": 0.02,
+      "attention_impl": "sparse",
+      "bf16_tolerance_checks": {
+        "finite_metrics": true,
+        "max_abs": true,
+        "mean_abs": true,
+        "p99_abs": true,
+        "relative_l2_gap": true,
+        "strict_status_recorded": true,
+        "strict_threshold_recorded": true
+      },
+      "bf16_tolerance_status": "PASS",
+      "label": "official_vs_miles_sparse",
+      "max_abs": 0.16042709350585938,
+      "mean_abs": 0.03158159181475639,
+      "mismatches": 63,
+      "num_tokens": 402,
+      "p95_abs": 0.08459470421075821,
+      "p99_abs": 0.13715827465057373,
+      "relative_l2_gap": 2.313715897095392e-06,
+      "rtol": 0.002,
+      "strict_status": "FAIL"
+    },
+    {
+      "artifact": "deepseek-v4-official-full-forward-1layer-bf16-tilelang-qatsim-0415-20260531.json",
+      "atol": 0.02,
+      "attention_impl": "tilelang",
+      "bf16_tolerance_checks": {
+        "finite_metrics": true,
+        "max_abs": true,
+        "mean_abs": true,
+        "p99_abs": true,
+        "relative_l2_gap": true,
+        "strict_status_recorded": true,
+        "strict_threshold_recorded": true
+      },
+      "bf16_tolerance_status": "PASS",
+      "label": "official_vs_miles_tilelang",
+      "max_abs": 0.14663314819335938,
+      "mean_abs": 0.03211159259080887,
+      "mismatches": 71,
+      "num_tokens": 402,
+      "p95_abs": 0.08687619864940643,
+      "p99_abs": 0.12487327307462692,
+      "relative_l2_gap": 2.4187967853084302e-06,
+      "rtol": 0.002,
+      "strict_status": "FAIL"
+    }
+  ],
+  "prerequisites": {
+    "attention_trace_replay": {
+      "actual": "PASS",
+      "artifact": "deepseek-v4-attention-trace-replay-qatsim-0415-20260531.json",
+      "expected": "PASS"
+    },
+    "fix_regression_guards": {
+      "actual": "PASS",
+      "artifact": "deepseek-v4-fix-regression-guards-20260531.json",
+      "expected": "PASS"
+    },
+    "grouped_mlp_math": {
+      "actual": "PASS",
+      "artifact": "deepseek-v4-grouped-mlp-math-20260531.json",
+      "expected": "PASS"
+    },
+    "loaded_weight_mapping": {
+      "actual": "PASS",
+      "artifact": "deepseek-v4-loaded-weight-mapping-1layer-mlp-qatsim-20260531.json",
+      "expected": "PASS"
+    },
+    "mlp_expert_replay": {
+      "actual": "PASS_WITH_DRIFT_RECORDED",
+      "artifact": "deepseek-v4-mlp-expert-replay-qatsim-0415-20260531.json",
+      "expected": "PASS_WITH_DRIFT_RECORDED"
+    },
+    "official_attention_forward": {
+      "actual": "PASS",
+      "artifact": "deepseek-v4-official-attention-forward-20260531.json",
+      "expected": "PASS"
+    }
+  },
+  "runtime_precision_variant_summary": {
+    "artifact": "deepseek-v4-official-runtime-precision-variants-qatsim-0415-20260531.json",
+    "best_by_mean_abs": {
+      "artifact": "deepseek-v4-official-full-forward-1layer-bf16-megatron-runtime-qatsim-0415-20260531.json",
+      "delta_vs_baseline": {
+        "max_abs": 0.08957290649414062,
+        "mean_abs": -0.008531136438250542,
+        "mismatches": -10,
+        "relative_l2_gap": 2.1024755847420806e-07
+      },
+      "label": "head_expert_router_bf16",
+      "max_abs": 0.25,
+      "mean_abs": 0.023050455376505852,
+      "mismatches": 53,
+      "num_tokens": 402,
+      "p95_abs": 0.11135884374380112,
+      "p99_abs": 0.21426548063755035,
+      "relative_l2_gap": 2.5239634555696e-06,
+      "runtime_variant": {
+        "expert_runtime_mode": "megatron_bf16_activation",
+        "head_logits_mode": "bf16",
+        "router_runtime_mode": "megatron_bf16_scores"
+      },
+      "status": "FAIL"
+    },
+    "status": "RUN_WITH_DRIFT_RECORDED"
+  },
+  "scope": "DeepSeek-V4 official-vs-Miles BF16 forward tolerance gate",
+  "status": "PASS",
+  "strict_forward_status": "FAIL",
+  "thresholds": {
+    "max_abs": 0.2,
+    "max_mean_abs": 0.04,
+    "max_p99_abs": 0.15,
+    "max_relative_l2_gap": 5e-06,
+    "strict_atol": 0.02,
+    "strict_rtol": 0.002
+  }
+}

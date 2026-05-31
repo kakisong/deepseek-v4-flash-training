@@ -1,0 +1,118 @@
+{
+  "core": [
+    {
+      "label": "official_sparse_vs_miles_sparse_torch",
+      "max_abs": 0.03125,
+      "mean_abs": 0.00011084329889854416,
+      "mismatches": 459,
+      "numel": 16777216,
+      "p95_abs": 0.00048828125,
+      "relative_gap": 7.048766184070132e-07,
+      "shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "status": "FAIL"
+    },
+    {
+      "label": "official_sparse_vs_miles_dense_torch",
+      "max_abs": 0.0576171875,
+      "mean_abs": 0.0004981823149137199,
+      "mismatches": 1336,
+      "numel": 16777216,
+      "p95_abs": 0.001953125,
+      "relative_gap": 5.286690779482406e-06,
+      "shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "status": "FAIL"
+    },
+    {
+      "label": "miles_sparse_torch_vs_miles_dense_torch",
+      "max_abs": 0.056640625,
+      "mean_abs": 0.00047663127770647407,
+      "mismatches": 1099,
+      "numel": 16777216,
+      "p95_abs": 0.001953125,
+      "relative_gap": 5.169209369437766e-06,
+      "shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "status": "FAIL"
+    }
+  ],
+  "head_dim": 512,
+  "label": "official_trace_reconstructed_attention_core_and_output_projection",
+  "projected": [
+    {
+      "label": "reconstructed_official_sparse_projection_vs_official_trace_wo_b",
+      "max_abs": 0.03125,
+      "mean_abs": 1.933080238814e-05,
+      "mismatches": 30,
+      "numel": 2097152,
+      "p95_abs": 0.0,
+      "relative_gap": 8.512503801849647e-08,
+      "shape": [
+        1,
+        512,
+        4096
+      ],
+      "status": "FAIL"
+    },
+    {
+      "label": "projected_official_sparse_vs_projected_miles_sparse_torch",
+      "max_abs": 0.0625,
+      "mean_abs": 0.002628238871693611,
+      "mismatches": 3485,
+      "numel": 2097152,
+      "p95_abs": 0.0078125,
+      "relative_gap": 4.000893816691331e-06,
+      "shape": [
+        1,
+        512,
+        4096
+      ],
+      "status": "FAIL"
+    },
+    {
+      "label": "projected_official_sparse_vs_projected_miles_dense_torch",
+      "max_abs": 0.0625,
+      "mean_abs": 0.006230559200048447,
+      "mismatches": 35480,
+      "numel": 2097152,
+      "p95_abs": 0.015625,
+      "relative_gap": 1.3875766263660161e-05,
+      "shape": [
+        1,
+        512,
+        4096
+      ],
+      "status": "FAIL"
+    },
+    {
+      "label": "projected_miles_sparse_torch_vs_projected_miles_dense_torch",
+      "max_abs": 0.0625,
+      "mean_abs": 0.006122671067714691,
+      "mismatches": 32951,
+      "numel": 2097152,
+      "p95_abs": 0.015625,
+      "relative_gap": 1.3450192235642255e-05,
+      "shape": [
+        1,
+        512,
+        4096
+      ],
+      "status": "FAIL"
+    }
+  ],
+  "seqlen": 512,
+  "topk": 128
+}

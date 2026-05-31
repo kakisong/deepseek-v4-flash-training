@@ -1,0 +1,193 @@
+{
+  "artifacts_dir_name": "advanced",
+  "attention_io": {
+    "max_output_abs": 0.0625,
+    "per_backend": {
+      "sparse": [
+        {
+          "finite_all": true,
+          "module": "module.decoder.layers.0.self_attention",
+          "output_max_abs": 0.0625,
+          "output_mean_abs_rank_max": 0.006124485284090042
+        },
+        {
+          "finite_all": true,
+          "module": "module.decoder.layers.1.self_attention",
+          "output_max_abs": 0.03515625,
+          "output_mean_abs_rank_max": 0.003262903308495879
+        },
+        {
+          "finite_all": true,
+          "module": "module.decoder.layers.2.self_attention",
+          "output_max_abs": 0.0625,
+          "output_mean_abs_rank_max": 0.004377629607915878
+        },
+        {
+          "finite_all": true,
+          "module": "module.decoder.layers.3.self_attention",
+          "output_max_abs": 0.0625,
+          "output_mean_abs_rank_max": 0.002733895555138588
+        }
+      ],
+      "tilelang": [
+        {
+          "finite_all": true,
+          "module": "module.decoder.layers.0.self_attention",
+          "output_max_abs": 0.0625,
+          "output_mean_abs_rank_max": 0.00623230030760169
+        },
+        {
+          "finite_all": true,
+          "module": "module.decoder.layers.1.self_attention",
+          "output_max_abs": 0.03515625,
+          "output_mean_abs_rank_max": 0.0034180437214672565
+        },
+        {
+          "finite_all": true,
+          "module": "module.decoder.layers.2.self_attention",
+          "output_max_abs": 0.0625,
+          "output_mean_abs_rank_max": 0.004430384375154972
+        },
+        {
+          "finite_all": true,
+          "module": "module.decoder.layers.3.self_attention",
+          "output_max_abs": 0.0625,
+          "output_mean_abs_rank_max": 0.002877437509596348
+        }
+      ]
+    }
+  },
+  "attention_io_training_step": {
+    "max_input_grad_abs": 9.5367431640625e-07,
+    "max_output_abs": 0.0625,
+    "max_state_after_step_abs": 0.0
+  },
+  "conclusion": "The real non-injected strict parity gates still fail, but all measured forward and training drifts are inside the declared BF16 tolerance envelope; once the localized attention forward-value drift is replayed away, complete SFT loss parity is exact and gradient/update drift remains below threshold.",
+  "date": "2026-05-31",
+  "failures": [],
+  "official_1layer": {
+    "sparse": {
+      "max_abs": 0.16042709350585938,
+      "mean_abs": 0.03158159181475639,
+      "mismatches": 63,
+      "p99_abs": 0.13715827465057373,
+      "relative_l2_gap": 2.313715897095392e-06
+    },
+    "tilelang": {
+      "max_abs": 0.14663314819335938,
+      "mean_abs": 0.03211159259080887,
+      "mismatches": 71,
+      "p99_abs": 0.12487327307462692,
+      "relative_l2_gap": 2.4187967853084302e-06
+    }
+  },
+  "real_forward": {
+    "dense_vs_sparse": {
+      "max_abs": 0.5140819549560547,
+      "mean_abs": 0.07136902213096619,
+      "mismatches": 205,
+      "p99_abs": 0.3139069080352783,
+      "relative_l2_gap": 1.547721555139603e-05
+    },
+    "dense_vs_tilelang": {
+      "max_abs": 0.4274272918701172,
+      "mean_abs": 0.07597572356462479,
+      "mismatches": 200,
+      "p99_abs": 0.36354541778564453,
+      "relative_l2_gap": 1.746831999693832e-05
+    },
+    "sparse_vs_tilelang": {
+      "max_abs": 0.5107736587524414,
+      "mean_abs": 0.06761329621076584,
+      "mismatches": 201,
+      "p99_abs": 0.3211056888103485,
+      "relative_l2_gap": 1.4695730324199019e-05
+    }
+  },
+  "real_train": {
+    "dense_vs_sparse": {
+      "loss_abs": 1.5947265625,
+      "routing_loss_abs": 1.1494140625,
+      "routing_selected_grad_max_rel_gap": 0.0001497947362728569,
+      "routing_selected_state_max_abs": 9.5367431640625e-07,
+      "selected_grad_max_rel_gap": 0.00044641669722478294,
+      "selected_state_max_abs": 9.5367431640625e-07
+    },
+    "dense_vs_tilelang": {
+      "loss_abs": 0.703125,
+      "routing_loss_abs": 0.5341796875,
+      "routing_selected_grad_max_rel_gap": 0.0001477684822497327,
+      "routing_selected_state_max_abs": 9.5367431640625e-07,
+      "selected_grad_max_rel_gap": 0.00038428885225427756,
+      "selected_state_max_abs": 9.5367431640625e-07
+    },
+    "sparse_vs_tilelang": {
+      "loss_abs": 0.8916015625,
+      "routing_loss_abs": 0.615234375,
+      "routing_selected_grad_max_rel_gap": 0.0001223404163664954,
+      "routing_selected_state_max_abs": 9.5367431640625e-07,
+      "selected_grad_max_rel_gap": 0.0002548021320385452,
+      "selected_state_max_abs": 9.5367431640625e-07
+    }
+  },
+  "routing_forward": {
+    "dense_vs_sparse": {
+      "max_abs": 0.255859375,
+      "mean_abs": 0.030136708170175552,
+      "mismatches": 84,
+      "p99_abs": 0.13741271197795868,
+      "relative_l2_gap": 3.5204090861329362e-06,
+      "relative_l2_reduction": 4.3964252939698225
+    },
+    "dense_vs_tilelang": {
+      "max_abs": 0.2412109375,
+      "mean_abs": 0.028718464076519012,
+      "mismatches": 75,
+      "p99_abs": 0.143231600522995,
+      "relative_l2_gap": 3.2778709475600465e-06,
+      "relative_l2_reduction": 5.329166485319148
+    },
+    "sparse_vs_tilelang": {
+      "max_abs": 0.18173837661743164,
+      "mean_abs": 0.023490911349654198,
+      "mismatches": 59,
+      "p99_abs": 0.12454071640968323,
+      "relative_l2_gap": 2.306529798046242e-06,
+      "relative_l2_reduction": 6.371359406085763
+    }
+  },
+  "scope": "DeepSeek-V4 end-to-end BF16 tolerance evidence",
+  "status": "PASS",
+  "thresholds": {
+    "max_attention_io_input_grad_abs": 0.01,
+    "max_attention_io_output_abs": 0.0625,
+    "max_official_1layer_mean_abs": 0.04,
+    "max_official_1layer_relative_l2": 5e-06,
+    "max_real_forward_mean_abs": 0.08,
+    "max_real_forward_p99_abs": 0.37,
+    "max_real_forward_relative_l2": 2e-05,
+    "max_real_train_grad_rel_gap": 0.0005,
+    "max_real_train_state_abs": 2e-05,
+    "max_routing_forward_relative_l2": 4e-06,
+    "max_sft_replay_grad_rel_gap": 3e-05,
+    "max_sft_replay_state_abs": 2e-05,
+    "min_routing_relative_l2_reduction": 4.0
+  },
+  "train_after_attention_output_replay": {
+    "dense_vs_sparse": {
+      "loss_abs": 0.0,
+      "selected_grad_max_rel_gap": 1.6638869012597368e-05,
+      "selected_state_max_abs": 4.76837158203125e-07
+    },
+    "dense_vs_tilelang": {
+      "loss_abs": 0.0,
+      "selected_grad_max_rel_gap": 2.1433698600525908e-05,
+      "selected_state_max_abs": 4.76837158203125e-07
+    },
+    "sparse_vs_tilelang": {
+      "loss_abs": 0.0,
+      "selected_grad_max_rel_gap": 1.8058738106341288e-05,
+      "selected_state_max_abs": 4.76837158203125e-07
+    }
+  }
+}

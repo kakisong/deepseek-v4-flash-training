@@ -1,0 +1,113 @@
+{
+  "conclusion": "The documented validation environment matches the environment recorded in the operator-math artifact, and linked proof artifacts remain passing.",
+  "date": "2026-05-31",
+  "doc": "deepseek-v4-hyperconnection-runtime.md",
+  "doc_environment_comparisons": {
+    "CUDA device count": {
+      "actual": "8",
+      "expected": "8",
+      "matches": true
+    },
+    "CUDA toolkit": {
+      "actual": "12.9",
+      "expected": "12.9",
+      "matches": true
+    },
+    "GPU": {
+      "actual": "NVIDIA H20",
+      "expected": "NVIDIA H20",
+      "matches": true
+    },
+    "NVIDIA driver": {
+      "actual": "580.126.20",
+      "expected": "580.126.20",
+      "matches": true
+    },
+    "NVIDIA-SMI CUDA version": {
+      "actual": "13.0",
+      "expected": "13.0",
+      "matches": true
+    },
+    "PyTorch": {
+      "actual": "2.9.1+cu129",
+      "expected": "2.9.1+cu129",
+      "matches": true
+    },
+    "Python": {
+      "actual": "3.12.3",
+      "expected": "3.12.3",
+      "matches": true
+    },
+    "mbridge": {
+      "actual": "0.15.1",
+      "expected": "0.15.1",
+      "matches": true
+    },
+    "megatron-core": {
+      "actual": "0.16.0rc0",
+      "expected": "0.16.0rc0",
+      "matches": true
+    },
+    "miles package": {
+      "actual": "0.2.1",
+      "expected": "0.2.1",
+      "matches": true
+    },
+    "tilelang": {
+      "actual": "0.1.9",
+      "expected": "0.1.9",
+      "matches": true
+    },
+    "torch CUDA": {
+      "actual": "12.9",
+      "expected": "12.9",
+      "matches": true
+    },
+    "transformer-engine": {
+      "actual": "2.10.0",
+      "expected": "2.10.0",
+      "matches": true
+    }
+  },
+  "environment_from_artifact": {
+    "cuda_device_count": 8,
+    "cuda_toolkit_release": "12.9",
+    "gpu": "NVIDIA H20",
+    "mbridge": "0.15.1",
+    "megatron_core": "0.16.0rc0",
+    "miles": "0.2.1",
+    "nvidia_driver": "580.126.20",
+    "nvidia_smi_cuda": "13.0",
+    "python": "3.12.3",
+    "tilelang": "0.1.9",
+    "torch": "2.9.1+cu129",
+    "torch_cuda": "12.9",
+    "transformer_config_has_dsv4_mode": true,
+    "transformer_config_has_experimental_attention_variant": true,
+    "transformer_engine": "2.10.0",
+    "upstream_hyper_connection_present": false
+  },
+  "failures": [],
+  "linked_artifacts": {
+    "deepseek-v4-operator-math-20260531.json": "PASS",
+    "deepseek-v4-proof-coverage-matrix-20260531.json": "PASS",
+    "deepseek-v4-proof-ledger-20260531.json": "PASS"
+  },
+  "runtime_structure_checks": {
+    "transformer_config_has_dsv4_mode=True": {
+      "expected": true,
+      "present_in_doc": true
+    },
+    "transformer_config_has_experimental_attention_variant=True": {
+      "expected": true,
+      "present_in_doc": true
+    },
+    "upstream_hyper_connection_present=False": {
+      "expected": true,
+      "present_in_doc": true
+    }
+  },
+  "scope": "DeepSeek-V4 proof environment provenance",
+  "source_artifact": "deepseek-v4-operator-math-20260531.json",
+  "status": "PASS"
+}

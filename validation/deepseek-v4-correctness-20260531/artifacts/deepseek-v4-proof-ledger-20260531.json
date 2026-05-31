@@ -1,0 +1,219 @@
+{
+  "artifacts_dir_name": "advanced",
+  "conclusion": "Recorded artifacts consistently prove the covered HC/QAT/attention/MLP/MoE/training-step gates, validate the official forward BF16 tolerance gate, and localize the remaining real-forward strict parity failure to BF16 attention forward-value drift amplified by the full model.",
+  "date": "2026-05-31",
+  "failures": [],
+  "gates": {
+    "attention_io_forward_drift": {
+      "finite_all": true,
+      "layer0_largest_output_mean_abs_for_both_backends": true,
+      "max_output_abs": 0.0625
+    },
+    "attention_io_training_step": {
+      "artifact": "deepseek-v4-mini-attention-io-training-step-qatsim-20260531.json",
+      "status": "PASS"
+    },
+    "attention_io_training_step_bounds": {
+      "max_input_grad_abs": 9.5367431640625e-07,
+      "max_output_abs": 0.0625,
+      "max_state_after_step_abs": 0.0
+    },
+    "attention_trace_replay": {
+      "artifact": "deepseek-v4-attention-trace-replay-qatsim-0415-20260531.json",
+      "status": "PASS"
+    },
+    "attention_training_step": {
+      "artifact": "deepseek-v4-attention-training-step-qatsim-20260531.json",
+      "status": "PASS"
+    },
+    "end_to_end_bf16_tolerance": {
+      "artifact": "deepseek-v4-end-to-end-bf16-tolerance-20260531.json",
+      "status": "PASS"
+    },
+    "environment_provenance": {
+      "artifact": "deepseek-v4-environment-provenance-20260531.json",
+      "status": "PASS"
+    },
+    "external_reference_provenance": {
+      "artifact": "deepseek-v4-external-reference-provenance-20260531.json",
+      "status": "PASS"
+    },
+    "fix_regression_guards": {
+      "artifact": "deepseek-v4-fix-regression-guards-20260531.json",
+      "status": "PASS"
+    },
+    "grouped_mlp_math": {
+      "artifact": "deepseek-v4-grouped-mlp-math-20260531.json",
+      "status": "PASS"
+    },
+    "hyper_connection_orientation": {
+      "fixed_formula_max_diff": 2.384185791015625e-07,
+      "wrong_formula_max_diff": 9.81311321258545
+    },
+    "loaded_weight_mapping": {
+      "artifact": "deepseek-v4-loaded-weight-mapping-1layer-mlp-qatsim-20260531.json",
+      "status": "PASS"
+    },
+    "moe_ep8_dispatch_math": {
+      "artifact": "deepseek-v4-moe-ep8-dispatch-math-20260531.json",
+      "status": "PASS"
+    },
+    "official_attention_forward": {
+      "artifact": "deepseek-v4-official-attention-forward-20260531.json",
+      "status": "PASS"
+    },
+    "official_forward_bf16_tolerance": {
+      "artifact": "deepseek-v4-official-forward-bf16-tolerance-20260531.json",
+      "status": "PASS"
+    },
+    "official_forward_bf16_tolerance_bounds": {
+      "bf16_forward_tolerance_status": "PASS",
+      "external_one_step_train_parity_status": "SKIPPED_FORWARD_STRICT_PARITY_REQUIRED",
+      "forward_checks": [
+        {
+          "artifact": "deepseek-v4-official-full-forward-1layer-bf16-qatsim-0415-20260531.json",
+          "atol": 0.02,
+          "attention_impl": "sparse",
+          "bf16_tolerance_checks": {
+            "finite_metrics": true,
+            "max_abs": true,
+            "mean_abs": true,
+            "p99_abs": true,
+            "relative_l2_gap": true,
+            "strict_status_recorded": true,
+            "strict_threshold_recorded": true
+          },
+          "bf16_tolerance_status": "PASS",
+          "label": "official_vs_miles_sparse",
+          "max_abs": 0.16042709350585938,
+          "mean_abs": 0.03158159181475639,
+          "mismatches": 63,
+          "num_tokens": 402,
+          "p95_abs": 0.08459470421075821,
+          "p99_abs": 0.13715827465057373,
+          "relative_l2_gap": 2.313715897095392e-06,
+          "rtol": 0.002,
+          "strict_status": "FAIL"
+        },
+        {
+          "artifact": "deepseek-v4-official-full-forward-1layer-bf16-tilelang-qatsim-0415-20260531.json",
+          "atol": 0.02,
+          "attention_impl": "tilelang",
+          "bf16_tolerance_checks": {
+            "finite_metrics": true,
+            "max_abs": true,
+            "mean_abs": true,
+            "p99_abs": true,
+            "relative_l2_gap": true,
+            "strict_status_recorded": true,
+            "strict_threshold_recorded": true
+          },
+          "bf16_tolerance_status": "PASS",
+          "label": "official_vs_miles_tilelang",
+          "max_abs": 0.14663314819335938,
+          "mean_abs": 0.03211159259080887,
+          "mismatches": 71,
+          "num_tokens": 402,
+          "p95_abs": 0.08687619864940643,
+          "p99_abs": 0.12487327307462692,
+          "relative_l2_gap": 2.4187967853084302e-06,
+          "rtol": 0.002,
+          "strict_status": "FAIL"
+        }
+      ],
+      "strict_forward_status": "FAIL",
+      "thresholds": {
+        "max_abs": 0.2,
+        "max_mean_abs": 0.04,
+        "max_p99_abs": 0.15,
+        "max_relative_l2_gap": 5e-06,
+        "strict_atol": 0.02,
+        "strict_rtol": 0.002
+      }
+    },
+    "operator_math": {
+      "artifact": "deepseek-v4-operator-math-20260531.json",
+      "status": "PASS"
+    },
+    "optimizer_update_math": {
+      "artifact": "deepseek-v4-optimizer-update-math-20260531.json",
+      "status": "PASS"
+    },
+    "proof_coverage_matrix": {
+      "artifact": "deepseek-v4-proof-coverage-matrix-20260531.json",
+      "status": "PASS"
+    },
+    "routing_replay_error_budget": {
+      "dense_vs_sparse": {
+        "baseline_mismatches": 205,
+        "baseline_relative_l2_gap": 1.547721555139603e-05,
+        "relative_l2_reduction": 4.3964252939698225,
+        "replay_mismatches": 84,
+        "replay_relative_l2_gap": 3.5204090861329362e-06
+      },
+      "dense_vs_tilelang": {
+        "baseline_mismatches": 200,
+        "baseline_relative_l2_gap": 1.746831999693832e-05,
+        "relative_l2_reduction": 5.329166485319148,
+        "replay_mismatches": 75,
+        "replay_relative_l2_gap": 3.2778709475600465e-06
+      },
+      "sparse_vs_tilelang": {
+        "baseline_mismatches": 201,
+        "baseline_relative_l2_gap": 1.4695730324199019e-05,
+        "relative_l2_reduction": 6.371359406085763,
+        "replay_mismatches": 59,
+        "replay_relative_l2_gap": 2.306529798046242e-06
+      }
+    },
+    "sft_attention_output_replay": {
+      "artifact": "deepseek-v4-mini-train-step-attention-output-replay-qatsim-20260531.json",
+      "status": "PASS"
+    },
+    "sparse_activation_localization": {
+      "all_attention_exact": true,
+      "all_mlp_exact": false,
+      "final_ln_exact": true,
+      "layerwise_all_attention_exact": true,
+      "off_mismatches": 84,
+      "prefix4_exact": true
+    },
+    "tilelang_activation_localization": {
+      "all_attention_exact": true,
+      "all_mlp_exact": false,
+      "final_ln_exact": true,
+      "layerwise_all_attention_exact": true,
+      "off_mismatches": 75,
+      "prefix4_exact": true
+    },
+    "train_step_error_budget": {
+      "dense_vs_sparse": {
+        "attention_output_replay_grad_rel_gap": 1.6638869012597368e-05,
+        "attention_output_replay_loss_abs": 0.0,
+        "attention_output_replay_state_abs": 4.76837158203125e-07,
+        "baseline_loss_abs": 1.5947265625,
+        "routing_loss_abs": 1.1494140625
+      },
+      "dense_vs_tilelang": {
+        "attention_output_replay_grad_rel_gap": 2.1433698600525908e-05,
+        "attention_output_replay_loss_abs": 0.0,
+        "attention_output_replay_state_abs": 4.76837158203125e-07,
+        "baseline_loss_abs": 0.703125,
+        "routing_loss_abs": 0.5341796875
+      },
+      "sparse_vs_tilelang": {
+        "attention_output_replay_grad_rel_gap": 1.8058738106341288e-05,
+        "attention_output_replay_loss_abs": 0.0,
+        "attention_output_replay_state_abs": 4.76837158203125e-07,
+        "baseline_loss_abs": 0.8916015625,
+        "routing_loss_abs": 0.615234375
+      }
+    },
+    "transformer_block_training_step": {
+      "artifact": "deepseek-v4-transformer-block-training-step-qatsim-20260531.json",
+      "status": "PASS"
+    }
+  },
+  "scope": "DeepSeek-V4 proof ledger consistency check",
+  "status": "PASS"
+}

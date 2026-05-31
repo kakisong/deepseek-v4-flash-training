@@ -1,0 +1,182 @@
+{
+  "adamw_math_cases": [
+    {
+      "first_step_sign_flip_bound": 2e-06,
+      "first_step_sign_flip_max_abs": 2.000480890274048e-06,
+      "name": "attn_sink",
+      "reference_vs_closed_form": {
+        "atol": 1e-09,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "mismatches": 0,
+        "name": "attn_sink_reference_vs_closed_form",
+        "rtol": 0.0,
+        "shape": [
+          64
+        ],
+        "status": "PASS"
+      },
+      "shape": [
+        64
+      ],
+      "state_threshold": 2e-05,
+      "zero_grad_weight_decay_only": {
+        "atol": 1e-09,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "mismatches": 0,
+        "name": "attn_sink_zero_grad_weight_decay_only",
+        "rtol": 0.0,
+        "shape": [
+          64
+        ],
+        "status": "PASS"
+      }
+    },
+    {
+      "first_step_sign_flip_bound": 2e-06,
+      "first_step_sign_flip_max_abs": 2.000480890274048e-06,
+      "name": "norm_weight",
+      "reference_vs_closed_form": {
+        "atol": 1e-09,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "mismatches": 0,
+        "name": "norm_weight_reference_vs_closed_form",
+        "rtol": 0.0,
+        "shape": [
+          1024
+        ],
+        "status": "PASS"
+      },
+      "shape": [
+        1024
+      ],
+      "state_threshold": 2e-05,
+      "zero_grad_weight_decay_only": {
+        "atol": 1e-09,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "mismatches": 0,
+        "name": "norm_weight_zero_grad_weight_decay_only",
+        "rtol": 0.0,
+        "shape": [
+          1024
+        ],
+        "status": "PASS"
+      }
+    },
+    {
+      "first_step_sign_flip_bound": 2e-06,
+      "first_step_sign_flip_max_abs": 2.000480890274048e-06,
+      "name": "attention_projection_tile",
+      "reference_vs_closed_form": {
+        "atol": 1e-09,
+        "max_abs": 9.313225746154785e-10,
+        "mean_abs": 1.7203035870827499e-15,
+        "mismatches": 0,
+        "name": "attention_projection_tile_reference_vs_closed_form",
+        "rtol": 0.0,
+        "shape": [
+          512,
+          4096
+        ],
+        "status": "PASS"
+      },
+      "shape": [
+        512,
+        4096
+      ],
+      "state_threshold": 2e-05,
+      "zero_grad_weight_decay_only": {
+        "atol": 1e-09,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "mismatches": 0,
+        "name": "attention_projection_tile_zero_grad_weight_decay_only",
+        "rtol": 0.0,
+        "shape": [
+          512,
+          4096
+        ],
+        "status": "PASS"
+      }
+    },
+    {
+      "first_step_sign_flip_bound": 2e-06,
+      "first_step_sign_flip_max_abs": 2.000480890274048e-06,
+      "name": "hc_scale",
+      "reference_vs_closed_form": {
+        "atol": 1e-09,
+        "max_abs": 1.1641532182693481e-10,
+        "mean_abs": 7.105427357601002e-15,
+        "mismatches": 0,
+        "name": "hc_scale_reference_vs_closed_form",
+        "rtol": 0.0,
+        "shape": [
+          4,
+          4096
+        ],
+        "status": "PASS"
+      },
+      "shape": [
+        4,
+        4096
+      ],
+      "state_threshold": 2e-05,
+      "zero_grad_weight_decay_only": {
+        "atol": 1e-09,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "mismatches": 0,
+        "name": "hc_scale_zero_grad_weight_decay_only",
+        "rtol": 0.0,
+        "shape": [
+          4,
+          4096
+        ],
+        "status": "PASS"
+      }
+    }
+  ],
+  "conclusion": "Miles DeepSeek-V4 uses the Megatron optimizer path with Adam settings in the DeepSeek-V4 runner, and the first AdamW step from zero moments is exactly equivalent to the closed-form update used for the selected-update proof. The worst-case first-step adaptive update disagreement is bounded by 2*lr, which is below the selected-state threshold.",
+  "date": "2026-05-31",
+  "failures": [],
+  "linked_artifacts": {
+    "end_to_end_bf16_tolerance": "deepseek-v4-end-to-end-bf16-tolerance-20260531.json",
+    "proof_ledger": "deepseek-v4-proof-ledger-20260531.json"
+  },
+  "optimizer_hyperparameters": {
+    "beta1": 0.9,
+    "beta2": 0.98,
+    "eps": 1e-08,
+    "lr": 1e-06,
+    "optimizer": "adam",
+    "weight_decay": 0.1
+  },
+  "scope": "DeepSeek-V4 optimizer path and AdamW first-step update math",
+  "seed": 20260531,
+  "status": "PASS",
+  "training_path_static_checks": {
+    "deepseek_v4_script": {
+      "checks": {
+        "--adam-beta1 0.9": true,
+        "--adam-beta2 0.98": true,
+        "--lr 1e-6": true,
+        "--optimizer adam": true,
+        "--weight-decay 0.1": true
+      },
+      "file": "run_deepseek_v4.py"
+    },
+    "megatron_train_step": {
+      "checks": {
+        "OptimizerConfig": true,
+        "get_megatron_optimizer": true,
+        "opt_param_scheduler.step(increment=args.global_batch_size)": true,
+        "optimizer.prepare_grads()": true,
+        "optimizer.step()": true
+      },
+      "file": "model.py"
+    }
+  }
+}

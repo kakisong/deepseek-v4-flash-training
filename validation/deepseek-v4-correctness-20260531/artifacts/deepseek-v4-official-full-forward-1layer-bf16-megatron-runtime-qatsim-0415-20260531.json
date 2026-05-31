@@ -1,0 +1,56 @@
+{
+  "checkpoint": "4-layer DeepSeek-V4 mini checkpoint",
+  "comparison": {
+    "atol": 0.02,
+    "label": "official_inference_vs_miles",
+    "max_abs": 0.25,
+    "mean_abs": 0.023050455376505852,
+    "miles_attention_impl": "sparse",
+    "mismatches": 53,
+    "num_samples": 1,
+    "num_tokens": 402,
+    "p50_abs": 0.008047103881835938,
+    "p95_abs": 0.11135884374380112,
+    "p99_abs": 0.21426548063755035,
+    "relative_l2_gap": 2.5239634555696e-06,
+    "rtol": 0.002,
+    "samples": [
+      {
+        "max_abs": 0.25,
+        "mean_abs": 0.023050455376505852,
+        "mismatches": 53,
+        "sample": 0,
+        "tokens": 402
+      }
+    ],
+    "status": "FAIL"
+  },
+  "conversion": {
+    "ape_hotfix_enabled": true
+  },
+  "official_summary": {
+    "max": -0.013567850925028324,
+    "mean": -18.26950454711914,
+    "min": -40.98828125,
+    "num_samples": 1,
+    "num_tokens": 402,
+    "sha256": "de1410388eb54b131f1b1365407203b2b84c9db09832c9f071daac84e6104de6"
+  },
+  "reference": "DeepSeek-V4 official inference Transformer",
+  "rollout": {
+    "max_total_length": 505,
+    "num_samples": 1,
+    "num_tokens": 402
+  },
+  "runtime": {
+    "CUDA_DEVICE_MAX_CONNECTIONS": "1",
+    "MEGATRON_USE_KV_QAT": "1",
+    "PYTORCH_ALLOC_CONF": "expandable_segments:True"
+  },
+  "runtime_variant": {
+    "expert_runtime_mode": "megatron_bf16_activation",
+    "head_logits_mode": "bf16",
+    "router_runtime_mode": "megatron_bf16_scores"
+  },
+  "seed": 20260531
+}

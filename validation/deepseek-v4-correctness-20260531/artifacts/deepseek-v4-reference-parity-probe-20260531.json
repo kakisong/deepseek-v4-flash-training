@@ -1,0 +1,55 @@
+{
+  "hf_4layer_artifacts": [
+    {
+      "exists": true,
+      "files": [
+        "config.json",
+        "encoding",
+        "generation_config.json",
+        "tokenizer.json",
+        "tokenizer_config.json"
+      ],
+      "has_index": false,
+      "has_safetensors": false,
+      "label": "hf_4layer_with_tokenizer"
+    },
+    {
+      "exists": true,
+      "files": [
+        "config.json",
+        "encoding",
+        "tokenizer.json",
+        "tokenizer_config.json"
+      ],
+      "has_index": false,
+      "has_safetensors": false,
+      "label": "hf_4layer_stub"
+    }
+  ],
+  "sglang": {
+    "deepseek_model_modules": [
+      "deepseek",
+      "deepseek_common",
+      "deepseek_janus_pro",
+      "deepseek_nextn",
+      "deepseek_ocr",
+      "deepseek_v2",
+      "deepseek_vl2"
+    ],
+    "deepseek_v4_error": "ModuleNotFoundError: No module named 'sglang.srt.models.deepseek_v4'",
+    "deepseek_v4_import": "FAIL",
+    "version": "0.5.10"
+  },
+  "reference_code": {
+    "official_inference_model_import": "PASS",
+    "sglang_v4_patch_import": "FAIL",
+    "sglang_v4_patch_error": "ModuleNotFoundError: No module named 'sglang.jit_kernel.deepseek_v4'"
+  },
+  "transformers": {
+    "auto_config_4layer_deepseek_v4": "FAIL",
+    "auto_config_error": "ValueError: The checkpoint you are trying to load has model type `deepseek_v4` but Transformers does not recognize this architecture.",
+    "supports_deepseek_v3": true,
+    "supports_deepseek_v4": false,
+    "version": "5.3.0"
+  }
+}

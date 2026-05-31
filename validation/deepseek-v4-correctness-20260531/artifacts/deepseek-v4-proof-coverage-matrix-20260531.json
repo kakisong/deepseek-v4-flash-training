@@ -1,0 +1,321 @@
+{
+  "conclusion": "All requested proof areas have explicit artifact-backed coverage, and the remaining strict gates are documented with machine-checked boundaries.",
+  "date": "2026-05-31",
+  "doc_checks": {
+    "CUDA toolkit": true,
+    "NVIDIA driver": true,
+    "megatron-core": true,
+    "tilelang": true,
+    "transformer-engine": true,
+    "\u5df2\u8bc1\u660e": true,
+    "\u5f53\u524d\u7ed3\u8bba\u662f **PARTIAL_PROOF**": true,
+    "\u672a\u4e25\u683c\u8bc1\u660e": true
+  },
+  "failures": [],
+  "forbidden_local_path_files": [],
+  "open_strict_gates": [
+    {
+      "actual_status": "FAIL",
+      "expected_status": "FAIL",
+      "id": "strict_mini_backend_logprob_parity",
+      "reason_contains": {
+        "0.0625": true,
+        "attention": true,
+        "strict": true
+      }
+    },
+    {
+      "actual_status": "FAIL",
+      "expected_status": "FAIL",
+      "id": "strict_mini_checkpoint_train_step_backend_parity",
+      "reason_contains": {
+        "attention-output": true,
+        "loss_abs": true,
+        "optimizer": true
+      }
+    },
+    {
+      "actual_status": "FAIL",
+      "expected_status": "FAIL",
+      "id": "official_reference_mini_checkpoint_forward_parity",
+      "reason_contains": {
+        "BF16": true,
+        "official": true,
+        "strict": true
+      }
+    },
+    {
+      "actual_status": "PARTIALLY_LOCALIZED",
+      "expected_status": "PARTIALLY_LOCALIZED",
+      "id": "production_ep8_moe_path_strict_parity",
+      "reason_contains": {
+        "EP=8": true,
+        "all-to-all": true,
+        "attention": true
+      }
+    },
+    {
+      "actual_status": "MISSING_INPUT",
+      "expected_status": "MISSING_INPUT",
+      "id": "external_reference_mini_checkpoint_one_step_train_parity",
+      "reason_contains": {
+        "forward parity": true,
+        "official/reference": true
+      }
+    }
+  ],
+  "requirements": [
+    {
+      "claim": "Document identifies the Megatron-LM PR #4839 HC orientation issue and the Miles-specific scope.",
+      "coverage_status": "PASS",
+      "doc_sections": [
+        "External References",
+        "\u95ee\u9898\u80cc\u666f",
+        "Miles \u5982\u4f55\u5b9e\u73b0"
+      ],
+      "evidence": [
+        "deepseek-v4-hyperconnection-runtime.md",
+        "deepseek-v4-operator-math-20260531.json",
+        "deepseek-v4-external-reference-provenance-20260531.json"
+      ],
+      "failures": [],
+      "id": "scope_problem_and_upstream_pr4839",
+      "status": "PROVED",
+      "summary_gates": [
+        "hyper_connection_pr4839_orientation",
+        "external_reference_provenance"
+      ]
+    },
+    {
+      "claim": "Known precision fixes remain present in source and are guarded against regression.",
+      "coverage_status": "PASS",
+      "doc_sections": [
+        "\u5df2\u4fee\u590d\u95ee\u9898",
+        "Fix Regression Guards"
+      ],
+      "evidence": [
+        "deepseek-v4-fix-regression-guards-20260531.json"
+      ],
+      "failures": [],
+      "id": "source_fixes_guarded",
+      "status": "PROVED",
+      "summary_gates": [
+        "precision_fix_regression_guards"
+      ]
+    },
+    {
+      "claim": "HC, RoPE, QAT, dense/sparse attention, and TileLang sparse MLA operator math pass.",
+      "coverage_status": "PASS",
+      "doc_sections": [
+        "\u7b97\u5b50\u6570\u5b66\u9a8c\u8bc1"
+      ],
+      "evidence": [
+        "deepseek-v4-operator-math-20260531.json"
+      ],
+      "failures": [],
+      "id": "operator_math_core",
+      "status": "PROVED",
+      "summary_gates": [
+        "operator_math"
+      ]
+    },
+    {
+      "claim": "dense/sparse/tilelang attention backend training surfaces pass for module and block scopes.",
+      "coverage_status": "PASS",
+      "doc_sections": [
+        "\u6a21\u5757\u8bad\u7ec3\u6b65\u9a8c\u8bc1",
+        "TransformerBlock \u8bad\u7ec3\u6b65\u9a8c\u8bc1"
+      ],
+      "evidence": [
+        "deepseek-v4-attention-training-step-qatsim-20260531.json",
+        "deepseek-v4-transformer-block-training-step-qatsim-20260531.json"
+      ],
+      "failures": [],
+      "id": "dense_sparse_tilelang_attention_training",
+      "status": "PROVED",
+      "summary_gates": [
+        "attention_training_step",
+        "transformer_block_training_step"
+      ]
+    },
+    {
+      "claim": "TE grouped MLP and EP=8 all-to-all dispatcher math pass forward/backward/update checks.",
+      "coverage_status": "PASS",
+      "doc_sections": [
+        "\u7b97\u5b50\u6570\u5b66\u9a8c\u8bc1"
+      ],
+      "evidence": [
+        "deepseek-v4-grouped-mlp-math-20260531.json",
+        "deepseek-v4-moe-ep8-dispatch-math-20260531.json"
+      ],
+      "failures": [],
+      "id": "moe_and_grouped_mlp_math",
+      "status": "PROVED",
+      "summary_gates": [
+        "grouped_mlp_training_math",
+        "moe_ep8_alltoall_dispatch_math"
+      ]
+    },
+    {
+      "claim": "official attention, loaded weight mapping, head replay, and MLP expert replay localize official-vs-Miles drift past known conversion/math fixes.",
+      "coverage_status": "PASS",
+      "doc_sections": [
+        "Attention Trace Replay",
+        "\u6743\u91cd\u52a0\u8f7d\u9a8c\u8bc1",
+        "Official Full-Forward Probe"
+      ],
+      "evidence": [
+        "deepseek-v4-official-attention-forward-20260531.json",
+        "deepseek-v4-loaded-weight-mapping-1layer-mlp-qatsim-20260531.json",
+        "deepseek-v4-attention-trace-replay-qatsim-0415-20260531.json",
+        "deepseek-v4-mlp-expert-replay-qatsim-0415-20260531.json"
+      ],
+      "failures": [],
+      "id": "official_and_weight_mapping_localization",
+      "status": "PROVED_WITH_DRIFT_RECORDED",
+      "summary_gates": [
+        "official_attention_forward",
+        "loaded_weight_mapping",
+        "attention_trace_replay",
+        "mlp_expert_replay"
+      ]
+    },
+    {
+      "claim": "official-vs-Miles full-forward drift is inside an explicit BF16 tolerance envelope while strict parity remains open.",
+      "coverage_status": "PASS",
+      "doc_sections": [
+        "Official Forward BF16 Tolerance"
+      ],
+      "evidence": [
+        "deepseek-v4-official-forward-bf16-tolerance-20260531.json"
+      ],
+      "failures": [],
+      "id": "official_forward_bf16_tolerance",
+      "status": "PROVED_WITH_BF16_TOLERANCE",
+      "summary_gates": [
+        "official_forward_bf16_tolerance"
+      ]
+    },
+    {
+      "claim": "mini forward drift is finite, routing-amplified, and localized to attention forward-value drift.",
+      "coverage_status": "PASS",
+      "doc_sections": [
+        "Mini Checkpoint Drift Probe"
+      ],
+      "evidence": [
+        "deepseek-v4-mini-forward-compare-20260531.json",
+        "deepseek-v4-mini-forward-routing-replay-dense-vs-sparse-qatsim-20260531.json",
+        "deepseek-v4-mini-activation-replay-qatsim-20260531.json",
+        "deepseek-v4-mini-sublayer-activation-replay-qatsim-20260531.json",
+        "deepseek-v4-mini-attention-io-replay-qatsim-20260531.json"
+      ],
+      "expected_failing_diagnostic_artifacts": [
+        "deepseek-v4-mini-forward-routing-replay-dense-vs-sparse-qatsim-20260531.json"
+      ],
+      "failures": [],
+      "id": "mini_checkpoint_forward_drift_localized",
+      "status": "PROVED_WITH_LOCALIZED_DRIFT",
+      "summary_gates": [
+        "mini_checkpoint_forward_execution",
+        "mini_checkpoint_forward_routing_replay",
+        "mini_checkpoint_activation_replay",
+        "mini_checkpoint_sublayer_activation_replay",
+        "mini_checkpoint_attention_io_replay"
+      ]
+    },
+    {
+      "claim": "mini SFT training chain is finite; attention-output replay gives exact loss parity and bounded gradient/update drift.",
+      "coverage_status": "PASS",
+      "doc_sections": [
+        "Mini Checkpoint Drift Probe"
+      ],
+      "evidence": [
+        "deepseek-v4-mini-train-step-qatsim-0415-20260531.json",
+        "deepseek-v4-mini-train-step-routing-replay-qatsim-20260531.json",
+        "deepseek-v4-mini-train-step-attention-output-replay-qatsim-20260531.json",
+        "deepseek-v4-mini-attention-io-training-step-qatsim-20260531.json"
+      ],
+      "expected_failing_diagnostic_artifacts": [
+        "deepseek-v4-mini-train-step-qatsim-0415-20260531.json",
+        "deepseek-v4-mini-train-step-routing-replay-qatsim-20260531.json"
+      ],
+      "failures": [],
+      "id": "mini_checkpoint_training_chain",
+      "status": "PROVED_WITH_BOUNDED_FORWARD_DRIFT",
+      "summary_gates": [
+        "mini_checkpoint_sft_one_step_execution",
+        "mini_checkpoint_sft_one_step_routing_replay",
+        "mini_checkpoint_sft_one_step_attention_output_replay",
+        "mini_checkpoint_attention_io_training_step"
+      ]
+    },
+    {
+      "claim": "real non-injected forward/train drift is inside the declared BF16 runtime tolerance envelope.",
+      "coverage_status": "PASS",
+      "doc_sections": [
+        "End-to-End BF16 Tolerance"
+      ],
+      "evidence": [
+        "deepseek-v4-end-to-end-bf16-tolerance-20260531.json"
+      ],
+      "failures": [],
+      "id": "bf16_tolerance_envelope",
+      "status": "PROVED_WITH_BF16_TOLERANCE",
+      "summary_gates": [
+        "end_to_end_bf16_tolerance_envelope"
+      ]
+    },
+    {
+      "claim": "actual optimizer path is Megatron Adam and first-step AdamW selected-update math is verified.",
+      "coverage_status": "PASS",
+      "doc_sections": [
+        "Optimizer Update Math"
+      ],
+      "evidence": [
+        "deepseek-v4-optimizer-update-math-20260531.json"
+      ],
+      "failures": [],
+      "id": "optimizer_update_math",
+      "status": "PROVED",
+      "summary_gates": [
+        "optimizer_update_math"
+      ]
+    },
+    {
+      "claim": "proof ledger machine-validates that the artifact chain is internally consistent.",
+      "coverage_status": "PASS",
+      "doc_sections": [
+        "Proof Ledger"
+      ],
+      "evidence": [
+        "deepseek-v4-proof-ledger-20260531.json"
+      ],
+      "failures": [],
+      "id": "proof_ledger_consistency",
+      "status": "PROVED",
+      "summary_gates": [
+        "proof_ledger_consistency"
+      ]
+    },
+    {
+      "claim": "documented environment versions match the environment captured by the operator-math artifact.",
+      "coverage_status": "PASS",
+      "doc_sections": [
+        "\u73af\u5883",
+        "Environment Provenance"
+      ],
+      "evidence": [
+        "deepseek-v4-environment-provenance-20260531.json"
+      ],
+      "failures": [],
+      "id": "environment_provenance",
+      "status": "PROVED",
+      "summary_gates": [
+        "environment_provenance"
+      ]
+    }
+  ],
+  "scope": "DeepSeek-V4 proof coverage matrix",
+  "status": "PASS",
+  "summary_status": "PARTIAL_PROOF"
+}

@@ -1,0 +1,189 @@
+{
+  "comparisons": [
+    {
+      "atol": 0.02,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "mismatches": 0,
+      "name": "official_saved_vs_official_hidden_fp32_head_replay",
+      "p95_abs": 0.0,
+      "p99_abs": 0.0,
+      "relative_l2_gap": 0.0,
+      "rtol": 0.002,
+      "shape": [
+        402
+      ],
+      "status": "PASS"
+    },
+    {
+      "atol": 0.02,
+      "max_abs": 1.9073486328125e-06,
+      "mean_abs": 1.0853383258790927e-07,
+      "mismatches": 0,
+      "name": "miles_saved_vs_miles_hidden_bf16_head_replay",
+      "p95_abs": 9.5367431640625e-07,
+      "p99_abs": 1.9073486328125e-06,
+      "relative_l2_gap": 0.0,
+      "rtol": 0.002,
+      "shape": [
+        402
+      ],
+      "status": "PASS"
+    },
+    {
+      "atol": 0.02,
+      "max_abs": 0.16042709350585938,
+      "mean_abs": 0.03158159181475639,
+      "mismatches": 63,
+      "name": "official_saved_vs_miles_saved",
+      "p95_abs": 0.08459470421075821,
+      "p99_abs": 0.13715827465057373,
+      "relative_l2_gap": 2.313715897095392e-06,
+      "rtol": 0.002,
+      "shape": [
+        402
+      ],
+      "status": "FAIL"
+    },
+    {
+      "atol": 0.02,
+      "max_abs": 0.1319141387939453,
+      "mean_abs": 0.021717099472880363,
+      "mismatches": 24,
+      "name": "same_fp32_head_official_hidden_vs_miles_hidden",
+      "p95_abs": 0.061199039220809937,
+      "p99_abs": 0.07897593826055527,
+      "relative_l2_gap": 1.0517284210198596e-06,
+      "rtol": 0.002,
+      "shape": [
+        402
+      ],
+      "status": "FAIL"
+    },
+    {
+      "atol": 0.02,
+      "max_abs": 0.25568389892578125,
+      "mean_abs": 0.026352204382419586,
+      "mismatches": 62,
+      "name": "same_bf16_head_official_hidden_vs_miles_hidden",
+      "p95_abs": 0.1068311333656311,
+      "p99_abs": 0.2257925271987915,
+      "relative_l2_gap": 3.155446774427695e-06,
+      "rtol": 0.002,
+      "shape": [
+        402
+      ],
+      "status": "FAIL"
+    },
+    {
+      "atol": 0.02,
+      "max_abs": 0.13891220092773438,
+      "mean_abs": 0.024665921926498413,
+      "mismatches": 35,
+      "name": "official_hidden_fp32_head_vs_bf16_head",
+      "p95_abs": 0.0657910704612732,
+      "p99_abs": 0.10759875923395157,
+      "relative_l2_gap": 1.472509922662013e-06,
+      "rtol": 0.002,
+      "shape": [
+        402
+      ],
+      "status": "FAIL"
+    },
+    {
+      "atol": 0.02,
+      "max_abs": 0.1281585693359375,
+      "mean_abs": 0.02311176247894764,
+      "mismatches": 24,
+      "name": "miles_hidden_fp32_head_vs_bf16_head",
+      "p95_abs": 0.05817011743783951,
+      "p99_abs": 0.09932272136211395,
+      "relative_l2_gap": 1.2621014493507943e-06,
+      "rtol": 0.002,
+      "shape": [
+        402
+      ],
+      "status": "FAIL"
+    }
+  ],
+  "output_layer_weight": {
+    "checkpoint_dtype": "bfloat16",
+    "shape": [
+      129280,
+      4096
+    ]
+  },
+  "replay_exact": {
+    "miles_saved_replayed_by_bf16_head": true,
+    "official_saved_replayed_by_fp32_head": true
+  },
+  "rollout": {
+    "num_samples": 1,
+    "num_tokens": 402,
+    "total_length": 505
+  },
+  "seed": 20260531,
+  "status": "PASS_WITH_DRIFT_RECORDED",
+  "summaries": [
+    {
+      "max": -0.012867515906691551,
+      "mean": -18.268766403198242,
+      "min": -41.07549285888672,
+      "name": "official_saved",
+      "sha256": "b026f8cbfe6fd32ef31eb6f18942798df345cb251ca3e8c7a82f6e9036e65096",
+      "shape": [
+        402
+      ]
+    },
+    {
+      "max": -0.012025594711303711,
+      "mean": -18.267969131469727,
+      "min": -40.9609375,
+      "name": "miles_saved",
+      "sha256": "f25089859568f244062e78d6ab7b6acc88846e27d91c8fa8e8dd65978fc06a21",
+      "shape": [
+        402
+      ]
+    },
+    {
+      "max": -0.012867515906691551,
+      "mean": -18.268766403198242,
+      "min": -41.07549285888672,
+      "name": "official_hidden_fp32_head_replay",
+      "sha256": "b026f8cbfe6fd32ef31eb6f18942798df345cb251ca3e8c7a82f6e9036e65096",
+      "shape": [
+        402
+      ]
+    },
+    {
+      "max": -0.012196367606520653,
+      "mean": -18.26719856262207,
+      "min": -41.0,
+      "name": "official_hidden_bf16_head_replay",
+      "sha256": "6f94d95795a60d1223c42a38ea7ecbf9d6d4d26adc304a7a906bf7c2d03b0272",
+      "shape": [
+        402
+      ]
+    },
+    {
+      "max": -0.012960365042090416,
+      "mean": -18.267242431640625,
+      "min": -41.026676177978516,
+      "name": "miles_hidden_fp32_head_replay",
+      "sha256": "3d415f55529dfba9dce7a8d343165c24f60eefba836c35e1e6343a7078325679",
+      "shape": [
+        402
+      ]
+    },
+    {
+      "max": -0.012025594711303711,
+      "mean": -18.267969131469727,
+      "min": -40.9609375,
+      "name": "miles_hidden_bf16_head_replay",
+      "sha256": "2e82f84c72e1b24ca0627d3d2786cb19b34d3c5a5fa8a3660c6288b39e04c58e",
+      "shape": [
+        402
+      ]
+    }
+  ]
+}

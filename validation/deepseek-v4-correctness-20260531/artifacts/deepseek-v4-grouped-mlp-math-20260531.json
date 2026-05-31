@@ -1,0 +1,906 @@
+{
+  "cases": [
+    {
+      "activation": "SwiGLU",
+      "activation_func_clamp_value": 10.0,
+      "comparisons": [
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "forward_output",
+          "nonzero_abs_count": 0,
+          "numel": 81920,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            20,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "input_grad",
+          "nonzero_abs_count": 0,
+          "numel": 81920,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            20,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc1_weight_grad_expert_0",
+          "nonzero_abs_count": 0,
+          "numel": 16777216,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc1_weight_grad_expert_1",
+          "nonzero_abs_count": 0,
+          "numel": 16777216,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc1_weight_grad_expert_2",
+          "nonzero_abs_count": 0,
+          "numel": 16777216,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc1_weight_grad_expert_3",
+          "nonzero_abs_count": 0,
+          "numel": 16777216,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc1_weight_grad_expert_4",
+          "nonzero_abs_count": 0,
+          "numel": 16777216,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc2_weight_grad_expert_0",
+          "nonzero_abs_count": 0,
+          "numel": 8388608,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            2048
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc2_weight_grad_expert_1",
+          "nonzero_abs_count": 0,
+          "numel": 8388608,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            2048
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc2_weight_grad_expert_2",
+          "nonzero_abs_count": 0,
+          "numel": 8388608,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            2048
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc2_weight_grad_expert_3",
+          "nonzero_abs_count": 0,
+          "numel": 8388608,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            2048
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc2_weight_grad_expert_4",
+          "nonzero_abs_count": 0,
+          "numel": 8388608,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            2048
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc1_sgd_update_expert_0",
+          "nonzero_abs_count": 0,
+          "numel": 16777216,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc1_sgd_update_expert_1",
+          "nonzero_abs_count": 0,
+          "numel": 16777216,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc1_sgd_update_expert_2",
+          "nonzero_abs_count": 0,
+          "numel": 16777216,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc1_sgd_update_expert_3",
+          "nonzero_abs_count": 0,
+          "numel": 16777216,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc1_sgd_update_expert_4",
+          "nonzero_abs_count": 0,
+          "numel": 16777216,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc2_sgd_update_expert_0",
+          "nonzero_abs_count": 0,
+          "numel": 8388608,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            2048
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc2_sgd_update_expert_1",
+          "nonzero_abs_count": 0,
+          "numel": 8388608,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            2048
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc2_sgd_update_expert_2",
+          "nonzero_abs_count": 0,
+          "numel": 8388608,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            2048
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc2_sgd_update_expert_3",
+          "nonzero_abs_count": 0,
+          "numel": 8388608,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            2048
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc2_sgd_update_expert_4",
+          "nonzero_abs_count": 0,
+          "numel": 8388608,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            2048
+          ],
+          "status": "PASS"
+        }
+      ],
+      "expert_module": "TEGroupedMLP",
+      "hidden_size": 4096,
+      "linear_module": "TEColumnParallelGroupedLinear",
+      "loss": {
+        "abs_diff": 0.0,
+        "reference": 0.002117642667144537,
+        "te": 0.002117642667144537
+      },
+      "moe_ffn_hidden_size": 2048,
+      "name": "imbalanced_with_empty_experts",
+      "num_experts": 5,
+      "probability_application": "after_activation_before_fc2",
+      "status": "PASS",
+      "tokens_per_expert": [
+        0,
+        1,
+        7,
+        3,
+        9
+      ],
+      "total_tokens": 20
+    },
+    {
+      "activation": "SwiGLU",
+      "activation_func_clamp_value": 10.0,
+      "comparisons": [
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "forward_output",
+          "nonzero_abs_count": 0,
+          "numel": 81920,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            20,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "input_grad",
+          "nonzero_abs_count": 0,
+          "numel": 81920,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            20,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc1_weight_grad_expert_0",
+          "nonzero_abs_count": 0,
+          "numel": 16777216,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc1_weight_grad_expert_1",
+          "nonzero_abs_count": 0,
+          "numel": 16777216,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc1_weight_grad_expert_2",
+          "nonzero_abs_count": 0,
+          "numel": 16777216,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc1_weight_grad_expert_3",
+          "nonzero_abs_count": 0,
+          "numel": 16777216,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc1_weight_grad_expert_4",
+          "nonzero_abs_count": 0,
+          "numel": 16777216,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc2_weight_grad_expert_0",
+          "nonzero_abs_count": 0,
+          "numel": 8388608,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            2048
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc2_weight_grad_expert_1",
+          "nonzero_abs_count": 0,
+          "numel": 8388608,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            2048
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc2_weight_grad_expert_2",
+          "nonzero_abs_count": 0,
+          "numel": 8388608,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            2048
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc2_weight_grad_expert_3",
+          "nonzero_abs_count": 0,
+          "numel": 8388608,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            2048
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc2_weight_grad_expert_4",
+          "nonzero_abs_count": 0,
+          "numel": 8388608,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            2048
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc1_sgd_update_expert_0",
+          "nonzero_abs_count": 0,
+          "numel": 16777216,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc1_sgd_update_expert_1",
+          "nonzero_abs_count": 0,
+          "numel": 16777216,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc1_sgd_update_expert_2",
+          "nonzero_abs_count": 0,
+          "numel": 16777216,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc1_sgd_update_expert_3",
+          "nonzero_abs_count": 0,
+          "numel": 16777216,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc1_sgd_update_expert_4",
+          "nonzero_abs_count": 0,
+          "numel": 16777216,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            4096
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc2_sgd_update_expert_0",
+          "nonzero_abs_count": 0,
+          "numel": 8388608,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            2048
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc2_sgd_update_expert_1",
+          "nonzero_abs_count": 0,
+          "numel": 8388608,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            2048
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc2_sgd_update_expert_2",
+          "nonzero_abs_count": 0,
+          "numel": 8388608,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            2048
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc2_sgd_update_expert_3",
+          "nonzero_abs_count": 0,
+          "numel": 8388608,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            2048
+          ],
+          "status": "PASS"
+        },
+        {
+          "atol": 0.0,
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "mismatches": 0,
+          "name": "fc2_sgd_update_expert_4",
+          "nonzero_abs_count": 0,
+          "numel": 8388608,
+          "p95_abs": 0.0,
+          "p99_abs": 0.0,
+          "relative_l2_gap": 0.0,
+          "rtol": 0.0,
+          "shape": [
+            4096,
+            2048
+          ],
+          "status": "PASS"
+        }
+      ],
+      "expert_module": "TEGroupedMLP",
+      "hidden_size": 4096,
+      "linear_module": "TEColumnParallelGroupedLinear",
+      "loss": {
+        "abs_diff": 0.0,
+        "reference": -0.0107453977689147,
+        "te": -0.0107453977689147
+      },
+      "moe_ffn_hidden_size": 2048,
+      "name": "balanced_all_experts_active",
+      "num_experts": 5,
+      "probability_application": "after_activation_before_fc2",
+      "status": "PASS",
+      "tokens_per_expert": [
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "total_tokens": 20
+    }
+  ],
+  "dtype": "bfloat16",
+  "runtime": {
+    "cuda": "12.9",
+    "torch": "2.9.1+cu129",
+    "transformer_engine_grouped_linear": "TEGroupedLinear"
+  },
+  "seed": 20260531,
+  "status": "PASS",
+  "threshold": {
+    "atol": 0.0,
+    "rtol": 0.0
+  }
+}

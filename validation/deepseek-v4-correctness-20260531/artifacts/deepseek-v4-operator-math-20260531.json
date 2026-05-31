@@ -1,0 +1,150 @@
+{
+  "device": "cuda",
+  "environment": {
+    "cuda_available": true,
+    "cuda_device_count": 8,
+    "cuda_toolkit": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Tue_May_27_02:21:03_PDT_2025\nCuda compilation tools, release 12.9, V12.9.86\nBuild cuda_12.9.r12.9/compiler.36037853_0",
+    "gpu": "NVIDIA H20",
+    "mbridge": "0.15.1",
+    "megatron_core": "0.16.0rc0",
+    "miles": "0.2.1",
+    "nvidia_driver": "580.126.20",
+    "nvidia_smi_cuda": "13.0",
+    "platform": "Linux-5.4.119-19.0009.56-x86_64-with-glibc2.39",
+    "python": "3.12.3",
+    "tilelang": "0.1.9",
+    "torch": "2.9.1+cu129",
+    "torch_cuda": "12.9",
+    "transformer_config_has_dsv4_mode": true,
+    "transformer_config_has_experimental_attention_variant": true,
+    "transformer_engine": "2.10.0",
+    "upstream_hyper_connection_present": false
+  },
+  "overall_status": "PASS",
+  "results": [
+    {
+      "details": {
+        "max_diff_vs_comb_transpose_residual": 2.384185791015625e-07,
+        "max_diff_vs_megatron_pr4839_fixed_native": 2.384185791015625e-07,
+        "max_diff_vs_prefix_wrong_comb_residual": 9.81311321258545,
+        "seed": 20260531
+      },
+      "name": "hyper_connection_pr4839_orientation",
+      "status": "PASS"
+    },
+    {
+      "details": {
+        "grad_finite": true,
+        "input_mutation_max_abs": 0.0,
+        "inverse_max_abs": 2.384185791015625e-07,
+        "output_aliases_input_storage": false,
+        "seed": 20260531,
+        "wrapped_cache_seq_len": 131072
+      },
+      "name": "rope_out_of_place_inverse_grad",
+      "status": "PASS"
+    },
+    {
+      "details": {
+        "block_size": 64,
+        "dtype": "bfloat16",
+        "exact_equal": true,
+        "inplace": true,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "nonzero_abs_count": 0,
+        "scale_dtype": "float32",
+        "scale_fmt": null,
+        "seed": 20260531,
+        "shape": [
+          2,
+          3,
+          512
+        ]
+      },
+      "name": "official_kv_qat_simulation",
+      "status": "PASS"
+    },
+    {
+      "details": {
+        "dattn_sink_rel_diff": 4.030836156632134e-06,
+        "dkv_rel_diff": 3.950309416911324e-06,
+        "dq_rel_diff": 3.0149637411103214e-06,
+        "dtype": "bfloat16",
+        "forward_max_abs": 0.0078125,
+        "forward_rel_diff": 2.197893374189519e-06,
+        "fully_masked_row_max_abs": 0.0,
+        "fully_masked_rows": 1,
+        "grads_finite": true,
+        "seed": 20260531,
+        "shape": {
+          "batch": 1,
+          "dim": 16,
+          "heads": 4,
+          "kv_len": 16,
+          "seqlen": 8,
+          "topk": 8
+        }
+      },
+      "name": "dense_sparse_torch_attention",
+      "status": "PASS"
+    },
+    {
+      "details": {
+        "cases": [
+          {
+            "dattn_sink_rel_diff": 5.942138694536858e-06,
+            "dkv_rel_diff": 4.104591915021771e-06,
+            "dq_rel_diff": 4.159996076502637e-06,
+            "dtype": "bfloat16",
+            "forward_max_abs": 0.004327297210693359,
+            "forward_rel_diff": 2.175237100887628e-06,
+            "fully_masked_row_max_abs": 0.0,
+            "fully_masked_rows": 0,
+            "grads_finite": true,
+            "name": "production_shape",
+            "seed": 20260531,
+            "shape": {
+              "batch": 1,
+              "dim": 512,
+              "heads": 8,
+              "kv_len": 160,
+              "seqlen": 128,
+              "topk": 64
+            }
+          },
+          {
+            "dattn_sink_rel_diff": 6.709198812515638e-06,
+            "dkv_rel_diff": 4.144493625735102e-06,
+            "dq_rel_diff": 4.225850927852548e-06,
+            "dtype": "bfloat16",
+            "forward_max_abs": 0.0037823915481567383,
+            "forward_rel_diff": 2.165028077927289e-06,
+            "fully_masked_row_max_abs": 0.0,
+            "fully_masked_rows": 1,
+            "grads_finite": true,
+            "name": "padded_topk_fully_masked_row",
+            "seed": 20260531,
+            "shape": {
+              "batch": 1,
+              "dim": 512,
+              "heads": 8,
+              "kv_len": 96,
+              "seqlen": 64,
+              "topk": 96
+            }
+          }
+        ],
+        "grads_finite": true,
+        "max_dattn_sink_rel_diff": 6.709198812515638e-06,
+        "max_dkv_rel_diff": 4.144493625735102e-06,
+        "max_dq_rel_diff": 4.225850927852548e-06,
+        "max_forward_max_abs": 0.004327297210693359,
+        "max_forward_rel_diff": 2.175237100887628e-06
+      },
+      "name": "tilelang_sparse_attention",
+      "status": "PASS"
+    }
+  ],
+  "seed": 20260531
+}

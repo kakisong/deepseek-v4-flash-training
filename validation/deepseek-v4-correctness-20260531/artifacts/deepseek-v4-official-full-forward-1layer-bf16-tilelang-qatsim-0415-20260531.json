@@ -1,0 +1,51 @@
+{
+  "checkpoint": "4-layer DeepSeek-V4 mini checkpoint",
+  "comparison": {
+    "atol": 0.02,
+    "label": "official_inference_vs_miles",
+    "max_abs": 0.14663314819335938,
+    "mean_abs": 0.03211159259080887,
+    "miles_attention_impl": "tilelang",
+    "mismatches": 71,
+    "num_samples": 1,
+    "num_tokens": 402,
+    "p50_abs": 0.02420330047607422,
+    "p95_abs": 0.08687619864940643,
+    "p99_abs": 0.12487327307462692,
+    "relative_l2_gap": 2.4187967853084302e-06,
+    "rtol": 0.002,
+    "samples": [
+      {
+        "max_abs": 0.14663314819335938,
+        "mean_abs": 0.03211159259080887,
+        "mismatches": 71,
+        "sample": 0,
+        "tokens": 402
+      }
+    ],
+    "status": "FAIL"
+  },
+  "conversion": {
+    "ape_hotfix_enabled": false
+  },
+  "official_summary": {
+    "max": -0.012867515906691551,
+    "mean": -18.268766403198242,
+    "min": -41.07549285888672,
+    "num_samples": 1,
+    "num_tokens": 402,
+    "sha256": "b026f8cbfe6fd32ef31eb6f18942798df345cb251ca3e8c7a82f6e9036e65096"
+  },
+  "reference": "DeepSeek-V4 official inference Transformer",
+  "rollout": {
+    "max_total_length": 505,
+    "num_samples": 1,
+    "num_tokens": 402
+  },
+  "runtime": {
+    "CUDA_DEVICE_MAX_CONNECTIONS": "1",
+    "MEGATRON_USE_KV_QAT": "1",
+    "PYTORCH_ALLOC_CONF": "expandable_segments:True"
+  },
+  "seed": 20260531
+}

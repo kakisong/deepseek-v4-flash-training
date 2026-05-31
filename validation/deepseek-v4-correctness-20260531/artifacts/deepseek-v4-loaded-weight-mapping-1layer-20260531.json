@@ -1,0 +1,54 @@
+{
+  "label": "loaded_miles_weights_vs_raw_megatron_checkpoint",
+  "selected": [
+    {
+      "exact_equal": true,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "name": "module.decoder.layers.0.self_attention.wq_a.weight",
+      "nonzero_abs_count": 0,
+      "shape": [
+        1024,
+        4096
+      ],
+      "status": "PASS"
+    },
+    {
+      "exact_equal": true,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "name": "module.decoder.layers.0.self_attention.wkv.weight",
+      "nonzero_abs_count": 0,
+      "shape": [
+        512,
+        4096
+      ],
+      "status": "PASS"
+    },
+    {
+      "exact_equal": true,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "name": "module.decoder.layers.0.self_attention.wo_a.weight",
+      "nonzero_abs_count": 0,
+      "shape": [
+        8192,
+        4096
+      ],
+      "status": "PASS"
+    },
+    {
+      "exact_equal": true,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "name": "module.decoder.layers.0.self_attention.wo_b.weight",
+      "nonzero_abs_count": 0,
+      "shape": [
+        4096,
+        8192
+      ],
+      "status": "PASS"
+    }
+  ],
+  "status": "PASS"
+}

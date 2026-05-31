@@ -1,0 +1,194 @@
+{
+  "best_by_mean_abs": {
+    "artifact": "deepseek-v4-official-full-forward-1layer-bf16-megatron-runtime-qatsim-0415-20260531.json",
+    "delta_vs_baseline": {
+      "max_abs": 0.08957290649414062,
+      "mean_abs": -0.008531136438250542,
+      "mismatches": -10,
+      "relative_l2_gap": 2.1024755847420806e-07
+    },
+    "label": "head_expert_router_bf16",
+    "max_abs": 0.25,
+    "mean_abs": 0.023050455376505852,
+    "mismatches": 53,
+    "num_tokens": 402,
+    "p95_abs": 0.11135884374380112,
+    "p99_abs": 0.21426548063755035,
+    "relative_l2_gap": 2.5239634555696e-06,
+    "runtime_variant": {
+      "expert_runtime_mode": "megatron_bf16_activation",
+      "head_logits_mode": "bf16",
+      "router_runtime_mode": "megatron_bf16_scores"
+    },
+    "status": "FAIL"
+  },
+  "best_by_mismatches": {
+    "artifact": "deepseek-v4-official-full-forward-1layer-bf16-megatron-runtime-qatsim-0415-20260531.json",
+    "delta_vs_baseline": {
+      "max_abs": 0.08957290649414062,
+      "mean_abs": -0.008531136438250542,
+      "mismatches": -10,
+      "relative_l2_gap": 2.1024755847420806e-07
+    },
+    "label": "head_expert_router_bf16",
+    "max_abs": 0.25,
+    "mean_abs": 0.023050455376505852,
+    "mismatches": 53,
+    "num_tokens": 402,
+    "p95_abs": 0.11135884374380112,
+    "p99_abs": 0.21426548063755035,
+    "relative_l2_gap": 2.5239634555696e-06,
+    "runtime_variant": {
+      "expert_runtime_mode": "megatron_bf16_activation",
+      "head_logits_mode": "bf16",
+      "router_runtime_mode": "megatron_bf16_scores"
+    },
+    "status": "FAIL"
+  },
+  "date": "2026-05-31",
+  "interpretation": [
+    "BF16 expert/runtime variants change the strict mismatch profile, so remaining drift is sensitive to runtime precision choices.",
+    "The all-BF16 runtime variant reduces mismatches from 63 to 53 and mean_abs from 0.03158159181475639 to 0.023050455376505852, but strict parity still fails.",
+    "This supports localization of remaining official-vs-Miles drift to runtime precision/execution differences, not to HC, QAT, attention math, or loaded weight mapping."
+  ],
+  "purpose": "Quantify how official inference runtime precision variants affect 1-layer official-vs-Miles sparse logprob drift.",
+  "rows": [
+    {
+      "artifact": "deepseek-v4-official-full-forward-1layer-bf16-qatsim-0415-20260531.json",
+      "label": "baseline_official_fp32",
+      "max_abs": 0.16042709350585938,
+      "mean_abs": 0.03158159181475639,
+      "mismatches": 63,
+      "num_tokens": 402,
+      "p95_abs": 0.08459470421075821,
+      "p99_abs": 0.13715827465057373,
+      "relative_l2_gap": 2.313715897095392e-06,
+      "runtime_variant": {
+        "expert_runtime_mode": "official_fp32_activation",
+        "head_logits_mode": "fp32",
+        "router_runtime_mode": "official_fp32_scores"
+      },
+      "status": "FAIL"
+    },
+    {
+      "artifact": "deepseek-v4-official-full-forward-1layer-bf16-head-only-qatsim-0415-20260531.json",
+      "delta_vs_baseline": {
+        "max_abs": 0.09525680541992188,
+        "mean_abs": -0.005229396745562553,
+        "mismatches": -1,
+        "relative_l2_gap": 8.417308773323029e-07
+      },
+      "label": "head_bf16_only",
+      "max_abs": 0.25568389892578125,
+      "mean_abs": 0.02635219506919384,
+      "mismatches": 62,
+      "num_tokens": 402,
+      "p95_abs": 0.1068311333656311,
+      "p99_abs": 0.2257925271987915,
+      "relative_l2_gap": 3.155446774427695e-06,
+      "runtime_variant": {
+        "expert_runtime_mode": "official_fp32_activation",
+        "head_logits_mode": "bf16",
+        "router_runtime_mode": "official_fp32_scores"
+      },
+      "status": "FAIL"
+    },
+    {
+      "artifact": "deepseek-v4-official-full-forward-1layer-bf16-expert-only-qatsim-0415-20260531.json",
+      "delta_vs_baseline": {
+        "max_abs": 0.00545501708984375,
+        "mean_abs": -0.0009206961840391159,
+        "mismatches": -6,
+        "relative_l2_gap": -1.0516704618268591e-07
+      },
+      "label": "expert_bf16_only",
+      "max_abs": 0.16588211059570312,
+      "mean_abs": 0.030660895630717278,
+      "mismatches": 57,
+      "num_tokens": 402,
+      "p95_abs": 0.0852736309170723,
+      "p99_abs": 0.12221565842628479,
+      "relative_l2_gap": 2.208548850912706e-06,
+      "runtime_variant": {
+        "expert_runtime_mode": "megatron_bf16_activation",
+        "head_logits_mode": "fp32",
+        "router_runtime_mode": "official_fp32_scores"
+      },
+      "status": "FAIL"
+    },
+    {
+      "artifact": "deepseek-v4-official-full-forward-1layer-bf16-router-only-qatsim-0415-20260531.json",
+      "delta_vs_baseline": {
+        "max_abs": 0.038509368896484375,
+        "mean_abs": -0.0010961033403873444,
+        "mismatches": -8,
+        "relative_l2_gap": 1.051699219933866e-07
+      },
+      "label": "router_bf16_only",
+      "max_abs": 0.19893646240234375,
+      "mean_abs": 0.03048548847436905,
+      "mismatches": 55,
+      "num_tokens": 402,
+      "p95_abs": 0.08790156245231628,
+      "p99_abs": 0.13314084708690643,
+      "relative_l2_gap": 2.4188858190887785e-06,
+      "runtime_variant": {
+        "expert_runtime_mode": "official_fp32_activation",
+        "head_logits_mode": "fp32",
+        "router_runtime_mode": "megatron_bf16_scores"
+      },
+      "status": "FAIL"
+    },
+    {
+      "artifact": "deepseek-v4-official-full-forward-1layer-bf16-expert-router-qatsim-0415-20260531.json",
+      "delta_vs_baseline": {
+        "max_abs": -0.005069732666015625,
+        "mean_abs": -0.0010031946003437042,
+        "mismatches": -4,
+        "relative_l2_gap": -1.0509991787976958e-07
+      },
+      "label": "expert_router_bf16",
+      "max_abs": 0.15535736083984375,
+      "mean_abs": 0.03057839721441269,
+      "mismatches": 59,
+      "num_tokens": 402,
+      "p95_abs": 0.08875443786382675,
+      "p99_abs": 0.12718506157398224,
+      "relative_l2_gap": 2.2086159792156224e-06,
+      "runtime_variant": {
+        "expert_runtime_mode": "megatron_bf16_activation",
+        "head_logits_mode": "fp32",
+        "router_runtime_mode": "megatron_bf16_scores"
+      },
+      "status": "FAIL"
+    },
+    {
+      "artifact": "deepseek-v4-official-full-forward-1layer-bf16-megatron-runtime-qatsim-0415-20260531.json",
+      "delta_vs_baseline": {
+        "max_abs": 0.08957290649414062,
+        "mean_abs": -0.008531136438250542,
+        "mismatches": -10,
+        "relative_l2_gap": 2.1024755847420806e-07
+      },
+      "label": "head_expert_router_bf16",
+      "max_abs": 0.25,
+      "mean_abs": 0.023050455376505852,
+      "mismatches": 53,
+      "num_tokens": 402,
+      "p95_abs": 0.11135884374380112,
+      "p99_abs": 0.21426548063755035,
+      "relative_l2_gap": 2.5239634555696e-06,
+      "runtime_variant": {
+        "expert_runtime_mode": "megatron_bf16_activation",
+        "head_logits_mode": "bf16",
+        "router_runtime_mode": "megatron_bf16_scores"
+      },
+      "status": "FAIL"
+    }
+  ],
+  "status": "RUN_WITH_DRIFT_RECORDED",
+  "threshold": {
+    "atol": 0.02,
+    "rtol": 0.002
+  }
+}

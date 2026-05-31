@@ -1,0 +1,149 @@
+{
+  "batch_size": 1,
+  "comparisons": [
+    {
+      "input_grad_max_abs": 1.430511474609375e-06,
+      "input_grad_rel_gap": 2.651357764016371e-05,
+      "label": "dense_vs_sparse",
+      "loss_abs": 3.134319558739662e-05,
+      "output_max_abs": 0.046875,
+      "output_rel_gap": 1.4185477623218645e-05,
+      "state_after_step_max_abs": 2.9802322387695312e-08,
+      "state_after_step_max_abs_name": "layers.0.self_attention.wq_a.weight",
+      "state_after_step_max_rel_gap": 0.0
+    },
+    {
+      "input_grad_max_abs": 1.430511474609375e-06,
+      "input_grad_rel_gap": 2.780726377638043e-05,
+      "label": "dense_vs_tilelang",
+      "loss_abs": 1.7511658370494843e-05,
+      "output_max_abs": 0.046875,
+      "output_rel_gap": 1.4841798940512518e-05,
+      "state_after_step_max_abs": 5.960464477539063e-08,
+      "state_after_step_max_abs_name": "layers.1.mlp.linear_fc2.weight",
+      "state_after_step_max_rel_gap": 0.0
+    },
+    {
+      "input_grad_max_abs": 1.430511474609375e-06,
+      "input_grad_rel_gap": 2.604709797326965e-05,
+      "label": "sparse_vs_tilelang",
+      "loss_abs": 1.383153721690178e-05,
+      "output_max_abs": 0.0390625,
+      "output_rel_gap": 1.2039845451283782e-05,
+      "state_after_step_max_abs": 5.960464477539063e-08,
+      "state_after_step_max_abs_name": "layers.1.mlp.linear_fc2.weight",
+      "state_after_step_max_rel_gap": 0.0
+    }
+  ],
+  "failures": [],
+  "impls": {
+    "dense": {
+      "loss": -0.0044256593100726604,
+      "max_param_grad_norm": 0.14155730605125427,
+      "num_params_with_grad": 29,
+      "params_without_grad": [
+        "layers.0.hc_attn_fn",
+        "layers.0.hc_attn_base",
+        "layers.0.hc_attn_scale",
+        "layers.0.hc_ffn_fn",
+        "layers.0.hc_ffn_base",
+        "layers.0.hc_ffn_scale",
+        "layers.1.hc_attn_fn",
+        "layers.1.hc_attn_base",
+        "layers.1.hc_attn_scale",
+        "layers.1.hc_ffn_fn",
+        "layers.1.hc_ffn_base",
+        "layers.1.hc_ffn_scale",
+        "layers.1.self_attention.indexer.linear_wq_b.weight",
+        "layers.1.self_attention.indexer.linear_weights_proj.weight",
+        "layers.1.self_attention.indexer.compressor.ape",
+        "layers.1.self_attention.indexer.compressor.wkv.weight",
+        "layers.1.self_attention.indexer.compressor.wgate.weight",
+        "layers.1.self_attention.indexer.compressor.norm.weight",
+        "hc_head_params.hc_head_fn",
+        "hc_head_params.hc_head_base",
+        "hc_head_params.hc_head_scale"
+      ]
+    },
+    "sparse": {
+      "loss": -0.004394316114485264,
+      "max_param_grad_norm": 0.141496941447258,
+      "num_params_with_grad": 29,
+      "params_without_grad": [
+        "layers.0.hc_attn_fn",
+        "layers.0.hc_attn_base",
+        "layers.0.hc_attn_scale",
+        "layers.0.hc_ffn_fn",
+        "layers.0.hc_ffn_base",
+        "layers.0.hc_ffn_scale",
+        "layers.1.hc_attn_fn",
+        "layers.1.hc_attn_base",
+        "layers.1.hc_attn_scale",
+        "layers.1.hc_ffn_fn",
+        "layers.1.hc_ffn_base",
+        "layers.1.hc_ffn_scale",
+        "layers.1.self_attention.indexer.linear_wq_b.weight",
+        "layers.1.self_attention.indexer.linear_weights_proj.weight",
+        "layers.1.self_attention.indexer.compressor.ape",
+        "layers.1.self_attention.indexer.compressor.wkv.weight",
+        "layers.1.self_attention.indexer.compressor.wgate.weight",
+        "layers.1.self_attention.indexer.compressor.norm.weight",
+        "hc_head_params.hc_head_fn",
+        "hc_head_params.hc_head_base",
+        "hc_head_params.hc_head_scale"
+      ]
+    },
+    "tilelang": {
+      "loss": -0.004408147651702166,
+      "max_param_grad_norm": 0.14156140387058258,
+      "num_params_with_grad": 29,
+      "params_without_grad": [
+        "layers.0.hc_attn_fn",
+        "layers.0.hc_attn_base",
+        "layers.0.hc_attn_scale",
+        "layers.0.hc_ffn_fn",
+        "layers.0.hc_ffn_base",
+        "layers.0.hc_ffn_scale",
+        "layers.1.hc_attn_fn",
+        "layers.1.hc_attn_base",
+        "layers.1.hc_attn_scale",
+        "layers.1.hc_ffn_fn",
+        "layers.1.hc_ffn_base",
+        "layers.1.hc_ffn_scale",
+        "layers.1.self_attention.indexer.linear_wq_b.weight",
+        "layers.1.self_attention.indexer.linear_weights_proj.weight",
+        "layers.1.self_attention.indexer.compressor.ape",
+        "layers.1.self_attention.indexer.compressor.wkv.weight",
+        "layers.1.self_attention.indexer.compressor.wgate.weight",
+        "layers.1.self_attention.indexer.compressor.norm.weight",
+        "hc_head_params.hc_head_fn",
+        "hc_head_params.hc_head_base",
+        "hc_head_params.hc_head_scale"
+      ]
+    }
+  },
+  "num_parameters": 134050561,
+  "scope": "Megatron TransformerBlock with Miles DeepSeek-V4 spec, HC block expand/head, two layers with compress_ratios [0, 4], MLP, final layernorm",
+  "seed": 20260531,
+  "seqlen": 8,
+  "status": "PASS",
+  "synthetic_config": {
+    "dsv4_compress_ratios": [
+      0,
+      4
+    ],
+    "dsv4_hc_mult": 4,
+    "dsv4_hc_sinkhorn_iters": 2,
+    "ffn_hidden_size": 1024,
+    "hidden_size": 4096,
+    "normalization": "RMSNorm",
+    "num_attention_heads": 8,
+    "num_layers": 2
+  },
+  "thresholds": {
+    "max_input_grad_abs": 2e-06,
+    "max_output_abs": 0.05,
+    "max_rel_gap": 6e-05,
+    "max_state_abs": 1e-07
+  }
+}

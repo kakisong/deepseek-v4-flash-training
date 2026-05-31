@@ -1,0 +1,46 @@
+{
+  "checks": {
+    "act_quant_official_compatible": {
+      "api_supports_inplace": true,
+      "api_supports_scale_dtype": true,
+      "casts_scale_to_kernel_dtype": true,
+      "has_fe8m0_dtype": true,
+      "inplace_copies_back": true,
+      "inplace_returns_input_dtype": true,
+      "inplace_returns_x": true,
+      "kernel_supports_inplace": true,
+      "uses_requested_scale_dtype": true
+    },
+    "attention_kv_qat_non_rope_only": {
+      "old_full_kv_qat_pattern_absent": true,
+      "preserves_rope_slice": true,
+      "qats_non_rope_slice": true,
+      "uses_torch_cat": true
+    },
+    "attention_trace_gating": {
+      "has_detach_float_cpu_capture": true,
+      "has_trace_env_guard": true
+    },
+    "compressor_qat_no_overlap_write": {
+      "old_slice_assignment_absent": true,
+      "preserves_rope_tail": true,
+      "qats_nope_slice_contiguous": true,
+      "uses_torch_cat": true
+    },
+    "qat_simulation_contract": {
+      "does_not_request_ue8m0_scales": true,
+      "uses_fp32_scales": true,
+      "uses_inplace_act_quant": true
+    }
+  },
+  "conclusion": "Current source contains the precision fix shapes for non-RoPE KV QAT, official-compatible in-place act_quant with FP32 scales, no-overlap compressor QAT, and trace gating; linked numerical artifacts remain passing.",
+  "date": "2026-05-31",
+  "failures": [],
+  "linked_artifacts": {
+    "deepseek-v4-attention-trace-replay-qatsim-0415-20260531.json": "PASS",
+    "deepseek-v4-operator-math-20260531.json": "PASS",
+    "deepseek-v4-proof-ledger-20260531.json": "PASS"
+  },
+  "scope": "DeepSeek-V4 source regression guards for precision fixes",
+  "status": "PASS"
+}

@@ -1,0 +1,48 @@
+{
+  "atol": 0.02,
+  "checkpoint": "4-layer DeepSeek-V4 mini checkpoint, first layer only",
+  "label": "official_inference_vs_miles_bf16_sparse_1layer",
+  "max_abs": 0.2347126007080078,
+  "mean_abs": 0.04502306506037712,
+  "miles_runtime": "BF16 Linear + KV QAT + sparse torch attention",
+  "miles_summary": {
+    "max": -0.012261959724128246,
+    "mean": -18.275920867919922,
+    "min": -40.9609375,
+    "num_samples": 1,
+    "num_tokens": 402,
+    "sha256": "92c6a22220ba48c217da5ec58fe8901826d5923ae8b9032e32f1d05c38fd49cc"
+  },
+  "mismatches": 123,
+  "num_samples": 1,
+  "num_tokens": 402,
+  "official_summary": {
+    "max": -0.012867515906691551,
+    "mean": -18.268766403198242,
+    "min": -41.07549285888672,
+    "num_samples": 1,
+    "num_tokens": 402,
+    "sha256": "b026f8cbfe6fd32ef31eb6f18942798df345cb251ca3e8c7a82f6e9036e65096"
+  },
+  "p50_abs": 0.032647132873535156,
+  "p95_abs": 0.13187453150749207,
+  "p99_abs": 0.18951721489429474,
+  "reference": "DeepSeek-V4 official inference Transformer",
+  "relative_l2_gap": 4.940713539958175e-06,
+  "rollout": {
+    "max_total_length": 505,
+    "num_samples": 1,
+    "num_tokens": 402
+  },
+  "rtol": 0.002,
+  "samples": [
+    {
+      "max_abs": 0.2347126007080078,
+      "mean_abs": 0.04502306506037712,
+      "mismatches": 123,
+      "sample": 0,
+      "tokens": 402
+    }
+  ],
+  "status": "FAIL"
+}

@@ -1,0 +1,245 @@
+{
+  "comparisons": [
+    {
+      "atol": 0.02,
+      "exact_equal": true,
+      "left_shape": [
+        512,
+        4096
+      ],
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "mismatch_limit": 0,
+      "mismatches": 0,
+      "name": "official_formula_total_replay_vs_official_ffn",
+      "nonzero_abs_count": 0,
+      "numel": 2097152,
+      "p95_abs": 0.0,
+      "p99_abs": 0.0,
+      "relative_l2_gap": 0.0,
+      "right_shape": [
+        512,
+        4096
+      ],
+      "rtol": 0.002,
+      "status": "PASS"
+    },
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        4096
+      ],
+      "max_abs": 0.25,
+      "mean_abs": 0.0008694053394719958,
+      "mismatch_limit": 0,
+      "mismatches": 6907,
+      "name": "miles_official_formula_total_replay_vs_miles_ffn",
+      "nonzero_abs_count": 908778,
+      "numel": 2097152,
+      "p95_abs": 0.00390625,
+      "p99_abs": 0.0078125,
+      "relative_l2_gap": 7.582827647678592e-06,
+      "right_shape": [
+        512,
+        4096
+      ],
+      "rtol": 0.002,
+      "status": "FAIL"
+    },
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        4096
+      ],
+      "max_abs": 0.125,
+      "mean_abs": 0.0006008074851706624,
+      "mismatch_limit": 0,
+      "mismatches": 4559,
+      "name": "miles_megatron_bf16_formula_total_replay_vs_miles_ffn",
+      "nonzero_abs_count": 653360,
+      "numel": 2097152,
+      "p95_abs": 0.001953125,
+      "p99_abs": 0.0078125,
+      "relative_l2_gap": 5.33511694711386e-06,
+      "right_shape": [
+        512,
+        4096
+      ],
+      "rtol": 0.002,
+      "status": "FAIL"
+    },
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        4096
+      ],
+      "max_abs": 0.06249809265136719,
+      "mean_abs": 0.0005944701260887086,
+      "mismatch_limit": 0,
+      "mismatches": 42,
+      "name": "official_formula_replay_vs_official_routed_derived",
+      "nonzero_abs_count": 1991509,
+      "numel": 2097152,
+      "p95_abs": 0.00177001953125,
+      "p99_abs": 0.00379180908203125,
+      "relative_l2_gap": 1.900589986281176e-06,
+      "right_shape": [
+        512,
+        4096
+      ],
+      "rtol": 0.002,
+      "status": "FAIL"
+    },
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        4096
+      ],
+      "max_abs": 0.2587699890136719,
+      "mean_abs": 0.0010870685800909996,
+      "mismatch_limit": 0,
+      "mismatches": 4781,
+      "name": "miles_official_formula_replay_vs_miles_routed_derived",
+      "nonzero_abs_count": 2069007,
+      "numel": 2097152,
+      "p95_abs": 0.002685546875,
+      "p99_abs": 0.007781982421875,
+      "relative_l2_gap": 7.853447421823923e-06,
+      "right_shape": [
+        512,
+        4096
+      ],
+      "rtol": 0.002,
+      "status": "FAIL"
+    },
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        4096
+      ],
+      "max_abs": 0.177581787109375,
+      "mean_abs": 0.0008681508479639888,
+      "mismatch_limit": 0,
+      "mismatches": 2412,
+      "name": "miles_megatron_bf16_formula_replay_vs_miles_routed_derived",
+      "nonzero_abs_count": 2054228,
+      "numel": 2097152,
+      "p95_abs": 0.00238037109375,
+      "p99_abs": 0.0059661865234375,
+      "relative_l2_gap": 5.176904311343655e-06,
+      "right_shape": [
+        512,
+        4096
+      ],
+      "rtol": 0.002,
+      "status": "FAIL"
+    },
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        4096
+      ],
+      "max_abs": 0.1497802734375,
+      "mean_abs": 0.0009835879318416119,
+      "mismatch_limit": 0,
+      "mismatches": 7816,
+      "name": "miles_official_formula_replay_vs_official_formula_replay",
+      "nonzero_abs_count": 2065136,
+      "numel": 2097152,
+      "p95_abs": 0.002197265625,
+      "p99_abs": 0.005523681640625,
+      "relative_l2_gap": 8.89354922384289e-06,
+      "right_shape": [
+        512,
+        4096
+      ],
+      "rtol": 0.002,
+      "status": "FAIL"
+    },
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        4096
+      ],
+      "max_abs": 0.1250762939453125,
+      "mean_abs": 0.0005323326913639903,
+      "mismatch_limit": 0,
+      "mismatches": 2554,
+      "name": "miles_megatron_bf16_formula_replay_vs_miles_official_formula_replay",
+      "nonzero_abs_count": 2031159,
+      "numel": 2097152,
+      "p95_abs": 0.00128173828125,
+      "p99_abs": 0.002227783203125,
+      "relative_l2_gap": 2.7609577452070155e-06,
+      "right_shape": [
+        512,
+        4096
+      ],
+      "rtol": 0.002,
+      "status": "FAIL"
+    },
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        4096
+      ],
+      "max_abs": 0.2509765625,
+      "mean_abs": 0.0013196724466979504,
+      "mismatch_limit": 0,
+      "mismatches": 10775,
+      "name": "official_routed_derived_vs_miles_routed_derived",
+      "nonzero_abs_count": 1347373,
+      "numel": 2097152,
+      "p95_abs": 0.00390625,
+      "p99_abs": 0.0078125,
+      "relative_l2_gap": 1.6837643582956474e-05,
+      "right_shape": [
+        512,
+        4096
+      ],
+      "rtol": 0.002,
+      "status": "FAIL"
+    }
+  ],
+  "key_checks": {
+    "megatron_bf16_formula_is_closer_to_miles_than_official_formula": true,
+    "official_formula_total_replay_matches_official_ffn": true,
+    "official_vs_miles_uses_same_expert_indices": true
+  },
+  "router": {
+    "num_tokens": 512,
+    "num_unique_experts": 256,
+    "topk": 6
+  },
+  "status": "PASS_WITH_DRIFT_RECORDED",
+  "swiglu_limit": 10.0,
+  "weights": {
+    "fc1_shape": [
+      256,
+      4096,
+      4096
+    ],
+    "fc2_shape": [
+      256,
+      4096,
+      2048
+    ],
+    "selected_expert_weight_sha256_first64": "33947cfdd101d9259ed9ff1e7625fde66892d7b4de05b0fbcc06426e7acfedee"
+  }
+}

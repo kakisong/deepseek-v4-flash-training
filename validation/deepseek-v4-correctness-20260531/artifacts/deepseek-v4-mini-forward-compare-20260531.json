@@ -1,0 +1,160 @@
+{
+  "checkpoint": "4-layer DeepSeek-V4 mini SFT checkpoint",
+  "compare_results": [
+    {
+      "label": "dense_vs_sparse",
+      "max_abs": 0.5140819549560547,
+      "mean_abs": 0.07136902213096619,
+      "mismatches": 205,
+      "num_tokens": 402,
+      "p50_abs": 0.05678081512451172,
+      "p95_abs": 0.20307272672653198,
+      "p99_abs": 0.3139069080352783,
+      "relative_l2_gap": 1.547721555139603e-05,
+      "samples": [
+        {
+          "max_abs": 0.5140819549560547,
+          "mean_abs": 0.07136902213096619,
+          "mismatches": 205,
+          "sample": 0,
+          "tokens": 402
+        }
+      ],
+      "status": "FAIL"
+    },
+    {
+      "label": "sparse_vs_tilelang",
+      "max_abs": 0.5107736587524414,
+      "mean_abs": 0.06761329621076584,
+      "mismatches": 201,
+      "num_tokens": 402,
+      "p50_abs": 0.05283689498901367,
+      "p95_abs": 0.18860189616680145,
+      "p99_abs": 0.3211056888103485,
+      "relative_l2_gap": 1.4695730324199019e-05,
+      "samples": [
+        {
+          "max_abs": 0.5107736587524414,
+          "mean_abs": 0.06761329621076584,
+          "mismatches": 201,
+          "sample": 0,
+          "tokens": 402
+        }
+      ],
+      "status": "FAIL"
+    },
+    {
+      "label": "dense_vs_tilelang",
+      "max_abs": 0.4274272918701172,
+      "mean_abs": 0.07597572356462479,
+      "mismatches": 200,
+      "num_tokens": 402,
+      "p50_abs": 0.060126304626464844,
+      "p95_abs": 0.23514626920223236,
+      "p99_abs": 0.36354541778564453,
+      "relative_l2_gap": 1.746831999693832e-05,
+      "samples": [
+        {
+          "max_abs": 0.4274272918701172,
+          "mean_abs": 0.07597572356462479,
+          "mismatches": 200,
+          "sample": 0,
+          "tokens": 402
+        }
+      ],
+      "status": "FAIL"
+    }
+  ],
+  "forward_outputs": [
+    {
+      "attention_impl": "dense",
+      "max": -0.010098082944750786,
+      "mean": -16.966196060180664,
+      "min": -40.0703125,
+      "sha256": "18f3d8d7f3a69159d897ade39e339843ecf313d25c0d45f7284e73bb339a5134"
+    },
+    {
+      "attention_impl": "sparse",
+      "max": -0.010389292612671852,
+      "mean": -16.966716766357422,
+      "min": -40.2734375,
+      "sha256": "a84be69b26396bf20c86ea00fa3af2fd03c207b092bb063a3e5306a6a4640235"
+    },
+    {
+      "attention_impl": "tilelang",
+      "max": -0.010109529830515385,
+      "mean": -16.961605072021484,
+      "min": -40.21875,
+      "sha256": "faf287166d006333934aa7c69092fdaa6e71d056ac1f6fcba2b2b3f3887c3017"
+    }
+  ],
+  "non_deterministic_baseline": {
+    "dense_repeat_exact": {
+      "label": "dense_repeat_without_deterministic_runtime_exact",
+      "max_abs": 0.2655487060546875,
+      "mean_abs": 0.04024806246161461,
+      "mismatches": 394,
+      "num_tokens": 402,
+      "p50_abs": 0.02899456024169922,
+      "p95_abs": 0.12321452796459198,
+      "p99_abs": 0.18234984576702118,
+      "relative_l2_gap": 5.303160599323675e-06,
+      "samples": [
+        {
+          "max_abs": 0.2655487060546875,
+          "mean_abs": 0.04024806246161461,
+          "mismatches": 394,
+          "sample": 0,
+          "tokens": 402
+        }
+      ],
+      "status": "FAIL"
+    },
+    "dense_repeat_strict_threshold": {
+      "label": "dense_repeat_without_deterministic_runtime",
+      "max_abs": 0.2655487060546875,
+      "mean_abs": 0.04024806246161461,
+      "mismatches": 122,
+      "num_tokens": 402,
+      "p50_abs": 0.02899456024169922,
+      "p95_abs": 0.12321452796459198,
+      "p99_abs": 0.18234984576702118,
+      "relative_l2_gap": 5.303160599323675e-06,
+      "samples": [
+        {
+          "max_abs": 0.2655487060546875,
+          "mean_abs": 0.04024806246161461,
+          "mismatches": 122,
+          "sample": 0,
+          "tokens": 402
+        }
+      ],
+      "status": "FAIL"
+    }
+  },
+  "repeatability_checks": [
+    {
+      "label": "dense_repeat_with_deterministic_runtime_exact",
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "mismatches": 0,
+      "num_tokens": 402,
+      "relative_l2_gap": 0.0,
+      "status": "PASS"
+    }
+  ],
+  "rollout": {
+    "num_samples": 1,
+    "num_tokens": 402
+  },
+  "runtime": {
+    "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
+    "NCCL_ALGO": "Ring",
+    "deterministic_mode": true
+  },
+  "seed": 20260531,
+  "strict_compare_threshold": {
+    "atol": 0.02,
+    "rtol": 0.002
+  }
+}

@@ -1,0 +1,1191 @@
+{
+  "backend_cases": [
+    {
+      "activation_replay": {
+        "replay_modules": [],
+        "replay_stats": {},
+        "stage": "off"
+      },
+      "case": "off",
+      "compare_to_dense": {
+        "exact_equal": false,
+        "max_abs": 0.255859375,
+        "mean_abs": 0.030136708170175552,
+        "mismatches": 84,
+        "num_tokens": 402,
+        "p50_abs": 0.015871047973632812,
+        "p95_abs": 0.11663676053285599,
+        "p99_abs": 0.13741271197795868,
+        "relative_l2_gap": 3.490060837885167e-06,
+        "status": "FAIL"
+      },
+      "description": "routing replay only, no dense activation injection",
+      "impl": "sparse",
+      "improvement_vs_off": {
+        "mean_abs_reduction": 0.0,
+        "mismatch_reduction": 0,
+        "relative_l2_gap_reduction": 0.0
+      },
+      "routing_replay": {
+        "file_name": "dsv4-mini-subrouting.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.008543252013623714,
+        "mean": -16.89225196838379,
+        "min": -40.4453125,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "41969834efd943f342176c30db32a0018aec255821961308a39771a76a14e818"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.layers.0.self_attention"
+        ],
+        "replay_stats": {
+          "module.decoder.layers.0.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.0625,
+            "pre_replay_mean_abs": 0.006124485284090042,
+            "pre_replay_nonzero_abs_count": 1423174,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "attn0",
+      "compare_to_dense": {
+        "exact_equal": false,
+        "max_abs": 0.25,
+        "mean_abs": 0.015565270557999611,
+        "mismatches": 33,
+        "num_tokens": 402,
+        "p50_abs": 0.004185676574707031,
+        "p95_abs": 0.06992443650960922,
+        "p99_abs": 0.11235504597425461,
+        "relative_l2_gap": 1.5783617770548375e-06,
+        "status": "FAIL"
+      },
+      "description": "inject dense self_attention output for layer 0 only",
+      "impl": "sparse",
+      "improvement_vs_off": {
+        "mean_abs_reduction": 0.014571437612175941,
+        "mismatch_reduction": 51,
+        "relative_l2_gap_reduction": 1.9116990608303297e-06
+      },
+      "routing_replay": {
+        "file_name": "dsv4-mini-subrouting.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.008524577133357525,
+        "mean": -16.888132095336914,
+        "min": -40.46484375,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "4d8c53453889d945db52d7e74404c6dd6735124d2c9ecda1fc59f347af9fe220"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.layers.1.self_attention"
+        ],
+        "replay_stats": {
+          "module.decoder.layers.1.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.0625,
+            "pre_replay_mean_abs": 0.007500836625695229,
+            "pre_replay_nonzero_abs_count": 1538699,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "attn1",
+      "compare_to_dense": {
+        "exact_equal": false,
+        "max_abs": 0.255859375,
+        "mean_abs": 0.02985672652721405,
+        "mismatches": 84,
+        "num_tokens": 402,
+        "p50_abs": 0.01668405532836914,
+        "p95_abs": 0.10885819792747498,
+        "p99_abs": 0.13416585326194763,
+        "relative_l2_gap": 3.3992384976810897e-06,
+        "status": "FAIL"
+      },
+      "description": "inject dense self_attention output for layer 1 only",
+      "impl": "sparse",
+      "improvement_vs_off": {
+        "mean_abs_reduction": 0.0002799816429615021,
+        "mismatch_reduction": 0,
+        "relative_l2_gap_reduction": 9.082234020407753e-08
+      },
+      "routing_replay": {
+        "file_name": "dsv4-mini-subrouting.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.008325276896357536,
+        "mean": -16.890743255615234,
+        "min": -40.453125,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "e48a755a3f18f30ae489dc60c022d5f99cbbcabfd700b70794e55f05a90d60ac"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.layers.2.self_attention"
+        ],
+        "replay_stats": {
+          "module.decoder.layers.2.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.06640625,
+            "pre_replay_mean_abs": 0.0070840055122971535,
+            "pre_replay_nonzero_abs_count": 1647994,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "attn2",
+      "compare_to_dense": {
+        "exact_equal": false,
+        "max_abs": 0.255859375,
+        "mean_abs": 0.03189099580049515,
+        "mismatches": 88,
+        "num_tokens": 402,
+        "p50_abs": 0.01581096649169922,
+        "p95_abs": 0.11767768114805222,
+        "p99_abs": 0.15541398525238037,
+        "relative_l2_gap": 4.036628672099418e-06,
+        "status": "FAIL"
+      },
+      "description": "inject dense self_attention output for layer 2 only",
+      "impl": "sparse",
+      "improvement_vs_off": {
+        "mean_abs_reduction": -0.0017542876303195953,
+        "mismatch_reduction": -4,
+        "relative_l2_gap_reduction": -5.46567834214251e-07
+      },
+      "routing_replay": {
+        "file_name": "dsv4-mini-subrouting.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.008539116010069847,
+        "mean": -16.890499114990234,
+        "min": -40.4296875,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "dbc686997e6e5b6d45d9d3139e052d3fef8a3cc3a97c655b4cd0e7e2e041912c"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.layers.3.self_attention"
+        ],
+        "replay_stats": {
+          "module.decoder.layers.3.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.125,
+            "pre_replay_mean_abs": 0.0074103763327002525,
+            "pre_replay_nonzero_abs_count": 1618643,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "attn3",
+      "compare_to_dense": {
+        "exact_equal": false,
+        "max_abs": 0.25390625,
+        "mean_abs": 0.03067130409181118,
+        "mismatches": 81,
+        "num_tokens": 402,
+        "p50_abs": 0.016027450561523438,
+        "p95_abs": 0.11657441407442093,
+        "p99_abs": 0.1410316675901413,
+        "relative_l2_gap": 3.7028001484973316e-06,
+        "status": "FAIL"
+      },
+      "description": "inject dense self_attention output for layer 3 only",
+      "impl": "sparse",
+      "improvement_vs_off": {
+        "mean_abs_reduction": -0.0005345959216356277,
+        "mismatch_reduction": 3,
+        "relative_l2_gap_reduction": -2.1273931061216445e-07
+      },
+      "routing_replay": {
+        "file_name": "dsv4-mini-subrouting.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.008550935424864292,
+        "mean": -16.890859603881836,
+        "min": -40.453125,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "3e174afb09e4134512532dcc21d07b5c32bbc6bd2ebacf4969cfb2989697c133"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.layers.0.self_attention",
+          "module.decoder.layers.1.self_attention"
+        ],
+        "replay_stats": {
+          "module.decoder.layers.0.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.0625,
+            "pre_replay_mean_abs": 0.006124485284090042,
+            "pre_replay_nonzero_abs_count": 1423174,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          },
+          "module.decoder.layers.1.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.03515625,
+            "pre_replay_mean_abs": 0.003262903308495879,
+            "pre_replay_nonzero_abs_count": 1120498,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "attn_prefix2",
+      "compare_to_dense": {
+        "exact_equal": false,
+        "max_abs": 0.248046875,
+        "mean_abs": 0.014432772994041443,
+        "mismatches": 27,
+        "num_tokens": 402,
+        "p50_abs": 0.0033922195434570312,
+        "p95_abs": 0.06568317860364914,
+        "p99_abs": 0.12301933765411377,
+        "relative_l2_gap": 1.5176156631380167e-06,
+        "status": "FAIL"
+      },
+      "description": "inject dense self_attention outputs for layers 0..1",
+      "impl": "sparse",
+      "improvement_vs_off": {
+        "mean_abs_reduction": 0.01570393517613411,
+        "mismatch_reduction": 57,
+        "relative_l2_gap_reduction": 1.9724451747471505e-06
+      },
+      "routing_replay": {
+        "file_name": "dsv4-mini-subrouting.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.008301514200866222,
+        "mean": -16.888221740722656,
+        "min": -40.46875,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "01c3f2988fdd699ced8337832c1c7f6ff72053db9dd8ca56fc6fe04b73d8bd8a"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.layers.0.self_attention",
+          "module.decoder.layers.1.self_attention",
+          "module.decoder.layers.2.self_attention"
+        ],
+        "replay_stats": {
+          "module.decoder.layers.0.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.0625,
+            "pre_replay_mean_abs": 0.006124485284090042,
+            "pre_replay_nonzero_abs_count": 1423174,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          },
+          "module.decoder.layers.1.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.03515625,
+            "pre_replay_mean_abs": 0.003262903308495879,
+            "pre_replay_nonzero_abs_count": 1120498,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          },
+          "module.decoder.layers.2.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.0625,
+            "pre_replay_mean_abs": 0.004377629607915878,
+            "pre_replay_nonzero_abs_count": 1435198,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "attn_prefix3",
+      "compare_to_dense": {
+        "exact_equal": false,
+        "max_abs": 0.12876510620117188,
+        "mean_abs": 0.008787469938397408,
+        "mismatches": 14,
+        "num_tokens": 402,
+        "p50_abs": 0.0011410713195800781,
+        "p95_abs": 0.03917451575398445,
+        "p99_abs": 0.09391536563634872,
+        "relative_l2_gap": 5.462808200240588e-07,
+        "status": "FAIL"
+      },
+      "description": "inject dense self_attention outputs for layers 0..2",
+      "impl": "sparse",
+      "improvement_vs_off": {
+        "mean_abs_reduction": 0.021349238231778145,
+        "mismatch_reduction": 70,
+        "relative_l2_gap_reduction": 2.9437800178611084e-06
+      },
+      "routing_replay": {
+        "file_name": "dsv4-mini-subrouting.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.00830872543156147,
+        "mean": -16.890045166015625,
+        "min": -40.47265625,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "effc9de275c6d0ecf1714df2ae31d333e01e8dcb34d69a54237f9849592ea9cf"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.layers.0.self_attention",
+          "module.decoder.layers.1.self_attention",
+          "module.decoder.layers.2.self_attention",
+          "module.decoder.layers.3.self_attention"
+        ],
+        "replay_stats": {
+          "module.decoder.layers.0.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.0625,
+            "pre_replay_mean_abs": 0.006124485284090042,
+            "pre_replay_nonzero_abs_count": 1423174,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          },
+          "module.decoder.layers.1.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.03515625,
+            "pre_replay_mean_abs": 0.003262903308495879,
+            "pre_replay_nonzero_abs_count": 1120498,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          },
+          "module.decoder.layers.2.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.0625,
+            "pre_replay_mean_abs": 0.004377629607915878,
+            "pre_replay_nonzero_abs_count": 1435198,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          },
+          "module.decoder.layers.3.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.0625,
+            "pre_replay_mean_abs": 0.002733895555138588,
+            "pre_replay_nonzero_abs_count": 1137151,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "all_attn",
+      "compare_to_dense": {
+        "exact_equal": true,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "mismatches": 0,
+        "num_tokens": 402,
+        "p50_abs": 0.0,
+        "p95_abs": 0.0,
+        "p99_abs": 0.0,
+        "relative_l2_gap": 0.0,
+        "status": "PASS"
+      },
+      "description": "inject dense self_attention outputs for layers 0..3",
+      "impl": "sparse",
+      "improvement_vs_off": {
+        "mean_abs_reduction": 0.030136708170175552,
+        "mismatch_reduction": 84,
+        "relative_l2_gap_reduction": 3.490060837885167e-06
+      },
+      "routing_replay": {
+        "file_name": "dsv4-mini-subrouting.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.008309789933264256,
+        "mean": -16.889389038085938,
+        "min": -40.47265625,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "7877e2afc5c84cfc21904fbfac14cc8916ca18104109f6242263ba9eb2107b24"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [],
+        "replay_stats": {},
+        "stage": "off"
+      },
+      "case": "off",
+      "compare_to_dense": {
+        "exact_equal": false,
+        "max_abs": 0.2412109375,
+        "mean_abs": 0.028718464076519012,
+        "mismatches": 75,
+        "num_tokens": 402,
+        "p50_abs": 0.015524864196777344,
+        "p95_abs": 0.11070670187473297,
+        "p99_abs": 0.143231600522995,
+        "relative_l2_gap": 3.2778709475600465e-06,
+        "status": "FAIL"
+      },
+      "description": "routing replay only, no dense activation injection",
+      "impl": "tilelang",
+      "improvement_vs_off": {
+        "mean_abs_reduction": 0.0,
+        "mismatch_reduction": 0,
+        "relative_l2_gap_reduction": 0.0
+      },
+      "routing_replay": {
+        "file_name": "dsv4-mini-subrouting.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.00967492163181305,
+        "mean": -16.89072036743164,
+        "min": -40.44921875,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "d553b999f6b31d25dfb52c41c4f58cb9b0a47fef51148aadf4efba0fda1f3944"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.layers.0.self_attention"
+        ],
+        "replay_stats": {
+          "module.decoder.layers.0.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.0625,
+            "pre_replay_mean_abs": 0.00623230030760169,
+            "pre_replay_nonzero_abs_count": 1432896,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "attn0",
+      "compare_to_dense": {
+        "exact_equal": false,
+        "max_abs": 0.25,
+        "mean_abs": 0.015592050738632679,
+        "mismatches": 31,
+        "num_tokens": 402,
+        "p50_abs": 0.005211830139160156,
+        "p95_abs": 0.07647154480218887,
+        "p99_abs": 0.11353328824043274,
+        "relative_l2_gap": 1.4569989524870763e-06,
+        "status": "FAIL"
+      },
+      "description": "inject dense self_attention output for layer 0 only",
+      "impl": "tilelang",
+      "improvement_vs_off": {
+        "mean_abs_reduction": 0.013126413337886333,
+        "mismatch_reduction": 44,
+        "relative_l2_gap_reduction": 1.8208719950729702e-06
+      },
+      "routing_replay": {
+        "file_name": "dsv4-mini-subrouting.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.008515831083059311,
+        "mean": -16.88748550415039,
+        "min": -40.4609375,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "c598cf182ba089ed382dcaf428d644c4b630bad7d29e8be54ed220c4413aee1d"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.layers.1.self_attention"
+        ],
+        "replay_stats": {
+          "module.decoder.layers.1.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.0703125,
+            "pre_replay_mean_abs": 0.007533158641308546,
+            "pre_replay_nonzero_abs_count": 1539551,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "attn1",
+      "compare_to_dense": {
+        "exact_equal": false,
+        "max_abs": 0.1866302490234375,
+        "mean_abs": 0.02962634526193142,
+        "mismatches": 87,
+        "num_tokens": 402,
+        "p50_abs": 0.016162395477294922,
+        "p95_abs": 0.11083383113145828,
+        "p99_abs": 0.14103122055530548,
+        "relative_l2_gap": 3.277700239223691e-06,
+        "status": "FAIL"
+      },
+      "description": "inject dense self_attention output for layer 1 only",
+      "impl": "tilelang",
+      "improvement_vs_off": {
+        "mean_abs_reduction": -0.0009078811854124069,
+        "mismatch_reduction": -12,
+        "relative_l2_gap_reduction": 1.7070833635557392e-10
+      },
+      "routing_replay": {
+        "file_name": "dsv4-mini-subrouting.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.00823057722300291,
+        "mean": -16.891157150268555,
+        "min": -40.453125,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "92beca2e15eea367d8a2587396e936c184aadc884f7319b982079c3bde618b70"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.layers.2.self_attention"
+        ],
+        "replay_stats": {
+          "module.decoder.layers.2.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.0625,
+            "pre_replay_mean_abs": 0.0071021197363734245,
+            "pre_replay_nonzero_abs_count": 1648005,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "attn2",
+      "compare_to_dense": {
+        "exact_equal": false,
+        "max_abs": 0.265625,
+        "mean_abs": 0.030821340158581734,
+        "mismatches": 87,
+        "num_tokens": 402,
+        "p50_abs": 0.015697479248046875,
+        "p95_abs": 0.11670047789812088,
+        "p99_abs": 0.15217427909374237,
+        "relative_l2_gap": 3.823746180020571e-06,
+        "status": "FAIL"
+      },
+      "description": "inject dense self_attention output for layer 2 only",
+      "impl": "tilelang",
+      "improvement_vs_off": {
+        "mean_abs_reduction": -0.0021028760820627213,
+        "mismatch_reduction": -12,
+        "relative_l2_gap_reduction": -5.458752324605243e-07
+      },
+      "routing_replay": {
+        "file_name": "dsv4-mini-subrouting.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.009442904032766819,
+        "mean": -16.892492294311523,
+        "min": -40.4453125,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "7f2b7ff49897e092a2046372e542218e370017ad1f7143b9dec7de5f25f9a319"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.layers.3.self_attention"
+        ],
+        "replay_stats": {
+          "module.decoder.layers.3.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.125,
+            "pre_replay_mean_abs": 0.007476142607629299,
+            "pre_replay_nonzero_abs_count": 1622870,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "attn3",
+      "compare_to_dense": {
+        "exact_equal": false,
+        "max_abs": 0.244140625,
+        "mean_abs": 0.03084748610854149,
+        "mismatches": 85,
+        "num_tokens": 402,
+        "p50_abs": 0.01750469207763672,
+        "p95_abs": 0.11167201399803162,
+        "p99_abs": 0.13478204607963562,
+        "relative_l2_gap": 3.6115673707204365e-06,
+        "status": "FAIL"
+      },
+      "description": "inject dense self_attention output for layer 3 only",
+      "impl": "tilelang",
+      "improvement_vs_off": {
+        "mean_abs_reduction": -0.002129022032022476,
+        "mismatch_reduction": -10,
+        "relative_l2_gap_reduction": -3.3369642316039005e-07
+      },
+      "routing_replay": {
+        "file_name": "dsv4-mini-subrouting.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.00945967249572277,
+        "mean": -16.89120101928711,
+        "min": -40.4453125,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "a9c77c9ec819378d27e9515ba350f2c4ad390490ba505eb7aa0270b9356ec31a"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.layers.0.self_attention",
+          "module.decoder.layers.1.self_attention"
+        ],
+        "replay_stats": {
+          "module.decoder.layers.0.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.0625,
+            "pre_replay_mean_abs": 0.00623230030760169,
+            "pre_replay_nonzero_abs_count": 1432896,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          },
+          "module.decoder.layers.1.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.03515625,
+            "pre_replay_mean_abs": 0.0034180437214672565,
+            "pre_replay_nonzero_abs_count": 1146481,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "attn_prefix2",
+      "compare_to_dense": {
+        "exact_equal": false,
+        "max_abs": 0.25,
+        "mean_abs": 0.012565052136778831,
+        "mismatches": 22,
+        "num_tokens": 402,
+        "p50_abs": 0.0031638145446777344,
+        "p95_abs": 0.06249990314245224,
+        "p99_abs": 0.11012905836105347,
+        "relative_l2_gap": 1.1230053565958187e-06,
+        "status": "FAIL"
+      },
+      "description": "inject dense self_attention outputs for layers 0..1",
+      "impl": "tilelang",
+      "improvement_vs_off": {
+        "mean_abs_reduction": 0.01615341193974018,
+        "mismatch_reduction": 53,
+        "relative_l2_gap_reduction": 2.154865590964228e-06
+      },
+      "routing_replay": {
+        "file_name": "dsv4-mini-subrouting.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.008304587565362453,
+        "mean": -16.888593673706055,
+        "min": -40.484375,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "101d27f9e23a7d3b7fff99fe86fd22c01bfd95d1b870227824c0521400de28f3"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.layers.0.self_attention",
+          "module.decoder.layers.1.self_attention",
+          "module.decoder.layers.2.self_attention"
+        ],
+        "replay_stats": {
+          "module.decoder.layers.0.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.0625,
+            "pre_replay_mean_abs": 0.00623230030760169,
+            "pre_replay_nonzero_abs_count": 1432896,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          },
+          "module.decoder.layers.1.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.03515625,
+            "pre_replay_mean_abs": 0.0034180437214672565,
+            "pre_replay_nonzero_abs_count": 1146481,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          },
+          "module.decoder.layers.2.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.0625,
+            "pre_replay_mean_abs": 0.004430384375154972,
+            "pre_replay_nonzero_abs_count": 1440345,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "attn_prefix3",
+      "compare_to_dense": {
+        "exact_equal": false,
+        "max_abs": 0.1324310302734375,
+        "mean_abs": 0.009016213938593864,
+        "mismatches": 17,
+        "num_tokens": 402,
+        "p50_abs": 0.0009522438049316406,
+        "p95_abs": 0.04140624403953552,
+        "p99_abs": 0.10531044751405716,
+        "relative_l2_gap": 6.676312116482563e-07,
+        "status": "FAIL"
+      },
+      "description": "inject dense self_attention outputs for layers 0..2",
+      "impl": "tilelang",
+      "improvement_vs_off": {
+        "mean_abs_reduction": 0.019702250137925148,
+        "mismatch_reduction": 58,
+        "relative_l2_gap_reduction": 2.61023973591179e-06
+      },
+      "routing_replay": {
+        "file_name": "dsv4-mini-subrouting.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.00813303142786026,
+        "mean": -16.891447067260742,
+        "min": -40.46875,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "439a7e37aed17c30b3e430e3cf28d121a8fcb7e9ce14c30056da021b9abf03ea"
+      }
+    },
+    {
+      "activation_replay": {
+        "replay_modules": [
+          "module.decoder.layers.0.self_attention",
+          "module.decoder.layers.1.self_attention",
+          "module.decoder.layers.2.self_attention",
+          "module.decoder.layers.3.self_attention"
+        ],
+        "replay_stats": {
+          "module.decoder.layers.0.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.0625,
+            "pre_replay_mean_abs": 0.00623230030760169,
+            "pre_replay_nonzero_abs_count": 1432896,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          },
+          "module.decoder.layers.1.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.03515625,
+            "pre_replay_mean_abs": 0.0034180437214672565,
+            "pre_replay_nonzero_abs_count": 1146481,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          },
+          "module.decoder.layers.2.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.0625,
+            "pre_replay_mean_abs": 0.004430384375154972,
+            "pre_replay_nonzero_abs_count": 1440345,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          },
+          "module.decoder.layers.3.self_attention": {
+            "dtype": "torch.bfloat16",
+            "pre_replay_max_abs": 0.0625,
+            "pre_replay_mean_abs": 0.002877437509596348,
+            "pre_replay_nonzero_abs_count": 1164509,
+            "shape": [
+              512,
+              1,
+              4096
+            ]
+          }
+        },
+        "stage": "replay_forward"
+      },
+      "case": "all_attn",
+      "compare_to_dense": {
+        "exact_equal": true,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "mismatches": 0,
+        "num_tokens": 402,
+        "p50_abs": 0.0,
+        "p95_abs": 0.0,
+        "p99_abs": 0.0,
+        "relative_l2_gap": 0.0,
+        "status": "PASS"
+      },
+      "description": "inject dense self_attention outputs for layers 0..3",
+      "impl": "tilelang",
+      "improvement_vs_off": {
+        "mean_abs_reduction": 0.028718464076519012,
+        "mismatch_reduction": 75,
+        "relative_l2_gap_reduction": 3.2778709475600465e-06
+      },
+      "routing_replay": {
+        "file_name": "dsv4-mini-subrouting.pt",
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "record_summary": null,
+        "stage": "replay_forward"
+      },
+      "summary": {
+        "max": -0.008309789933264256,
+        "mean": -16.889389038085938,
+        "min": -40.47265625,
+        "num_samples": 1,
+        "num_tokens": 402,
+        "sha256": "7877e2afc5c84cfc21904fbfac14cc8916ca18104109f6242263ba9eb2107b24"
+      }
+    }
+  ],
+  "case_descriptions": {
+    "all_attn": "inject dense self_attention outputs for layers 0..3",
+    "attn0": "inject dense self_attention output for layer 0 only",
+    "attn1": "inject dense self_attention output for layer 1 only",
+    "attn2": "inject dense self_attention output for layer 2 only",
+    "attn3": "inject dense self_attention output for layer 3 only",
+    "attn_prefix2": "inject dense self_attention outputs for layers 0..1",
+    "attn_prefix3": "inject dense self_attention outputs for layers 0..2",
+    "off": "routing replay only, no dense activation injection"
+  },
+  "claims": {
+    "attention_prefix_injection_reduces_mismatches_monotonically_to_zero_for_both_backends": true,
+    "injecting_all_attention_outputs_recovers_dense_logprobs_bitwise_for_sparse_and_tilelang": true,
+    "injecting_layer0_attention_output_alone_reduces_mismatches_for_both_backends": true,
+    "single_later_attention_layers_are_not_sufficient_to_recover_dense_logprobs": true
+  },
+  "date": "2026-05-31",
+  "reference": {
+    "impl": "dense",
+    "routing_replay": {
+      "file_name": "dsv4-mini-subrouting.pt",
+      "num_recorded_tensors": 1,
+      "num_replays": 4,
+      "record_summary": {
+        "num_recorded_tensors": 1,
+        "num_replays": 4,
+        "rank": 0
+      },
+      "stage": "record"
+    },
+    "summary": {
+      "max": -0.008309789933264256,
+      "mean": -16.889389038085938,
+      "min": -40.47265625,
+      "num_samples": 1,
+      "num_tokens": 402,
+      "sha256": "7877e2afc5c84cfc21904fbfac14cc8916ca18104109f6242263ba9eb2107b24"
+    }
+  },
+  "scope": "4-layer DeepSeek-V4 mini checkpoint attention-layer activation replay across dense/sparse/tilelang backends",
+  "sparse_vs_tilelang": [
+    {
+      "case": "off",
+      "compare": {
+        "exact_equal": false,
+        "max_abs": 0.18173837661743164,
+        "mean_abs": 0.023490911349654198,
+        "mismatches": 59,
+        "num_tokens": 402,
+        "p50_abs": 0.011959075927734375,
+        "p95_abs": 0.09727238863706589,
+        "p99_abs": 0.12454071640968323,
+        "relative_l2_gap": 2.3368788033550913e-06,
+        "status": "FAIL"
+      },
+      "description": "routing replay only, no dense activation injection"
+    },
+    {
+      "case": "attn0",
+      "compare": {
+        "exact_equal": false,
+        "max_abs": 0.12418460845947266,
+        "mean_abs": 0.01518903486430645,
+        "mismatches": 33,
+        "num_tokens": 402,
+        "p50_abs": 0.003773212432861328,
+        "p95_abs": 0.07007759809494019,
+        "p99_abs": 0.11116789281368256,
+        "relative_l2_gap": 1.2750074497303032e-06,
+        "status": "FAIL"
+      },
+      "description": "inject dense self_attention output for layer 0 only"
+    },
+    {
+      "case": "attn1",
+      "compare": {
+        "exact_equal": false,
+        "max_abs": 0.26171875,
+        "mean_abs": 0.025502115488052368,
+        "mismatches": 68,
+        "num_tokens": 402,
+        "p50_abs": 0.01220846176147461,
+        "p95_abs": 0.10171230137348175,
+        "p99_abs": 0.12499115616083145,
+        "relative_l2_gap": 2.7921524733409697e-06,
+        "status": "FAIL"
+      },
+      "description": "inject dense self_attention output for layer 1 only"
+    },
+    {
+      "case": "attn2",
+      "compare": {
+        "exact_equal": false,
+        "max_abs": 0.16227054595947266,
+        "mean_abs": 0.02464570291340351,
+        "mismatches": 59,
+        "num_tokens": 402,
+        "p50_abs": 0.0137786865234375,
+        "p95_abs": 0.0989338830113411,
+        "p99_abs": 0.1461351066827774,
+        "relative_l2_gap": 2.39747989050354e-06,
+        "status": "FAIL"
+      },
+      "description": "inject dense self_attention output for layer 2 only"
+    },
+    {
+      "case": "attn3",
+      "compare": {
+        "exact_equal": false,
+        "max_abs": 0.16244125366210938,
+        "mean_abs": 0.023737795650959015,
+        "mismatches": 59,
+        "num_tokens": 402,
+        "p50_abs": 0.012908458709716797,
+        "p95_abs": 0.10270990431308746,
+        "p99_abs": 0.12952940165996552,
+        "relative_l2_gap": 2.397665002096261e-06,
+        "status": "FAIL"
+      },
+      "description": "inject dense self_attention output for layer 3 only"
+    },
+    {
+      "case": "attn_prefix2",
+      "compare": {
+        "exact_equal": false,
+        "max_abs": 0.2509765625,
+        "mean_abs": 0.014677598141133785,
+        "mismatches": 33,
+        "num_tokens": 402,
+        "p50_abs": 0.003000497817993164,
+        "p95_abs": 0.0699118971824646,
+        "p99_abs": 0.12703925371170044,
+        "relative_l2_gap": 1.7301707633254892e-06,
+        "status": "FAIL"
+      },
+      "description": "inject dense self_attention outputs for layers 0..1"
+    },
+    {
+      "case": "attn_prefix3",
+      "compare": {
+        "exact_equal": false,
+        "max_abs": 0.12872886657714844,
+        "mean_abs": 0.008736250922083855,
+        "mismatches": 18,
+        "num_tokens": 402,
+        "p50_abs": 0.0009136199951171875,
+        "p95_abs": 0.04079677164554596,
+        "p99_abs": 0.09512516856193542,
+        "relative_l2_gap": 6.069174263156896e-07,
+        "status": "FAIL"
+      },
+      "description": "inject dense self_attention outputs for layers 0..2"
+    },
+    {
+      "case": "all_attn",
+      "compare": {
+        "exact_equal": true,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "mismatches": 0,
+        "num_tokens": 402,
+        "p50_abs": 0.0,
+        "p95_abs": 0.0,
+        "p99_abs": 0.0,
+        "relative_l2_gap": 0.0,
+        "status": "PASS"
+      },
+      "description": "inject dense self_attention outputs for layers 0..3"
+    }
+  ],
+  "status": "PASS_WITH_LAYERWISE_ATTENTION_DRIFT_LOCALIZED",
+  "thresholds": {
+    "atol": 0.02,
+    "rtol": 0.002
+  }
+}

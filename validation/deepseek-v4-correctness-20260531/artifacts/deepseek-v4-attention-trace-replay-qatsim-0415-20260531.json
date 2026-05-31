@@ -1,0 +1,330 @@
+{
+  "attention_dtype": "bfloat16",
+  "comparisons": [
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        1,
+        64,
+        512
+      ],
+      "max_abs": 0.0625,
+      "mean_abs": 2.61895070252649e-06,
+      "mismatches": 18,
+      "name": "q_after_rope_official_vs_miles",
+      "nonzero_abs_count": 20572,
+      "numel": 16777216,
+      "p95_abs": 0.0,
+      "relative_gap": -5.963718052726108e-08,
+      "right_shape": [
+        512,
+        1,
+        64,
+        512
+      ],
+      "rtol": 0.002,
+      "status": "PASS"
+    },
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        1,
+        512
+      ],
+      "max_abs": 0.00390625,
+      "mean_abs": 7.778365329613735e-08,
+      "mismatches": 0,
+      "name": "kv_after_rope_qat_official_vs_miles",
+      "nonzero_abs_count": 38,
+      "numel": 262144,
+      "p95_abs": 0.0,
+      "relative_gap": 0.0,
+      "right_shape": [
+        512,
+        1,
+        512
+      ],
+      "rtol": 0.002,
+      "status": "PASS"
+    },
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        1,
+        64,
+        512
+      ],
+      "max_abs": 0.03125,
+      "mean_abs": 0.00011113091750303283,
+      "mismatches": 461,
+      "name": "attention_core_official_vs_miles",
+      "nonzero_abs_count": 3326429,
+      "numel": 16777216,
+      "p95_abs": 0.00048828125,
+      "relative_gap": 9.398352703859914e-07,
+      "right_shape": [
+        512,
+        1,
+        64,
+        512
+      ],
+      "rtol": 0.002,
+      "status": "PASS"
+    },
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        1,
+        8192
+      ],
+      "max_abs": 0.015625,
+      "mean_abs": 0.0006611821008846164,
+      "mismatches": 0,
+      "name": "after_wo_a_official_vs_miles",
+      "nonzero_abs_count": 1886598,
+      "numel": 4194304,
+      "p95_abs": 0.00244140625,
+      "relative_gap": 3.5309590756815723e-06,
+      "right_shape": [
+        512,
+        1,
+        8192
+      ],
+      "rtol": 0.002,
+      "status": "PASS"
+    },
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        1,
+        4096
+      ],
+      "max_abs": 0.0625,
+      "mean_abs": 0.0026297857984900475,
+      "mismatches": 3485,
+      "name": "after_wo_b_official_vs_miles",
+      "nonzero_abs_count": 988092,
+      "numel": 2097152,
+      "p95_abs": 0.0078125,
+      "relative_gap": 4.000893816691331e-06,
+      "right_shape": [
+        512,
+        1,
+        4096
+      ],
+      "rtol": 0.002,
+      "status": "PASS"
+    },
+    {
+      "exact_equal": true,
+      "mismatches": 0,
+      "name": "topk_window_indices_official_vs_expected",
+      "shape": [
+        1,
+        512,
+        128
+      ],
+      "status": "PASS",
+      "window_size": 128
+    },
+    {
+      "atol": 1e-05,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        1,
+        64,
+        512
+      ],
+      "max_abs": 1.9073486328125e-06,
+      "mean_abs": 9.406129208855418e-09,
+      "mismatches": 0,
+      "name": "dense_vs_sparse_fp32_math_replay_from_official_inputs",
+      "nonzero_abs_count": 6575178,
+      "numel": 16777216,
+      "p95_abs": 4.470348358154297e-08,
+      "relative_gap": 0.0,
+      "right_shape": [
+        512,
+        1,
+        64,
+        512
+      ],
+      "rtol": 1e-05,
+      "status": "PASS"
+    },
+    {
+      "atol": 1e-05,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        1,
+        64,
+        512
+      ],
+      "max_abs": 1.9073486328125e-06,
+      "mean_abs": 9.47945810736428e-09,
+      "mismatches": 0,
+      "name": "dense_vs_sparse_fp32_math_replay_from_miles_inputs",
+      "nonzero_abs_count": 6603121,
+      "numel": 16777216,
+      "p95_abs": 4.470348358154297e-08,
+      "relative_gap": 0.0,
+      "right_shape": [
+        512,
+        1,
+        64,
+        512
+      ],
+      "rtol": 1e-05,
+      "status": "PASS"
+    },
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        1,
+        64,
+        512
+      ],
+      "max_abs": 0.056640625,
+      "mean_abs": 0.0004766307247336954,
+      "mismatches": 1099,
+      "name": "dense_vs_sparse_bf16_production_replay_from_official_inputs",
+      "nonzero_abs_count": 7163230,
+      "numel": 16777216,
+      "p95_abs": 0.001953125,
+      "relative_gap": 5.169209369437766e-06,
+      "right_shape": [
+        512,
+        1,
+        64,
+        512
+      ],
+      "rtol": 0.002,
+      "status": "PASS"
+    },
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        1,
+        64,
+        512
+      ],
+      "max_abs": 0.056640625,
+      "mean_abs": 0.0004765739431604743,
+      "mismatches": 1099,
+      "name": "dense_vs_sparse_bf16_production_replay_from_miles_inputs",
+      "nonzero_abs_count": 7162761,
+      "numel": 16777216,
+      "p95_abs": 0.001953125,
+      "relative_gap": 5.169207547561783e-06,
+      "right_shape": [
+        512,
+        1,
+        64,
+        512
+      ],
+      "rtol": 0.002,
+      "status": "PASS"
+    },
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        1,
+        64,
+        512
+      ],
+      "max_abs": 0.03125,
+      "mean_abs": 0.00011084476136602461,
+      "mismatches": 459,
+      "name": "official_attention_core_vs_sparse_replay",
+      "nonzero_abs_count": 3321810,
+      "numel": 16777216,
+      "p95_abs": 0.00048828125,
+      "relative_gap": 9.39835491209351e-07,
+      "right_shape": [
+        512,
+        1,
+        64,
+        512
+      ],
+      "rtol": 0.002,
+      "status": "PASS"
+    },
+    {
+      "atol": 0.02,
+      "exact_equal": true,
+      "left_shape": [
+        512,
+        1,
+        64,
+        512
+      ],
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "mismatches": 0,
+      "name": "miles_attention_core_vs_sparse_replay",
+      "nonzero_abs_count": 0,
+      "numel": 16777216,
+      "p95_abs": 0.0,
+      "relative_gap": 0.0,
+      "right_shape": [
+        512,
+        1,
+        64,
+        512
+      ],
+      "rtol": 0.002,
+      "status": "PASS"
+    },
+    {
+      "atol": 0.02,
+      "exact_equal": false,
+      "left_shape": [
+        512,
+        1,
+        64,
+        512
+      ],
+      "max_abs": 0.015625,
+      "mean_abs": 7.848704512980476e-07,
+      "mismatches": 0,
+      "name": "sparse_replay_official_inputs_vs_miles_inputs",
+      "nonzero_abs_count": 33116,
+      "numel": 16777216,
+      "p95_abs": 0.0,
+      "relative_gap": 0.0,
+      "right_shape": [
+        512,
+        1,
+        64,
+        512
+      ],
+      "rtol": 0.002,
+      "status": "PASS"
+    }
+  ],
+  "device": "cuda",
+  "failures": [],
+  "miles_logprob_sha256": "f25089859568f244062e78d6ab7b6acc88846e27d91c8fa8e8dd65978fc06a21",
+  "official_logprob_sha256": "b026f8cbfe6fd32ef31eb6f18942798df345cb251ca3e8c7a82f6e9036e65096",
+  "softmax_scale": 0.04419417382415922,
+  "status": "PASS",
+  "window_size": 128
+}

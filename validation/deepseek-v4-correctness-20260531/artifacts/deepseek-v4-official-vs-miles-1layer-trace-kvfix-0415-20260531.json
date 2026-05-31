@@ -1,0 +1,404 @@
+{
+  "atol": 0.02,
+  "first_failed_trace": {
+    "exact_equal": false,
+    "max_abs": 0.0625,
+    "mean_abs": 0.007393164560198784,
+    "miles_name": "module.decoder.layers.0.self_attention.kv_norm",
+    "miles_shape": [
+      512,
+      1,
+      512
+    ],
+    "mismatches": 8822,
+    "nonzero_abs_count": 234950,
+    "numel": 262144,
+    "official_name": "layers.0.attn.kv_norm",
+    "official_shape": [
+      512,
+      1,
+      512
+    ],
+    "p95_abs": 0.01953125,
+    "relative_gap": 0.00010902831842229954,
+    "status": "FAIL"
+  },
+  "max_abs_trace": {
+    "exact_equal": false,
+    "max_abs": 0.875,
+    "mean_abs": 0.009189995937049389,
+    "miles_name": "module.decoder.layers.0.mlp",
+    "miles_shape": [
+      512,
+      1,
+      4096
+    ],
+    "mismatches": 108459,
+    "nonzero_abs_count": 1934855,
+    "numel": 2097152,
+    "official_name": "layers.0.ffn",
+    "official_shape": [
+      512,
+      1,
+      4096
+    ],
+    "p95_abs": 0.020751953125,
+    "relative_gap": 0.0002416917659711082,
+    "status": "FAIL"
+  },
+  "max_relative_trace": {
+    "exact_equal": false,
+    "max_abs": 0.265625,
+    "mean_abs": 0.03228781744837761,
+    "miles_name": "module.decoder.layers.0.self_attention.wo_b",
+    "miles_shape": [
+      512,
+      1,
+      4096
+    ],
+    "mismatches": 1222248,
+    "nonzero_abs_count": 1943697,
+    "numel": 2097152,
+    "official_name": "layers.0.attn.wo_b",
+    "official_shape": [
+      512,
+      1,
+      4096
+    ],
+    "p95_abs": 0.08203125,
+    "relative_gap": 0.0003090965398743206,
+    "status": "FAIL"
+  },
+  "miles_logprob_sha256": "0bb2d7c6cd13c917847c09c02b798c193c7d777516259db2b8365a526cf59c4e",
+  "num_compared": 14,
+  "num_failed": 8,
+  "official_logprob_sha256": "b026f8cbfe6fd32ef31eb6f18942798df345cb251ca3e8c7a82f6e9036e65096",
+  "rtol": 0.002,
+  "status": "FAIL",
+  "traces": [
+    {
+      "exact_equal": true,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "miles_name": "module.embedding.word_embeddings",
+      "miles_shape": [
+        512,
+        1,
+        4096
+      ],
+      "mismatches": 0,
+      "nonzero_abs_count": 0,
+      "numel": 2097152,
+      "official_name": "embed",
+      "official_shape": [
+        512,
+        1,
+        4096
+      ],
+      "p95_abs": 0.0,
+      "relative_gap": 0.0,
+      "status": "PASS"
+    },
+    {
+      "exact_equal": false,
+      "max_abs": 0.000244140625,
+      "mean_abs": 2.9103830456733704e-10,
+      "miles_name": "module.decoder.layers.0.input_layernorm",
+      "miles_shape": [
+        512,
+        1,
+        4096
+      ],
+      "mismatches": 0,
+      "nonzero_abs_count": 3,
+      "numel": 2097152,
+      "official_name": "layers.0.attn_norm",
+      "official_shape": [
+        512,
+        1,
+        4096
+      ],
+      "p95_abs": 0.0,
+      "relative_gap": 6.47732412151214e-08,
+      "status": "PASS"
+    },
+    {
+      "exact_equal": false,
+      "max_abs": 0.006103515625,
+      "mean_abs": 0.0010075154714286327,
+      "miles_name": "module.decoder.layers.0.self_attention.wq_a",
+      "miles_shape": [
+        512,
+        1,
+        1024
+      ],
+      "mismatches": 0,
+      "nonzero_abs_count": 470057,
+      "numel": 524288,
+      "official_name": "layers.0.attn.wq_a",
+      "official_shape": [
+        512,
+        1,
+        1024
+      ],
+      "p95_abs": 0.00244140625,
+      "relative_gap": 0.00015191764669808538,
+      "status": "PASS"
+    },
+    {
+      "exact_equal": false,
+      "max_abs": 0.003173828125,
+      "mean_abs": 0.0005207997746765614,
+      "miles_name": "module.decoder.layers.0.self_attention.q_norm",
+      "miles_shape": [
+        512,
+        1,
+        1024
+      ],
+      "mismatches": 0,
+      "nonzero_abs_count": 470978,
+      "numel": 524288,
+      "official_name": "layers.0.attn.q_norm",
+      "official_shape": [
+        512,
+        1,
+        1024
+      ],
+      "p95_abs": 0.0012664794921875,
+      "relative_gap": 0.0001471984386248737,
+      "status": "PASS"
+    },
+    {
+      "exact_equal": false,
+      "max_abs": 0.0078125,
+      "mean_abs": 0.0004340966697782278,
+      "miles_name": "module.decoder.layers.0.self_attention.wq_b",
+      "miles_shape": [
+        512,
+        1,
+        32768
+      ],
+      "mismatches": 0,
+      "nonzero_abs_count": 15133015,
+      "numel": 16777216,
+      "official_name": "layers.0.attn.wq_b",
+      "official_shape": [
+        512,
+        1,
+        32768
+      ],
+      "p95_abs": 0.001129150390625,
+      "relative_gap": 0.00011897377787251084,
+      "status": "PASS"
+    },
+    {
+      "exact_equal": false,
+      "max_abs": 0.0078125,
+      "mean_abs": 0.0010812549153342843,
+      "miles_name": "module.decoder.layers.0.self_attention.wkv",
+      "miles_shape": [
+        512,
+        1,
+        512
+      ],
+      "mismatches": 0,
+      "nonzero_abs_count": 234981,
+      "numel": 262144,
+      "official_name": "layers.0.attn.wkv",
+      "official_shape": [
+        512,
+        1,
+        512
+      ],
+      "p95_abs": 0.002685546875,
+      "relative_gap": 0.00010722654174266655,
+      "status": "PASS"
+    },
+    {
+      "exact_equal": false,
+      "max_abs": 0.0625,
+      "mean_abs": 0.007393164560198784,
+      "miles_name": "module.decoder.layers.0.self_attention.kv_norm",
+      "miles_shape": [
+        512,
+        1,
+        512
+      ],
+      "mismatches": 8822,
+      "nonzero_abs_count": 234950,
+      "numel": 262144,
+      "official_name": "layers.0.attn.kv_norm",
+      "official_shape": [
+        512,
+        1,
+        512
+      ],
+      "p95_abs": 0.01953125,
+      "relative_gap": 0.00010902831842229954,
+      "status": "FAIL"
+    },
+    {
+      "exact_equal": false,
+      "max_abs": 0.265625,
+      "mean_abs": 0.03228781744837761,
+      "miles_name": "module.decoder.layers.0.self_attention.wo_b",
+      "miles_shape": [
+        512,
+        1,
+        4096
+      ],
+      "mismatches": 1222248,
+      "nonzero_abs_count": 1943697,
+      "numel": 2097152,
+      "official_name": "layers.0.attn.wo_b",
+      "official_shape": [
+        512,
+        1,
+        4096
+      ],
+      "p95_abs": 0.08203125,
+      "relative_gap": 0.0003090965398743206,
+      "status": "FAIL"
+    },
+    {
+      "exact_equal": false,
+      "max_abs": 0.265625,
+      "mean_abs": 0.03228781744837761,
+      "miles_name": "module.decoder.layers.0.self_attention",
+      "miles_shape": [
+        512,
+        1,
+        4096
+      ],
+      "mismatches": 1222248,
+      "nonzero_abs_count": 1943697,
+      "numel": 2097152,
+      "official_name": "layers.0.attn",
+      "official_shape": [
+        512,
+        1,
+        4096
+      ],
+      "p95_abs": 0.08203125,
+      "relative_gap": 0.0003090965398743206,
+      "status": "FAIL"
+    },
+    {
+      "exact_equal": false,
+      "max_abs": 0.0751953125,
+      "mean_abs": 0.0041348752565681934,
+      "miles_name": "module.decoder.layers.0.pre_mlp_layernorm",
+      "miles_shape": [
+        512,
+        1,
+        4096
+      ],
+      "mismatches": 2786,
+      "nonzero_abs_count": 1904973,
+      "numel": 2097152,
+      "official_name": "layers.0.ffn_norm",
+      "official_shape": [
+        512,
+        1,
+        4096
+      ],
+      "p95_abs": 0.0107421875,
+      "relative_gap": 0.0002707548023841433,
+      "status": "FAIL"
+    },
+    {
+      "exact_equal": false,
+      "max_abs": 0.06640625,
+      "mean_abs": 0.005432458594441414,
+      "miles_name": "module.decoder.layers.0.mlp.shared_experts",
+      "miles_shape": [
+        512,
+        1,
+        4096
+      ],
+      "mismatches": 33853,
+      "nonzero_abs_count": 1933342,
+      "numel": 2097152,
+      "official_name": "layers.0.ffn.shared_experts",
+      "official_shape": [
+        512,
+        1,
+        4096
+      ],
+      "p95_abs": 0.015625,
+      "relative_gap": 0.00024224711962306245,
+      "status": "FAIL"
+    },
+    {
+      "exact_equal": false,
+      "max_abs": 0.875,
+      "mean_abs": 0.009189995937049389,
+      "miles_name": "module.decoder.layers.0.mlp",
+      "miles_shape": [
+        512,
+        1,
+        4096
+      ],
+      "mismatches": 108459,
+      "nonzero_abs_count": 1934855,
+      "numel": 2097152,
+      "official_name": "layers.0.ffn",
+      "official_shape": [
+        512,
+        1,
+        4096
+      ],
+      "p95_abs": 0.020751953125,
+      "relative_gap": 0.0002416917659711082,
+      "status": "FAIL"
+    },
+    {
+      "exact_equal": false,
+      "max_abs": 0.875,
+      "mean_abs": 0.0015558270970359445,
+      "miles_name": "module.decoder.layers.0",
+      "miles_shape": [
+        512,
+        1,
+        4,
+        4096
+      ],
+      "mismatches": 39340,
+      "nonzero_abs_count": 3580198,
+      "numel": 8388608,
+      "official_name": "layers.0",
+      "official_shape": [
+        512,
+        1,
+        4,
+        4096
+      ],
+      "p95_abs": 0.0072021484375,
+      "relative_gap": 0.00023144445848932715,
+      "status": "FAIL"
+    },
+    {
+      "exact_equal": false,
+      "max_abs": 0.0546875,
+      "mean_abs": 0.005454324185848236,
+      "miles_name": "module.decoder.final_layernorm",
+      "miles_shape": [
+        512,
+        1,
+        4096
+      ],
+      "mismatches": 13110,
+      "nonzero_abs_count": 1926601,
+      "numel": 2097152,
+      "official_name": "norm",
+      "official_shape": [
+        512,
+        1,
+        4096
+      ],
+      "p95_abs": 0.013671875,
+      "relative_gap": 0.0002568682170736025,
+      "status": "FAIL"
+    }
+  ]
+}

@@ -1,0 +1,134 @@
+{
+  "label": "loaded_miles_weights_vs_raw_megatron_checkpoint",
+  "selected": [
+    {
+      "exact_equal": true,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "name": "module.embedding.word_embeddings.weight",
+      "nonzero_abs_count": 0,
+      "shape": [
+        129280,
+        4096
+      ],
+      "status": "PASS"
+    },
+    {
+      "exact_equal": true,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "name": "module.decoder.layers.0.self_attention.attn_sink",
+      "nonzero_abs_count": 0,
+      "shape": [
+        64
+      ],
+      "status": "PASS"
+    },
+    {
+      "exact_equal": true,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "name": "module.decoder.layers.0.self_attention.wq_a.weight",
+      "nonzero_abs_count": 0,
+      "shape": [
+        1024,
+        4096
+      ],
+      "status": "PASS"
+    },
+    {
+      "exact_equal": true,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "name": "module.decoder.layers.0.self_attention.q_norm.weight",
+      "nonzero_abs_count": 0,
+      "shape": [
+        1024
+      ],
+      "status": "PASS"
+    },
+    {
+      "exact_equal": true,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "name": "module.decoder.layers.0.self_attention.wq_b.weight",
+      "nonzero_abs_count": 0,
+      "shape": [
+        32768,
+        1024
+      ],
+      "status": "PASS"
+    },
+    {
+      "exact_equal": true,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "name": "module.decoder.layers.0.self_attention.wkv.weight",
+      "nonzero_abs_count": 0,
+      "shape": [
+        512,
+        4096
+      ],
+      "status": "PASS"
+    },
+    {
+      "exact_equal": true,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "name": "module.decoder.layers.0.self_attention.kv_norm.weight",
+      "nonzero_abs_count": 0,
+      "shape": [
+        512
+      ],
+      "status": "PASS"
+    },
+    {
+      "exact_equal": true,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "name": "module.decoder.layers.0.self_attention.wo_a.weight",
+      "nonzero_abs_count": 0,
+      "shape": [
+        8192,
+        4096
+      ],
+      "status": "PASS"
+    },
+    {
+      "exact_equal": true,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "name": "module.decoder.layers.0.self_attention.wo_b.weight",
+      "nonzero_abs_count": 0,
+      "shape": [
+        4096,
+        8192
+      ],
+      "status": "PASS"
+    },
+    {
+      "exact_equal": true,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "name": "module.decoder.final_layernorm.weight",
+      "nonzero_abs_count": 0,
+      "shape": [
+        4096
+      ],
+      "status": "PASS"
+    },
+    {
+      "exact_equal": true,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "name": "module.output_layer.weight",
+      "nonzero_abs_count": 0,
+      "shape": [
+        129280,
+        4096
+      ],
+      "status": "PASS"
+    }
+  ],
+  "status": "PASS"
+}
