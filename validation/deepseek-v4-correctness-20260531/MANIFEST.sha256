@@ -1,4 +1,4 @@
-509f6ea0a32b96f61f6e4debda7ccd765740f93bd8f35d35a4abad4ffe33b604  ./README.md
+d8d262c0f71b9ca3f66e69779d0e481003253e1e6c24dc2667187076433da1fc  ./README.md
 2d88d23d771761f629881f4a3b0fe627a20e4c70d8937c288426d96322936de4  ./artifacts/deepseek-v4-attention-core-projection-replay-20260531.json
 d8bab6670579e82c918cb919d22909ff99ed9877bbf6805676ec51c683e4eac3  ./artifacts/deepseek-v4-attention-replay-official-miles-bf16-20260531.json
 45e5ee1c7d57851b527dc4cfe63c3a90ec09ddfd8d3434f6e78925dd929b9cf0  ./artifacts/deepseek-v4-attention-trace-replay-qatsim-0415-20260531.json
@@ -70,6 +70,7 @@ b7b485eb84ce5f95229ba7c5725c1a1ab2a49398f7316e8cea0491e8dc282f91  ./artifacts/de
 d4027e1068db9757b1259c2af84ca28e4a8236f0257cd154d4c3f8f650a94732  ./artifacts/deepseek-v4-sft-loss-train-reference-20260531.json
 b74bd7e6ba70129f1ae576dc67f3f93ae93f5eec2637e26173395fd4b168faff  ./artifacts/deepseek-v4-transformer-block-training-step-20260531.json
 c01bb65e0721f5500148ae53d336914ba3dcfb0cd4c3d21c7f31536c94efdd95  ./artifacts/deepseek-v4-transformer-block-training-step-qatsim-20260531.json
+76fc7ff5afeca52ada0a7fe1b94e71da9e611db8a89eab106068a4f61e6a2b39  ./docs/deepseek-v4-correctness-explained.md
 65c51d277e3b58d61577b0b14e4c1ea5759c908cb22c91486c3cfbf40a25c583  ./docs/deepseek-v4-hyperconnection-runtime.md
 e270d47a50dba9efc803f4275bb6de9c0c1f7fb22570af0a45b95b6349d35ec3  ./scripts/compare_deepseek_v4_official_miles_traces.py
 9715c36aed9a7f738253d7215150051ccba21e47dd475e144c75857278f6f51f  ./scripts/verify_deepseek_v4_attention_trace_replay.py

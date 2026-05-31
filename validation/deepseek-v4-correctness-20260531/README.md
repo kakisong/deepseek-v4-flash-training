@@ -4,7 +4,7 @@ This directory archives the DeepSeek-V4 training correctness validation snapshot
 
 ## Contents
 
-- `docs/`: human-readable validation write-up.
+- `docs/`: human-readable validation write-ups. Start with `docs/deepseek-v4-correctness-explained.md` for a lower-barrier explanation, then use `docs/deepseek-v4-hyperconnection-runtime.md` for the full technical detail.
 - `scripts/`: verifier and trace-comparison scripts used for the validation.
 - `artifacts/`: machine-readable JSON validation outputs.
 - `MANIFEST.sha256`: SHA256 checksums for the archived files.
