@@ -2,7 +2,7 @@
 # Stage B — 8 nodes x 8 cards H20 (64 GPUs), full DeepSeek-V4-Flash 284B SFT.
 #
 # Prerequisites:
-#   1. Stage A green (verify_chat_template + run_stage_a_smoke)
+#   1. Stage A green (verification/verify_chat_template.py + smoke/run_stage_a_smoke.sh)
 #   2. $MODELS/DeepSeek-V4-Flash_torch_dist generated and rsync'd to every node
 #      at /root/local_data/V4-Flash_torch_dist
 #   3. /root/mpi_rack_hostfile lists all node IPs (one per line)

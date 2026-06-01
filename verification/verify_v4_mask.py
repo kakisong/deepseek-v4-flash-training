@@ -19,12 +19,12 @@ import sys
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data", required=True)
-    ap.add_argument("--hf-checkpoint", default="/data_fast_v3/kaynzhang/v4-sft/models/DeepSeek-V4-Flash-bf16-unpacked")
+    ap.add_argument("--hf-checkpoint", default="/data_train/kaynzhang/v4-sft/models/DeepSeek-V4-Flash-bf16-unpacked")
     ap.add_argument("--num", type=int, default=3)
     args = ap.parse_args()
 
     # Ensure miles is importable
-    miles_root = "/data_fast_v3/kaynzhang/v4-sft/miles"
+    miles_root = "/data_train/kaynzhang/v4-sft/miles"
     sys.path.insert(0, miles_root)
 
     from miles.utils.mask_utils import MultiTurnLossMaskGenerator

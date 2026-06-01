@@ -842,6 +842,7 @@ nav.tlog-toc .toc-group.open .toc-children { display: flex; }
       <a href="#s4-15" class="toc-sub"><span class="toc-sn">4.15</span><span class="toc-st">selective recompute 死路</span></a>
       <a href="#s4-16" class="toc-sub"><span class="toc-sn">4.16</span><span class="toc-st">DeepEP -5.2%</span></a>
       <a href="#s4-17" class="toc-sub"><span class="toc-sn">4.17</span><span class="toc-st">关 cpu-offload OOM</span></a>
+      <a href="#s4-18" class="toc-sub"><span class="toc-sn">4.18</span><span class="toc-st">16节点 PP=16 winner + GRAM 表</span></a>
     </div>
   </div>
 
@@ -1116,7 +1117,7 @@ nav.tlog-toc .toc-group.open .toc-children { display: flex; }
             <ul>
               <li>必须 <b>TP ≥ 2</b>,单独 SP=on 无意义</li>
               <li>对 4K shape 收益小(activation 本来就小),对长 seq 收益大</li>
-              <li>本项目<b>默认开</b>(<code>cluster/run.sh:190</code> 的 <code>--sequence-parallel</code>),§4 性能分析数据全部在 SP=on 下测得</li>
+              <li>本项目<b>默认开</b>(<code>run.sh:190</code> 的 <code>--sequence-parallel</code>),§4 性能分析数据全部在 SP=on 下测得</li>
             </ul>
           </div>
         </div>
@@ -1400,7 +1401,7 @@ flowchart TB
         tilelang["tilelang<br/>sparse-MLA<br/>fwd / bwd kernel"]
     end
 
-    subgraph storage ["共享存储 CFS /data_fast_v3/kaynzhang/v4-sft"]
+    subgraph storage ["共享存储 CFS /data_train/kaynzhang/v4-sft"]
         weights["V4-Flash BF16<br/>权重 542 GB<br/>(由 HF FP8 转换)"]
         td["Megatron torch_dist<br/>分片权重"]
         data["OpenHermes<br/>parquet 数据"]
@@ -1808,7 +1809,7 @@ flowchart TB
 <p>整个 miles → SFT 的退化,<strong>没有改 miles 源码一行</strong>。只用 6 个 CLI flag 把 RL 数据流 → SFT 数据流、RL loss → SFT CE loss、RL 反馈环 → 顺序读训环。框架本体仍以 RL 的执行图运行(actor / rollout / placement_group / weight_sync 都还在),只是数据通路和 loss 函数被替换。</p>
 </div>
 
-<p style="font-size: 12.5px; color: var(--ink-low); margin-top: 0.9rem"><strong>顺手注 · 实际 prod 启动还有几个长开的 Megatron flag 不在上面 6 个里</strong>,但 §4 性能数据都基于它们:<code>--sequence-parallel</code>(<code>cluster/run.sh:190</code>,TP 区域沿 seq 切 activation,省 ~7/8 LN / dropout 内存,原理见 §0 primer 的 SP 卡)、<code>--pipeline-model-parallel-layout</code>(prod 默认 layout + VPP=2,§4.14)、<code>--moe-grouped-gemm</code>、<code>--moe-token-dispatcher-type alltoall</code>。完整 flag list 见 <code>cluster/run.sh</code> 和 <code>scripts/models/deepseek-v4-flash.sh</code>。</p>
+<p style="font-size: 12.5px; color: var(--ink-low); margin-top: 0.9rem"><strong>顺手注 · 实际 prod 启动还有几个长开的 Megatron flag 不在上面 6 个里</strong>,但 §4 性能数据都基于它们:<code>--sequence-parallel</code>(<code>run.sh:190</code>,TP 区域沿 seq 切 activation,省 ~7/8 LN / dropout 内存,原理见 §0 primer 的 SP 卡)、<code>--pipeline-model-parallel-layout</code>(prod 默认 layout + VPP=2,§4.14)、<code>--moe-grouped-gemm</code>、<code>--moe-token-dispatcher-type alltoall</code>。完整 flag list 见 <code>run.sh</code> 和 <code>scripts/models/deepseek-v4-flash.sh</code>。</p>
 </section>
 
 <section id="m2">
@@ -3126,7 +3127,7 @@ flowchart TB
 <table>
 <thead><tr><th>改动</th><th>文件</th><th>说明</th></tr></thead>
 <tbody>
-<tr><td><code>--profile</code> CLI flag</td><td><code>cluster/run.sh</code></td><td>自动注入 <code>--use-pytorch-profiler --profile-step-start 5 --profile-step-end 6 --profile-target train_overall --tensorboard-dir $SAVE_DIR/profiler_traces</code></td></tr>
+<tr><td><code>--profile</code> CLI flag</td><td><code>run.sh</code></td><td>自动注入 <code>--use-pytorch-profiler --profile-step-start 5 --profile-step-end 6 --profile-target train_overall --tensorboard-dir $SAVE_DIR/profiler_traces</code></td></tr>
 <tr><td>Profile defaults 改安全态</td><td><code>miles/utils/profile_utils.py</code></td><td><code>with_stack=False</code>(NCCL hang fix)/ <code>record_shapes=False</code> / <code>profile_memory=False</code> / 选 ranks <code>{0, 32, 48}</code></td></tr>
 <tr><td>Rank 选择 override</td><td><code>MILES_PROFILE_RANKS</code> env var</td><td>不同 shape 用 <code>MILES_PROFILE_RANKS=0,32,56 bash run.sh ...</code> 即可换</td></tr>
 </tbody>
@@ -3341,7 +3342,7 @@ Of the allocated memory 85.38 GiB is allocated by PyTorch, ...</code></pre>
 <tbody>
 <tr><td>Preset</td><td><code>cluster/presets/albaliang_smoke.env</code></td></tr>
 <tr><td>并行</td><td>TP=4 PP=4 CP=4 EP=8 ETP=1 DP=1</td></tr>
-<tr><td>数据</td><td><code>/data_fast_v3/kaynzhang/v4-sft/data/albaliang_057_le32k.jsonl</code>(24,360 行)</td></tr>
+<tr><td>数据</td><td><code>/data_train/kaynzhang/v4-sft/data/albaliang_057_le32k.jsonl</code>(24,360 行)</td></tr>
 <tr><td>Tokenizer</td><td>V4 sparse-MLA tokenizer(同 prod)</td></tr>
 <tr><td>max_tokens_per_gpu</td><td>8192</td></tr>
 <tr><td>Recompute</td><td>full,uniform,num_layers=1</td></tr>
@@ -3734,7 +3735,7 @@ Of the allocated memory 85.38 GiB is allocated by PyTorch, ...</code></pre>
 
 <h4>5.14.2 实现:run.sh / preset 改动</h4>
 
-<p>把 layout / VPP 做成 preset 可选(向后兼容 decoder-first/last 路径),核心是 3 个变化(<code>examples/deepseek_v4_sft/cluster/run.sh</code>):</p>
+<p>把 layout / VPP 做成 preset 可选(向后兼容 decoder-first/last 路径),核心是 3 个变化(<code>run.sh</code>):</p>
 
 <pre><code># 1. 新增 PRESET_PIPELINE_LAYOUT(自动 shell-escape '|()*' 字符,绕开 ray job 的 argv 重组)
 if [[ -n "${PRESET_PIPELINE_LAYOUT:-}" ]]; then
@@ -3941,7 +3942,7 @@ fi</code></pre>
 <li><code>--moe-router-dtype=fp32</code> —— DeepEP 在 bf16 probs 走内部 fp32 转换,加这个直接出 fp32 probs 给 dispatcher;Megatron 对 num_experts>=32 也建议 fp32 routing 数值稳定。注意这个 flag <strong>增加 router compute</strong>,所以纯 DeepEP 增益 ≥ 观测值</li>
 </ul>
 
-<p>容器内 <code>deep_ep</code> 1.2.1 已装,runtime probe ok。<code>cluster/run.sh</code> 加 <code>PRESET_MOE_DEEPEP</code> + <code>PRESET_MOE_DEEPEP_NUM_SMS</code> + <code>PRESET_MOE_ROUTER_DTYPE</code> 三个开关。</p>
+<p>容器内 <code>deep_ep</code> 1.2.1 已装,runtime probe ok。<code>run.sh</code> 加 <code>PRESET_MOE_DEEPEP</code> + <code>PRESET_MOE_DEEPEP_NUM_SMS</code> + <code>PRESET_MOE_ROUTER_DTYPE</code> 三个开关。</p>
 
 <h4>4.16.3 SM 分配 sweep(50 步 × 3 档)</h4>
 
@@ -4032,9 +4033,177 @@ fi</code></pre>
 
 <p>preset 留在 repo 作 negative-result 复现入口(<code>prod_no_offload.env</code> + run.sh 的 <code>PRESET_CPU_OFFLOAD_FLAGS=""</code> toggle 都接通了)。WRITEUP §6.2 P1 行已经有 H200 + H4 复测的入口,这里也指过去。</p>
 
+<p><strong>更新 2026-05-22</strong>:集群从 8 节点扩到 16 节点(§4.18)后,PP=16 让 per-rank Adam 从 40 GB → 2.5 GB,H4 终于真正解锁,详见下一节。</p>
+
 </section>
 
-<section id="m4">
+<section id="m4-18">
+
+<h3 id="s4-18">4.18 16 节点 PP=16 winner:H4 真正解锁,step time 5.23s 稳定 200 步(2026-05-22)</h3>
+
+<p>2026-05-21 集群从 8 节点扩到 16 节点(128 GPU)。先后试过 (a) 同 shape DP=2 + ZeRO-1 + 关 cpu-offload,(b) 16 节点 PP=16(VPP 自动 disable)。结论:<strong>(b) 是 winner,step time 5.23s</strong>(8 节点 prod 10.88s 减半再多),200 步无漂移,memory 余量充足。</p>
+
+<h4>4.18.1 实验链(每档 50 步,winner 复跑 200 步)</h4>
+
+<table>
+<thead><tr><th>配置</th><th>step median</th><th>post-init alloc / free</th><th>peak used</th><th>vs 8 节点 prod (10.88s)</th><th>verdict</th></tr></thead>
+<tbody>
+<tr><td>(基) 8 节点 prod (PP=8 VPP=2 + offload)</td><td>10.88s</td><td>24-31 / 63-72 GB</td><td>~85 GB(activation peak)</td><td>baseline</td><td>—</td></tr>
+<tr style="background: var(--bad-soft);"><td>16 节点 DP=2 + ZeRO-1 + 关 offload(同 shape)</td><td>OOM</td><td>38 GB / 54 GB</td><td>86.96 GB</td><td>—</td><td>✗ activation 还是撑爆</td></tr>
+<tr style="background: var(--bad-soft);"><td>16 节点 DP=2 + ZeRO-1 + offload(同 shape)</td><td>11.69s</td><td>—</td><td>—</td><td><strong>+7.4%</strong></td><td>✗ DP=2 跨节点 IB allreduce 抵消省的 Memcpy</td></tr>
+<tr><td>16 节点 PP=16 + offload</td><td>5.92s</td><td>14 / 79 GB</td><td>~52 GB</td><td><strong>-45.6%</strong></td><td>✓ memory 余量大</td></tr>
+<tr style="background: var(--good-soft);"><td><strong>16 节点 PP=16 + 关 offload(winner)</strong></td><td><strong>5.23s</strong></td><td>16-24 / 70-77 GB</td><td><strong>71.5 GB peak / 52.3 GB steady</strong></td><td><strong>-51.9%</strong></td><td>✓ H4 unlocked, 200 步零漂移, headroom 25%</td></tr>
+<tr><td>16 节点 PP=16 + 关 offload + DP=2 ZeRO-1</td><td>6.87s</td><td>15.8 / 77 GB</td><td>—</td><td>+31% vs winner</td><td>✗ Adam 已被 PP 切到 2.5 GB,ZeRO-1 边际收益 < 通信开销</td></tr>
+</tbody>
+</table>
+
+<h4>4.18.2 为什么 PP=16 这么有效</h4>
+
+<p>PP=8 → PP=16 几何上把每 rank 持有的 layer 数从 ~5-6 减到 ~2-3:</p>
+
+<ul>
+<li><strong>Adam state 折半</strong>:40 GB → ~2.5 GB(BF16 master + fp32 m/v 都按 layer 数缩),关 cpu-offload 完全无压力</li>
+<li><strong>Activation peak 折半</strong>:每 rank 只算 1 stage(VPP 自动 disable,因 stages_in_layout/PP = 16/16 = 1),activation 不再叠 VPP=2 的双份</li>
+<li><strong>Pipeline filling 更深</strong>:GBS=128 → 128 microbatch / PP=16 = 8/stage,比 8 节点 PP=8 的 16/8 = 2/stage 多 4×,bubble 摊薄</li>
+<li><strong>Per-stage 计算量减半</strong>:fwd/bwd 时间缩,16-stage 流水填充时间也跟着缩</li>
+</ul>
+
+<p>累积下来不是单纯的"GPU 翻倍 → 时间减半",是 (per-stage 时间 × pipeline 充实度 × Adam-state pressure 解除) 三个因素同向叠加。</p>
+
+<h4>4.18.3 H4 真正解锁的条件</h4>
+
+<p>§4.17 当时结论:8 节点 H20 上 H4 forced,因为 95 GB - 6 GB weights - 40 GB Adam - 46 GB activation peak = -3 GB,装不下。</p>
+
+<p>16 节点 PP=16 让账重做:</p>
+<table>
+<thead><tr><th>项</th><th>8 节点 PP=8</th><th>16 节点 PP=16</th></tr></thead>
+<tbody>
+<tr><td>Weights (BF16)</td><td>6-8 GB</td><td>3-4 GB</td></tr>
+<tr><td>Adam state(BF16 master + fp32 m/v)</td><td>40 GB</td><td>2.5 GB</td></tr>
+<tr><td>Activation peak(stage 内)</td><td>37-46 GB</td><td>~20 GB</td></tr>
+<tr><td><strong>合计 / 95 GB</strong></td><td><strong>~83-94 GB(逼近)</strong></td><td><strong>~26-30 GB(余量 65 GB)</strong></td></tr>
+</tbody>
+</table>
+
+<p>所以 H4 不是"换 H200 才能解锁",是"PP 翻倍把 Adam 切到能放 GPU 的尺度"。这个解锁路径比 H200 迁移成本低得多。</p>
+
+<h4>4.18.4 SM sweep 验证(SM=16/20/24)</h4>
+
+<p>4K shape PP=16 上重做 DeepEP num_sms sweep,跟 §4.16 PP=8 时的 -2.5%~-5.2% 差异验证 sweet spot 是否平移:</p>
+
+<table>
+<thead><tr><th>SM</th><th>median</th><th>vs SM=20</th></tr></thead>
+<tbody>
+<tr><td>16</td><td>5.27s</td><td>+0.4%</td></tr>
+<tr style="background: var(--good-soft);"><td><strong>20(默认)</strong></td><td><strong>5.25s</strong></td><td>baseline</td></tr>
+<tr><td>24</td><td>5.21s</td><td>-0.8%</td></tr>
+</tbody>
+</table>
+
+<p>三档差距 < 1%(noise level),不像 PP=8 时 SM=20 vs 16/32 差 2-3%。原因:PP=16 几何下每 stage 算量减半,DeepEP dispatch 频率翻倍但每次传输量更小,SM 预算的边际效用降低。<strong>保持 SM=20 默认</strong>,不再 sweep。</p>
+
+<h4>4.18.5 长跑稳定性(200 步)</h4>
+
+<table>
+<thead><tr><th>指标</th><th>值</th></tr></thead>
+<tbody>
+<tr><td>median</td><td>5.23s</td></tr>
+<tr><td>mean</td><td>5.23s</td></tr>
+<tr><td>p25 / p75</td><td>4.94 / 5.48s</td></tr>
+<tr><td>max</td><td>6.85s(无飙升)</td></tr>
+<tr><td>first half median(step 11-105)</td><td>5.23s</td></tr>
+<tr><td>second half median(step 106-200)</td><td>5.24s</td></tr>
+</tbody>
+</table>
+
+<p><strong>零漂移</strong>:前半后半 median 差 0.01s,长跑无内存碎片化、无 NCCL hang、无 step 飙升。可以放心拉 1000+ 步生产长跑。</p>
+
+<h4>4.18.6 32K shape 上的 PP=16(albaliang)</h4>
+
+<p>32K context 在 8 节点上(TP=4 PP=4 CP=4)只能跑 step ~119s + 强制 recompute=full。16 节点 PP=16 + CP=2 + TP=4 重做:</p>
+
+<table>
+<thead><tr><th>32K 配置</th><th>step median</th><th>peak used</th><th>verdict</th></tr></thead>
+<tbody>
+<tr><td>8 节点 TP=4 PP=4 CP=4 + offload + recompute=full</td><td>~119s</td><td>~85 GB</td><td>baseline (§5.13)</td></tr>
+<tr><td>16 节点 PP=16 CP=2 TP=4 + offload + recompute=full</td><td><strong>58.4s</strong>(<strong>-50.9%</strong>)</td><td>~30 GB</td><td>✓</td></tr>
+<tr><td>16 节点 PP=16 CP=2 TP=4 + 关 offload + recompute=full</td><td>57.5s(-1.5%)</td><td>~65 GB</td><td>✓ 收益微</td></tr>
+<tr style="background: var(--bad-soft);"><td>16 节点 PP=16 CP=2 TP=4 + 关 offload + recompute=none</td><td>OOM(89.45 GB allocated)</td><td>—</td><td>✗ activation 撑爆</td></tr>
+</tbody>
+</table>
+
+<p>32K 上 H4 自然解锁(PP=16 让 Adam 已经很小,关 offload 收益 -1.5% 接近 noise),但 activation 是新瓶颈 —— recompute=full 不能拿掉。32K 真正瓶颈不是 Adam,是 32K seq × MoE topk-6 的 forward activation 峰值。</p>
+
+<h4>4.18.7 64K shape 上的 PP=16</h4>
+
+<p>64K context 在 8 节点上(TP=2 PP=4 CP=8)step 225s,§4.13/§5.13 baseline。16 节点 PP=16 + CP=4 + TP=2 重做(<code>scale/tp2pp16cp4ep8</code> + <code>workload/sft_64k_pp16</code>):</p>
+
+<table>
+<thead><tr><th>64K 配置</th><th>step median</th><th>peak used</th><th>free min</th><th>vs 8 节点 (225s)</th></tr></thead>
+<tbody>
+<tr><td>8 节点 TP=2 PP=4 CP=8 + offload + recompute=full</td><td>225s</td><td>~85 GB</td><td>~10 GB</td><td>baseline</td></tr>
+<tr style="background: var(--good-soft);"><td><strong>16 节点 PP=16 CP=4 TP=2 + offload + recompute=full(winner)</strong></td><td><strong>65.9s</strong></td><td>47.7 GB</td><td>47 GB</td><td><strong>-70.7%</strong></td></tr>
+<tr><td>16 节点 PP=16 CP=4 TP=2 + 关 offload + recompute=full</td><td>65.6s</td><td>74.0 GB</td><td>21 GB</td><td>-70.8%(关 offload 仅 -0.5%,noise)</td></tr>
+</tbody>
+</table>
+
+<p><strong>超线性加速(2× GPU 拿到 3.4×)</strong>:</p>
+
+<ul>
+<li>PP 4 → 16:pipeline filling 更深,bubble 摊薄</li>
+<li>CP 8 → 4:CP ring 通信跳数减半。§5.13 验证 CP+TP NCCL 占 wall ~30%,CP 减半在 64K shape 上是大头</li>
+<li>TP=2 不变:attention compute 不退步</li>
+<li>per-stage 算量减半</li>
+</ul>
+
+<p><strong>关 offload 没收益</strong>:跟 32K shape 同样的现象 —— PP=16 让 Adam 已经切到 ~2.5 GB/rank,关掉只省 ~3 GB Memcpy。但 peak used 从 47.7 GB → 74 GB,长跑的 safety margin 下降明显。<strong>64K 默认保留 cpu-offload + recompute=full</strong>。</p>
+
+<p>另一个隐含收益:§5.13 提到 <strong>final-save 在 64K + 长跑 + 120 步会撞 <code>cudaErrorInvalidValue</code></strong>(模块 3 §p8)。step time 从 225s → 66s 后,同样的 120 步从 7.5h → 2.2h,CUDA context 老化窗口缩 70% —— 即使没修复底层问题,触发概率也降低。</p>
+
+<h4>4.18.8 累积优化链(2026-05-12 → 2026-05-22)</h4>
+
+<table>
+<thead><tr><th>shape</th><th>5/12 baseline</th><th>5/22 16 节点 winner</th><th>累积</th></tr></thead>
+<tbody>
+<tr><td>4K (prod)</td><td>~12s</td><td><strong>5.23s</strong></td><td><strong>-56.4%</strong></td></tr>
+<tr><td>32K (albaliang)</td><td>119s</td><td><strong>58.4s</strong></td><td><strong>-50.9%</strong></td></tr>
+<tr><td>64K (albaliang_64k)</td><td>225s</td><td><strong>65.9s</strong></td><td><strong>-70.7%</strong></td></tr>
+</tbody>
+</table>
+
+<p>当前 prod 默认还是 8 节点 PP=8 + offload(为兼容老 cluster)。<strong>新 prod 默认应切到 16 节点 PP=16</strong>:4K 用 <code>workload/sft_prod</code> + <code>scale/tp8pp16ep8_layout</code>(关 offload),32K 用 <code>workload/sft_albaliang</code> + <code>scale/tp4pp16cp2ep8</code>(保留 offload),64K 用 <code>workload/sft_64k_pp16</code> + <code>scale/tp2pp16cp4ep8</code>(保留 offload)。三个 shape 全部 200 步级长跑稳定。</p>
+
+<h4>4.18.9 GRAM 实测分布表(2026-05-22 winner 5 档)</h4>
+
+<p>所有数据来自 <code>memory_utils.py</code> 在 init / steady / peak 三个时刻的实测,non-PP-imbalanced rank 取样,total 95 GB H20。</p>
+
+<table>
+<thead>
+<tr><th>shape × 配置</th><th>step</th><th>post-init used</th><th>steady used (after clear)</th><th>peak used (mid-step)</th><th>headroom @ peak</th></tr>
+</thead>
+<tbody>
+<tr><td>4K winner (PP=16 关 offload)</td><td>5.23s</td><td>18.1 GB</td><td>52.3 GB</td><td><strong>71.5 GB</strong></td><td>23.5 GB(25%)</td></tr>
+<tr><td>32K (PP=16 CP=2 + offload + recompute=full)</td><td>58.4s</td><td>15.9 GB</td><td>26.1 GB</td><td><strong>36.4 GB</strong></td><td>58.6 GB(62%)</td></tr>
+<tr><td>32K + 关 offload</td><td>57.5s</td><td>18.5 GB</td><td>53.8 GB</td><td>64.6 GB</td><td>30.4 GB(32%)</td></tr>
+<tr><td>64K (PP=16 CP=4 + offload + recompute=full)</td><td>65.9s</td><td>12.4 GB</td><td>28.2 GB</td><td><strong>47.7 GB</strong></td><td>47.3 GB(50%)</td></tr>
+<tr><td>64K + 关 offload</td><td>65.6s</td><td>26.0 GB</td><td>55.9 GB</td><td>74.0 GB</td><td>21.0 GB(22%)</td></tr>
+</tbody>
+</table>
+
+<p><strong>关键观察</strong>:</p>
+<ul>
+<li><strong>4K winner peak 71.5 GB / headroom 25%</strong> — 比之前文档"~30 GB peak"的估计偏低,实际 fwd/bwd 中段瞬态比 clear 后稳态高 ~20 GB(activation + grad accumulator)。仍稳定 200 步零漂移,但不是"奢侈余量"</li>
+<li><strong>32K offload-on peak 仅 36 GB</strong> — 是所有档里最宽松的,Adam 在 CPU 加上 recompute=full 让 GPU 只承担 weights + 1 layer activation</li>
+<li><strong>64K offload-on peak 47.7 GB</strong> — vs 关 offload 的 74 GB,差 26 GB 是 Adam state 拉回 GPU 的代价。step time 完全相同(65.9 vs 65.6s),所以 64K 默认必须保留 offload(safety margin 翻倍)</li>
+<li><strong>steady (after clear) 稳态 = weights + Adam(若 GPU 上)+ buffer</strong>;<strong>peak - steady = activation + grad 瞬态</strong>。两者比例随 seq length 涨</li>
+<li>关 offload 在 4K 是真实收益(-11.3%),32K/64K 是 noise(<2%) —— PP=16 让 Adam 在 32K/64K 上已经切到不构成瓶颈</li>
+</ul>
+
+<p>这张表是后续推 RL / 更大 context / 模型升级时的 single source of truth:任何"会不会爆显存"的判断,先来这里查 peak 留多少 headroom,再算新增项的预算。</p>
+
+</section>
+
+<section id="m5">
 <h2 data-kicker="§ 05 · MODULE 5 — H200 MIGRATION">H200 集群迁移准备</h2>
 
 <h3 id="s5-1">5.1 迁移成本:换 1 个文件</h3>
@@ -4329,7 +4498,7 @@ flowchart LR
 </table>
 
 <div class="callout callout-success">
-<p><strong>动作顺序建议(更新 2026-05-20)</strong>:VPP <strong>已完成</strong>(§4.14,prod 默认已切,-2.6%);<strong>DeepEP EP A2A overlap 已完成</strong>(§4.16,prod 默认已切,-5.2%,绕过 §4.14 schedule-层 blocker);schedule-层 EP overlap 仍 blocked(<code>combined_1f1b</code> 要 attention 暴露 <code>backward_dw</code>,V4 自定义 attention 没实现);选择性 recompute <strong>blocker</strong>(§4.15);EP 8 → 16/32 在当前 PP=8 几何下 max EP=8 锁死。<strong>累积 prod 默认相对 5/19 前 baseline ≈ -7.6%</strong>。下一波等 H200 + FP8。</p>
+<p><strong>动作顺序建议(更新 2026-05-22)</strong>:VPP <strong>已完成</strong>(§4.14,prod 默认已切,-2.6%);<strong>DeepEP EP A2A overlap 已完成</strong>(§4.16,prod 默认已切,-5.2%,绕过 §4.14 schedule-层 blocker);schedule-层 EP overlap 仍 blocked(<code>combined_1f1b</code> 要 attention 暴露 <code>backward_dw</code>,V4 自定义 attention 没实现);选择性 recompute <strong>blocker</strong>(§4.15);<strong>16 节点 PP=16 + 关 cpu-offload 已完成</strong>(§4.18,5.23s 稳定 200 步,H4 真正解锁,vs 8 节点 prod 10.88s = -51.9%);EP 8 → 16/32 在当前 PP=8/16 几何下 max EP=8 锁死。<strong>累积 prod 默认相对 5/19 前 baseline ≈ -7.6%(8 节点);16 节点 PP=16 winner 4K -56.4% / 32K -50.9% / 64K -70.7%(vs 5/12 baseline)</strong>。下一波等 H200 + FP8。</p>
 </div>
 
 <h3 id="s6-5">6.5 并行配置的几何 reasoning(为什么是 TP=8 / TP=4 / TP=2)</h3>
@@ -4450,7 +4619,7 @@ flowchart LR
 <div class="mermaid">
 flowchart TB
     subgraph entry ["启动入口"]
-        run["cluster/run.sh<br/>(主入口)"]
+        run["run.sh<br/>(主入口)"]
         bring["cluster/bring_up_cluster.sh"]
         tear["cluster/tear_down.sh"]
         convert["cluster/convert_hf_to_megatron.sh"]
@@ -4642,7 +4811,7 @@ MEGATRON_SPARSE_ATTN_IMPL=$PRESET_ATTN_IMPL  # tilelang / dense_mla 选择</pre>
 <td><code>e561465d0</code> fix launch scripts to support one-click smoke test</td>
 <td>scripts/run_deepseek_v4.py 调试 patch</td>
 <td><strong>drop</strong></td>
-<td>SFT pipeline 已迁移到 <code>cluster/run.sh</code>,这个 launch script 不再用</td>
+<td>SFT pipeline 已迁移到 <code>run.sh</code>,这个 launch script 不再用</td>
 </tr>
 <tr>
 <td><code>cba47946c</code> Auto-patch 4-layer model_type</td>
@@ -5055,7 +5224,7 @@ MEGATRON_SPARSE_ATTN_IMPL=$PRESET_ATTN_IMPL  # tilelang / dense_mla 选择</pre>
 <div class="mermaid">
 flowchart TB
     subgraph L0 ["L0 · 用户入口(本仓 examples/deepseek_v4_sft/)"]
-      runsh["cluster/run.sh<br/>编排 + 拼 ray job submit"]
+      runsh["run.sh<br/>编排 + 拼 ray job submit"]
       preset["presets/*.env<br/>workload knobs"]
       hwenv["hw/*.env<br/>HW knobs (token cap, recompute)"]
       modelsh["scripts/models/<br/>deepseek-v4-flash.sh<br/>MODEL_ARGS 数组"]
@@ -5166,7 +5335,7 @@ flowchart TB
 <tr><th>层</th><th>组件</th><th>职责</th><th>跟上 / 下层的接口</th></tr>
 </thead>
 <tbody>
-<tr><td>L0</td><td>cluster/run.sh + presets + hw + scripts/models</td><td>把所有 knob 拼成一条 ray job submit 命令</td><td>↑ 人;↓ 写出 launch_in_container.sh + RUNTIME_ENV</td></tr>
+<tr><td>L0</td><td>run.sh + presets + hw + scripts/models</td><td>把所有 knob 拼成一条 ray job submit 命令</td><td>↑ 人;↓ 写出 launch_in_container.sh + RUNTIME_ENV</td></tr>
 <tr><td>L1</td><td>Ray + Docker</td><td>跨 8 节点拉起 64 worker,按 actor placement group 绑卡</td><td>↑ ray job submit JSON;↓ 容器内 python3 train.py</td></tr>
 <tr><td>L2</td><td>miles/</td><td>RL 训练主循环;SFT 通过 6 个 flag 把 advantage / KL / clip 全跳过</td><td>↑ argparse;↓ 调 megatron actor / sglang rollout</td></tr>
 <tr><td>L3a</td><td>SGLang (sglang-miles fork)</td><td>RL 时做高吞吐推理;SFT 时只走 prompt → token id 化路径</td><td>↑ miles rollout API;↓ CUDA kernels</td></tr>

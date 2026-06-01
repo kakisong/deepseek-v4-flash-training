@@ -720,23 +720,27 @@ nav.toc a .num { color:var(--ink-faint); margin-right:6px; }
 │   ├── hw/                             # 硬件 hint(H20 / H200)
 │   ├── caddy/Caddyfile                 # /docs /ray /grafana 路由
 │   └── lib/                            # 共享 shell 函数
-├── tools/                              # 数据 / ckpt 转换工具
-│   ├── jsonl_to_v4_dataset.py          # jsonl → V4 chat-template parquet
-│   ├── megablocks_to_hf_bf16.py        # megablocks 命名 → V3 命名 + FP8 dequant
-│   ├── tilelang_sparse_mla_*.py        # sparse-MLA kernel 诊断 / repro / shapes
-│   ├── verify_v4_mask.py               # loss_mask 边界验证
-│   └── qa_fit_check.py                 # 数据质量检查
+├── run.sh                              # 训练任务提交主入口
+├── smoke/                              # Stage / smoke runner
+│   ├── run_stage_a_smoke.sh
+│   ├── run_stage_b_full.sh
+│   └── run_stage_a_fp8_smoke.sh
+├── verification/                       # correctness / mask / QA-fit 验证工具
+│   ├── verify_v4_mask.py
+│   ├── verify_chat_template.py
+│   └── verify_deepseek_v4_*.py
+├── tools/                              # 数据 / ckpt 转换 / 非验证类辅助工具
+│   ├── jsonl_to_v4_dataset.py
+│   ├── megablocks_to_hf_bf16.py
+│   ├── tilelang_sparse_mla_*.py
+│   └── launch_sglang.sh
 ├── prepare_data.py                     # 一次性数据准备入口
 ├── prepare_megatron_ckpt.sh            # 一次性权重准备入口
-├── run_stage_a_smoke.sh                # 端到端 stage runner(smoke)
-├── run_stage_b_full.sh                 # 端到端 stage runner(full)
-├── README.md
-├── WRITEUP.html                        # 完整工程实录
-└── v4_training.html                    # 本文档</pre>
+└── docs/                               # README / WRITEUP / 报告</pre>
 
 <h3>5.3 三层 env 正交分解</h3>
 
-<p>所有训练任务都通过 <code class="inline">cluster/run.sh --fleet X --scale Y --workload Z</code> 三个维度组合启动。三层正交,任意组合都可跑。这套分解是<strong>迁移成本控制的核心</strong>:换硬件只动 fleet,换 shape 只动 scale,换数据只动 workload,三者互不污染。</p>
+<p>所有训练任务都通过 <code class="inline">run.sh --fleet X --scale Y --workload Z</code> 三个维度组合启动。三层正交,任意组合都可跑。这套分解是<strong>迁移成本控制的核心</strong>:换硬件只动 fleet,换 shape 只动 scale,换数据只动 workload,三者互不污染。</p>
 
 <table>
 <thead><tr><th>层</th><th>关心什么</th><th>切换示例</th></tr></thead>
@@ -783,7 +787,7 @@ bash tear_down.sh</pre>
 <pre># 用本地 editable miles / 本仓
 export V4_MILES_REPO=/local/path/to/miles
 export V4_TRAINING_REPO=/local/path/to/deepseek-v4-flash-training
-bash cluster/run.sh --fleet h20_16node --scale tp8pp16ep8_layout --workload sft_smoke
+bash run.sh --fleet h20_16node --scale tp8pp16ep8_layout --workload sft_smoke
 
 # Profile rank 选择 override
 MILES_PROFILE_RANKS=0,32,56 bash run.sh ... --profile</pre>

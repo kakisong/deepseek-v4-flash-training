@@ -1,35 +1,42 @@
 #!/usr/bin/env bash
-# Stage A — single 8-GPU node, V4 4-layer random-init, SFT smoke minimal repro.
-# Purpose: after Stage B0 64-GPU produced PP=7 grad NaN, reproduce in the smallest
-# possible setup and add hooks to localize the failure.
+# Stage A FP8 smoke — single 8-GPU node, V4 4-layer SFT with TE FP8 training.
 #
-# Key differences:
-#   - 1 node x 8 GPU (the other 7 workers stay idle ~5 min, within anti-pollution threshold)
-#   - 4-layer V4 (scripts/models/deepseek-v4-flash-4layer.sh)
-#   - TP=1 PP=1 EP=8 ETP=1 (no PP, EP fills all 8 cards)
-#   - No --ref-load (SFT doesn't need KL; only checked at arguments.py:1671), saves 15 min ckpt conversion
-#   - 2 iters, save@1
+# This keeps the Stage A topology small and only adds:
+#   - TransformerEngine FP8 blockwise training flags
+#   - DeepSeek V4 KV/indexer FP8 QAT simulation env
 #
-# Launch: bash run_stage_a.sh
+# Launch: bash smoke/run_stage_a_fp8_smoke.sh
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
-source "$SCRIPT_DIR/env.sh"
+REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." &>/dev/null && pwd)"
+source "$REPO_ROOT/cluster/env.sh"
 
 [[ -d "$V4_BF16_DIR" ]] || { echo "[err] BF16 dir missing: $V4_BF16_DIR" >&2; exit 1; }
 [[ -f "$V4_SFT_DATA" ]] || { echo "[err] SFT data missing: $V4_SFT_DATA" >&2; exit 1; }
-
-ssh -o StrictHostKeyChecking=no root@$V4_MASTER_IP "docker exec $V4_CONTAINER ray status" 2>&1 | grep -qiE "active|HEALTHY|node_" || {
-  echo "[err] ray cluster not healthy. cluster_up.sh first." >&2
+[[ -d "$V4_MODELS/DeepSeek-V4-Flash-bf16-4layer-stub" ]] || {
+  echo "[err] 4-layer stub missing: $V4_MODELS/DeepSeek-V4-Flash-bf16-4layer-stub" >&2
   exit 1
 }
 
-RUN_ID="stageA-$(date +%Y%m%d-%H%M%S)"
+ssh -o StrictHostKeyChecking=no root@"$V4_MASTER_IP" "docker exec $V4_CONTAINER ray status" 2>&1 | grep -qiE "active|HEALTHY|node_" || {
+  echo "[err] ray cluster not healthy. bring_up_cluster.sh first." >&2
+  exit 1
+}
+
+RUN_ID="stageA-fp8-$(date +%Y%m%d-%H%M%S)"
 SAVE_DIR="$V4_OUT/$RUN_ID"
+HF_SMOKE_DIR="$SAVE_DIR/hf_4layer_with_tokenizer"
 mkdir -p "$SAVE_DIR"
+mkdir -p "$HF_SMOKE_DIR"
+cp "$V4_MODELS/DeepSeek-V4-Flash-bf16-4layer-stub/config.json" "$HF_SMOKE_DIR/config.json"
+cp "$V4_BF16_DIR"/tokenizer*.json "$HF_SMOKE_DIR/"
+cp "$V4_BF16_DIR/generation_config.json" "$HF_SMOKE_DIR/"
+cp -r "$V4_BF16_DIR/encoding" "$HF_SMOKE_DIR/"
 echo "[info] run id   : $RUN_ID"
 echo "[info] save dir : $SAVE_DIR"
+echo "[info] hf smoke : $HF_SMOKE_DIR"
 echo "[info] dashboard: http://$V4_MASTER_IP:$V4_DASHBOARD_PORT"
 
 LAUNCH=$SAVE_DIR/launch_in_container.sh
@@ -37,10 +44,10 @@ cat > "$LAUNCH" <<EOF
 #!/usr/bin/env bash
 set -e
 cd $V4_MILES
-source scripts/models/deepseek-v4-flash-4layer.sh   # NLAYERS=4 + short compress_ratios
+source scripts/models/deepseek-v4-flash-4layer.sh
 
 CKPT_ARGS=(
-  --hf-checkpoint  /data_fast_v3/kaynzhang/v4-sft/models/DeepSeek-V4-Flash-bf16-4layer-stub
+  --hf-checkpoint  $HF_SMOKE_DIR
   --ref-load       $V4_TORCH_DIST
   --load           $SAVE_DIR/checkpoints
   --save           $SAVE_DIR/checkpoints
@@ -65,7 +72,6 @@ SFT_ARGS=(
   --loss-mask-type deepseek_v4
 )
 
-# 1 node x 8 GPU; EP=8 fills the node; no PP partitioning.
 PERF_ARGS=(
   --tensor-model-parallel-size 1
   --sequence-parallel
@@ -95,6 +101,11 @@ OPTIMIZER_ARGS=(
 )
 
 MISC_ARGS=(
+  --transformer-impl transformer_engine
+  --bf16
+  --fp8-format e4m3
+  --fp8-recipe blockwise
+
   --attention-dropout 0.0
   --hidden-dropout    0.0
   --accumulate-allreduce-grads-in-fp32
@@ -114,14 +125,11 @@ MISC_ARGS=(
   --no-offload-rollout
   --use-fault-tolerance
   --dump-details $SAVE_DIR/dump_details
-
-  # Phase 2 hook: per-module forward hook prints first nan/inf location
-  --custom-megatron-before-train-step-hook-path nan_hook.hook_fn
 )
 
 RUNTIME_ENV='{
   "env_vars": {
-    "PYTHONPATH": "$V4_MEGATRON:/data_fast_v3/kaynzhang/v4-sft/wheels",
+    "PYTHONPATH": "$V4_RUNTIME_PYTHONPATH:$V4_WORK/wheels",
     "CUDA_DEVICE_MAX_CONNECTIONS": "1",
     "MASTER_ADDR": "$V4_MASTER_IP",
     "MILES_DSV4_THINKING_MODE": "chat",
@@ -130,7 +138,9 @@ RUNTIME_ENV='{
     "GLOO_SOCKET_IFNAME": "eth0",
     "NCCL_SOCKET_IFNAME": "eth0",
     "LD_PRELOAD": "/usr/local/lib/python3.12/dist-packages/torch_memory_saver_hook_mode_preload.abi3.so",
-    "MEGATRON_SPARSE_ATTN_IMPL": "sparse"
+    "MEGATRON_SPARSE_ATTN_IMPL": "sparse",
+    "NVTE_FP8_BLOCK_SCALING_FP32_SCALES": "1",
+    "MEGATRON_USE_KV_QAT": "1"
   }
 }'
 
@@ -149,4 +159,4 @@ chmod +x "$LAUNCH"
 echo "[info] launch script: $LAUNCH"
 echo
 echo "=== submit ray job (live logs mirrored to $SAVE_DIR/job.log) ==="
-ssh root@$V4_MASTER_IP "docker exec $V4_CONTAINER bash $LAUNCH" 2>&1 | tee "$SAVE_DIR/job.log"
+ssh -o StrictHostKeyChecking=no root@"$V4_MASTER_IP" "docker exec $V4_CONTAINER bash $LAUNCH" 2>&1 | tee "$SAVE_DIR/job.log"

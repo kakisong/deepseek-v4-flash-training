@@ -1,0 +1,83 @@
+# Manifest = immutable index for one training input bundle.
+# It intentionally does not contain fleet IPs, Redis credentials, proxy, or
+# monitoring endpoints; those belong to cluster/fleet/*.env.
+
+schema_version: 1
+name: albaliang_057_dsv4_flash_sft
+created_at: "2026-05-29"
+
+framework:
+  image:
+    tag: radixark/miles:dev-fht-v4deps-20260529
+    image_id: sha256:6595fd109f15e6f963985f19135b8c01daf49e51436d8e882adca0306a76c1af
+  miles:
+    repo: kakisong/miles
+    branch: v4-flash-sft
+    commit: 34684df536fa30a5040b514f8a69fad81ff897d0
+  training_repo:
+    repo: kakisong/deepseek-v4-flash-training
+    commit: 029501db7893f4456338170f8d8786742a157779
+  megatron:
+    placement: image
+    image_path: /root/Megatron-LM
+    source: local dsv4-pr28 checkout exported from /data_train/kaynzhang/v4-sft/Megatron-LM
+    source_commit: 1c6e5b7bcde0097ebe193b6258115ff3558f69d6
+  tilekernels:
+    placement: image
+    image_path: /root/TileKernels
+    source: local checkout exported from /data_train/kaynzhang/v4-sft/TileKernels
+    source_commit: 36d9e45d38e204ebb87e6f6e833821eee0482fe5
+
+model:
+  hf_checkpoint: models/DeepSeek-V4-Flash-bf16-unpacked
+  hf_checkpoint_required_files:
+    model_index:
+      path: models/DeepSeek-V4-Flash-bf16-unpacked/model.safetensors.index.json
+      sha256: b243898058cd3267601bb9117856aa0d3731b461efe8a08ac22546915e707904
+    tokenizer_config:
+      path: models/DeepSeek-V4-Flash-bf16-unpacked/tokenizer_config.json
+    encoding_dsv4:
+      source: tokenizer/encoding_dsv4.py
+      target: models/DeepSeek-V4-Flash-bf16-unpacked/encoding/encoding_dsv4.py
+      sha256: bdbd57c132a1b3725042323d02b98b9d1df28e5f388f134399555d041f5055e0
+  torch_dist_checkpoint:
+    path: models/DeepSeek-V4-Flash-FP8_torch_dist
+    marker:
+      path: models/DeepSeek-V4-Flash-FP8_torch_dist/latest_checkpointed_iteration.txt
+      sha256: a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829
+
+data:
+  train_file:
+    path: data/albaliang_057_le32k.jsonl
+    format: jsonl
+    rows: 24360
+    size: 2.2G
+    sha256: 5cfb4f4b5049435cc917a0c6cab3bc217975024c57b452a2d0f58091146061ef
+  input_key: messages
+  tool_key: tools
+  max_context_tokens: 32768
+
+training:
+  epochs: 3
+  global_batch_size: 128
+  num_rollout: 571
+  lr: 1.0e-5
+  lr_decay_style: cosine
+  lr_warmup_iters: 20
+  save_interval: 50
+  save_retain_interval: 100
+  no_save_optim: true
+
+parallelism:
+  tp: 4
+  pp: 16
+  cp: 2
+  ep: 8
+  etp: 1
+  max_tokens_per_gpu: 16384
+  attention_impl: tilelang
+
+requirements:
+  gpu_model: H20
+  num_nodes: 16
+  gpus_per_node: 8

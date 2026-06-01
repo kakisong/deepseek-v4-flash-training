@@ -12,7 +12,7 @@ If errors are found, follow README §1.4 to add gen_multi_turn_loss_mask_deepsee
 to miles/utils/mask_utils.py, then rerun with --loss-mask-type deepseek_v4.
 
 Usage:
-    python examples/deepseek_v4_sft/verify_chat_template.py \\
+    python verification/verify_chat_template.py \\
         --hf-checkpoint        $MODELS/DeepSeek-V4-Flash-bf16 \\
         --chat-template-path   $REPO/templates/deepseek_v4.jinja \\
         --sample-data          $DATA/openhermes_v4.parquet \\

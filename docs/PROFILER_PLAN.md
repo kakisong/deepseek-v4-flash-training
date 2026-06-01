@@ -89,9 +89,9 @@ def _create_torch_profiler(args, name):
     )
 ```
 
-### 3.2 在 `examples/deepseek_v4_sft/cluster/run.sh` 的 `MISC_ARGS` 里注入 profile flag
+### 3.2 在 `run.sh` 的 `MISC_ARGS` 里注入 profile flag
 
-文件位置 `cluster/run.sh:170-190`,在 `MISC_ARGS=(` 数组末尾、`)` 之前加四行:
+文件位置 `run.sh:170-190`,在 `MISC_ARGS=(` 数组末尾、`)` 之前加四行:
 
 ```bash
   --use-pytorch-profiler
@@ -125,7 +125,7 @@ export PRESET_NUM_ROLLOUT=8
 export PRESET_SAVE_INTERVAL=1000
 
 # 启动
-bash examples/deepseek_v4_sft/cluster/run.sh validation
+bash run.sh validation
 ```
 
 **预期 wall**:6-9 min(8 步 + JIT)。

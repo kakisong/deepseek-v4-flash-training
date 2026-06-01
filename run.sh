@@ -2,8 +2,8 @@
 # Unified launch entry.
 #
 # 用法 (任选):
-#   bash run.sh --fleet h20_16node --scale tp8pp8ep8_layout --workload sft_prod
-#   V4_FLEET=h20_16node V4_SCALE=tp8pp8ep8_layout V4_WORKLOAD=sft_prod bash run.sh
+#   bash run.sh --fleet h20_16node --scale tp8pp16ep8_layout --workload sft_prod
+#   V4_FLEET=h20_16node V4_SCALE=tp8pp16ep8_layout V4_WORKLOAD=sft_prod bash run.sh
 #
 # Common overrides (each maps to a PRESET_* / HW_* variable):
 #   --num-rollout N           training steps
@@ -18,12 +18,13 @@
 # --dry-run: generate launch_in_container.sh but do NOT submit it to ray.
 #
 # Load order (later overrides earlier):
-#   fleet/$V4_FLEET.env  →  base.env  →  hw/$V4_GPU_MODEL.env  →
-#   scale/$V4_SCALE.env  →  workload/$V4_WORKLOAD.env  →  CLI overrides
+#   cluster/fleet/$V4_FLEET.env  →  cluster/base.env  →  cluster/hw/$V4_GPU_MODEL.env  →
+#   cluster/scale/$V4_SCALE.env  →  cluster/workload/$V4_WORKLOAD.env  →  CLI overrides
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+CLUSTER_DIR="$REPO_ROOT/cluster"
 
 # ---------- parse args -------------------------------------------------------
 DRY_RUN=0
@@ -39,9 +40,9 @@ while [[ $# -gt 0 ]]; do
     --workload)              export V4_WORKLOAD="$2"; shift 2 ;;
     -h|--help)
       sed -n '2,/^set -euo/p' "$0" | sed 's/^# \?//; /^set -euo/d'
-      echo "Available fleets:    $(ls "$SCRIPT_DIR/fleet/" | sed 's/\.env$//' | tr '\n' ' ')"
-      echo "Available scales:    $(ls "$SCRIPT_DIR/scale/" | sed 's/\.env$//' | tr '\n' ' ')"
-      echo "Available workloads: $(ls "$SCRIPT_DIR/workload/" | sed 's/\.env$//' | tr '\n' ' ')"
+      echo "Available fleets:    $(ls "$CLUSTER_DIR/fleet/" | sed 's/\.env$//' | tr '\n' ' ')"
+      echo "Available scales:    $(ls "$CLUSTER_DIR/scale/" | sed 's/\.env$//' | tr '\n' ' ')"
+      echo "Available workloads: $(ls "$CLUSTER_DIR/workload/" | sed 's/\.env$//' | tr '\n' ' ')"
       exit 0 ;;
     --num-rollout)           OVERRIDES[PRESET_NUM_ROLLOUT]="$2"; shift 2 ;;
     --lr)                    OVERRIDES[PRESET_LR]="$2"; shift 2 ;;
@@ -65,7 +66,7 @@ done
 
 # ---------- layered source ---------------------------------------------------
 # env.sh handles: fleet → base → hw → scale → workload.
-source "$SCRIPT_DIR/env.sh"
+source "$CLUSTER_DIR/env.sh"
 
 # CLI overrides (applied last in the source chain)
 for k in "${!OVERRIDES[@]}"; do
@@ -181,7 +182,7 @@ PROFILE_FLAGS=""
 PROFILE_TBDIR=""
 
 # ---------- preflight ----------------------------------------------------------
-source "$SCRIPT_DIR/lib/preflight.sh"
+source "$CLUSTER_DIR/lib/preflight.sh"
 if [[ "$V4_WORKLOAD" == "sft_smoke" ]]; then
   preflight_64gpu_strict || exit 1
 else
@@ -210,6 +211,20 @@ if (( PROFILE_ENABLED == 1 )); then
   mkdir -p "$PROFILE_TBDIR"
   PROFILE_FLAGS="--use-pytorch-profiler --profile-step-start $PROFILE_STEP_START --profile-step-end $PROFILE_STEP_END --profile-target train_overall --tensorboard-dir $PROFILE_TBDIR"
   echo "[info] profile  : ON  active steps [$PROFILE_STEP_START,$PROFILE_STEP_END)  tb_dir=$PROFILE_TBDIR"
+fi
+
+# Wandb flags (workload sets PRESET_USE_WANDB=1 to enable).
+WANDB_FLAGS=""
+WANDB_RUNTIME_ENV_VARS=""
+if [[ "${PRESET_USE_WANDB:-0}" == "1" ]]; then
+  : "${PRESET_WANDB_PROJECT:?PRESET_WANDB_PROJECT required when PRESET_USE_WANDB=1}"
+  : "${PRESET_WANDB_API_KEY:?PRESET_WANDB_API_KEY required when PRESET_USE_WANDB=1}"
+  WANDB_DIR="$SAVE_DIR/wandb"
+  mkdir -p "$WANDB_DIR"
+  WANDB_FLAGS="--use-wandb --wandb-project $PRESET_WANDB_PROJECT --wandb-key $PRESET_WANDB_API_KEY --wandb-dir $WANDB_DIR --wandb-group $RUN_ID"
+  [[ -n "${PRESET_WANDB_TEAM:-}" ]] && WANDB_FLAGS="$WANDB_FLAGS --wandb-team $PRESET_WANDB_TEAM"
+  echo "[info] wandb    : ON  project=$PRESET_WANDB_PROJECT team=${PRESET_WANDB_TEAM:-<default>} group=$RUN_ID"
+  echo "[info]            MFU on wandb: derive as actor_train_tflops / ${HW_GPU_PEAK_TFLOPS_BF16:-148} (H20 BF16 peak)"
 fi
 
 # ---------- generate in-container launch script ------------------------------
@@ -303,11 +318,12 @@ MISC_ARGS=(
   --use-fault-tolerance
   --dump-details $SAVE_DIR/dump_details
   $PROFILE_FLAGS
+  $WANDB_FLAGS
 )
 
 RUNTIME_ENV='{
   "env_vars": {
-    "PYTHONPATH": "$V4_MEGATRON:$V4_TILE_KERNELS",
+    "PYTHONPATH": "$V4_RUNTIME_PYTHONPATH",
     "CUDA_DEVICE_MAX_CONNECTIONS": "1",
     "MASTER_ADDR": "$V4_MASTER_IP",
     "MILES_DSV4_THINKING_MODE": "chat",
@@ -317,7 +333,9 @@ RUNTIME_ENV='{
     "NCCL_SOCKET_IFNAME": "eth0",
     "LD_PRELOAD": "/usr/local/lib/python3.12/dist-packages/torch_memory_saver_hook_mode_preload.abi3.so",
     "MEGATRON_SPARSE_ATTN_IMPL": "$PRESET_ATTN_IMPL",
-    "PYTORCH_CUDA_ALLOC_CONF": "${HW_PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
+    "PYTORCH_CUDA_ALLOC_CONF": "${HW_PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}",
+    "CUDA_LAUNCH_BLOCKING": "${HW_CUDA_LAUNCH_BLOCKING:-0}",
+    "TORCH_USE_CUDA_DSA": "${HW_TORCH_USE_CUDA_DSA:-0}"
   }
 }'
 

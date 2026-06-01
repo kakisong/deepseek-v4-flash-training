@@ -25,17 +25,22 @@ mkdir -p "$CADDY_RUNTIME"/{data,config,log,static}
 cp "$SCRIPT_DIR/caddy/Caddyfile" "$CADDY_RUNTIME/Caddyfile"
 echo "[info] Caddyfile -> $CADDY_RUNTIME/Caddyfile"
 
-# 静态文档同步到 caddy/static —— /docs/* 路径 serve 这里
-# 后续加页面:在 DOCS_FILES 加一行(相对 $SCRIPT_DIR/.. 的路径)
+# 静态文档同步到 caddy/static —— /docs/* 路径 serve 这里。
+# 后续加页面:在 DOCS_FILES 加一行(相对 repo docs/ 的文件名)。
+DOCS_DIR="$SCRIPT_DIR/../docs"
 DOCS_FILES=(
   "WRITEUP.html"
+  "v4_training.html"
+  "QA_FIT_REPORT.html"
+  "THROUGHPUT_REPORT.html"
+  "EVAL_PLAN.html"
   # 例:加新页面只需在这里追加一行
   # "RUNBOOK.html"
   # "subdir/foo.html"
 )
 
 for rel in "${DOCS_FILES[@]}"; do
-  src="$SCRIPT_DIR/../$rel"
+  src="$DOCS_DIR/$rel"
   dst="$CADDY_RUNTIME/static/$rel"
   if [[ -f "$src" ]]; then
     mkdir -p "$(dirname "$dst")"

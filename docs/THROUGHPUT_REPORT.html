@@ -184,7 +184,7 @@ V4-Flash 是 hybrid SWA 模型（<code>swa_full_tokens_ratio=0.1</code>），<b>
 
 <h2>6. 运维 / 交付物</h2>
 <table>
-<tr><th>路径（CFS <code>/data_fast_v3/kaynzhang/v4-sft/</code>）</th><th>说明</th></tr>
+<tr><th>路径（CFS <code>/data_train/kaynzhang/v4-sft/</code>）</th><th>说明</th></tr>
 <tr><td><code>run_sglang_replica.sh</code></td><td>单机 TP=8 副本启动脚本（<code>CG=1</code> 开 cuda graph）</td></tr>
 <tr><td><code>ep_ctl.sh</code> / <code>run_sglang_ep.sh</code></td><td>16 节点 EP 启停（保留备查，待 NVSHMEM 修复后可复用）</td></tr>
 <tr><td><code>mybench.py</code> / <code>bench_ep.sh</code></td><td>无网络依赖的吞吐/并发压测客户端</td></tr>
@@ -195,7 +195,7 @@ V4-Flash 是 hybrid SWA 模型（<code>swa_full_tokens_ratio=0.1</code>），<b>
 
 <h3>重启某副本（例）</h3>
 <pre>ssh root@&lt;node&gt; "docker exec -d sglang-ep bash -lc \
-  'cd /data_fast_v3/kaynzhang/v4-sft &amp;&amp; CG=1 nohup bash run_sglang_replica.sh &gt; logs/replica_&lt;node&gt;.log 2>&1 &amp;'"</pre>
+  'cd /data_train/kaynzhang/v4-sft &amp;&amp; CG=1 nohup bash run_sglang_replica.sh &gt; logs/replica_&lt;node&gt;.log 2>&1 &amp;'"</pre>
 
 <h2>7. 后续可提升项</h2>
 <ul>

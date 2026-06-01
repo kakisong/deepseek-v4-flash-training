@@ -96,7 +96,7 @@ if [[ -f "$TEMPLATE" ]]; then
 else
   SFT_ARGS+=( --apply-chat-template )
   echo "[warn] $TEMPLATE does not exist; falling back to the tokenizer built-in template."
-  echo "       If verify_chat_template.py already found the mask is wrong, fix it before going to GPU."
+  echo "       If verification/verify_chat_template.py already found the mask is wrong, fix it before going to GPU."
 fi
 SFT_ARGS+=( --loss-mask-type "$LOSS_MASK_TYPE" )
 

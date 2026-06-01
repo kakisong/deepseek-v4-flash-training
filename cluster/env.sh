@@ -9,8 +9,8 @@
 #   base.env               — 路径派生 (V4_MILES, V4_DATA, ...)
 #
 # 入口三种用法 (任选):
-#   1. V4_FLEET=h20_16node V4_SCALE=tp8pp8ep8_layout V4_WORKLOAD=sft_prod bash run.sh
-#   2. bash run.sh --fleet h20_16node --scale tp8pp8ep8_layout --workload sft_prod
+#   1. V4_FLEET=h20_16node V4_SCALE=tp8pp16ep8_layout V4_WORKLOAD=sft_prod bash run.sh
+#   2. bash run.sh --fleet h20_16node --scale tp8pp16ep8_layout --workload sft_prod
 #   3. bash run.sh prod                  (向后兼容: 走老 presets/<preset>.env 路径)
 #
 # 直接被 bring_up_cluster.sh / tear_down.sh / bring_up_caddy.sh source 时,只需要

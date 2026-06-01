@@ -40,6 +40,19 @@
         reverse_proxy localhost:8201
     }
 
+    # sglang 推理服务 — /sglang/* 剥前缀后转发到推理节点的 OpenAI API。
+    # 不在 master 本机:sglang 跑在某计算节点 (当前 10.0.8.2:30000, TP=8)。
+    # caddy 用 host network 可直连。节点被回收/换机时改下面这行 IP:PORT。
+    # 例: POST /sglang/v1/chat/completions → 10.0.8.2:30000/v1/chat/completions
+    #     GET  /sglang/get_model_info     → 10.0.8.2:30000/get_model_info
+    # flush_interval -1: 关闭缓冲,支持 stream=true 的 SSE 流式输出。
+    handle_path /sglang/* {
+        reverse_proxy 10.0.8.17:31000 {
+            flush_interval -1
+        }
+    }
+    redir /sglang /sglang/ 308
+
     # 项目文档静态目录挂载 — /docs/* 转发到容器内 /srv/docs/
     # 容器外路径:$V4_WORK/caddy/static/(由 bring_up_caddy.sh 同步)
     # 后续加页面:只需把新 html 加到 bring_up_caddy.sh 的 DOCS_FILES 数组
@@ -56,5 +69,26 @@
 
     handle {
         respond "Not Found" 404
+    }
+}
+
+# ---------------------------------------------------------------------------
+# sglang 推理服务专用监听 — 独立端口(必须在 WOA 跳板机端口白名单内)。
+# :8200 的 caddy 公网可达,但跳板机只转发已知路径前缀(/grafana /ray /promql
+# /docs),没有 /sglang location,所以 :8200 上的 /sglang/* 只在集群内可达。
+# 对外暴露推理 API 走这个独立白名单端口,整段反代到推理节点根路径。
+# 外部 base_url 干净: https://kaynzhang.woa.com:8202/v1
+# sglang 不在 master:跑在计算节点 (当前 10.0.8.2:30000, TP=8)。换机时改这行 IP:PORT。
+# flush_interval -1: 支持 stream=true 的 SSE 流式输出。
+# ---------------------------------------------------------------------------
+:8202 {
+    log {
+        output file /var/log/caddy/sglang.log
+        format console
+    }
+    # sglang_router (10.0.8.17:31000) 负载均衡到 16 节点 × TP=8 单机副本(各 :30000)。
+    # 不再是单节点:横向副本 + router,聚合吞吐 ~16×。换部署时改这行。
+    reverse_proxy 10.0.8.17:31000 {
+        flush_interval -1
     }
 }

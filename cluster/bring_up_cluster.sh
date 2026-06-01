@@ -45,7 +45,7 @@ docker run -d --name $V4_CONTAINER \
     --ipc=host \
     --privileged \
     $DOCKER_MOUNT_FLAGS \
-    -e PYTHONPATH=$V4_MEGATRON \
+    -e PYTHONPATH=$V4_RUNTIME_PYTHONPATH \
     -e HF_HOME=$V4_HF_HOME \
     -e HF_DATASETS_CACHE=$V4_HF_HOME/datasets \
     -e TRANSFORMERS_CACHE=$V4_HF_HOME/transformers \
@@ -58,24 +58,9 @@ docker run -d --name $V4_CONTAINER \
     $V4_IMAGE \
     sleep infinity >/dev/null
 docker exec $V4_CONTAINER bash -lc 'pip install -e . --quiet --no-deps 2>&1 | tail -1' >/dev/null
-# DSA indexer lazy-imports fast_hadamard_transform — the image does not ship it, and
-# pip install via git+https often stalls 30+ minutes inside China. Prefer to extract
-# a cached tarball from CFS (written by the first ready node via docker cp + tar czf);
-# fall back to git pip install if the cache is missing.
-docker exec -e HTTPS_PROXY=$V4_HTTP_PROXY $V4_CONTAINER bash -lc '
-python -c "import fast_hadamard_transform" 2>/dev/null && exit 0
-SP=/usr/local/lib/python3.12/dist-packages
-if [ -f '"$V4_WORK"'/fht-bundle.tar.gz ]; then
-    cd /tmp && rm -rf fht-pkg fht-distinfo fht-cuda.so
-    tar xzf '"$V4_WORK"'/fht-bundle.tar.gz
-    cp -r fht-pkg "$SP/fast_hadamard_transform"
-    cp -r fht-distinfo "$SP/fast_hadamard_transform-1.1.0.dist-info"
-    cp fht-cuda.so "$SP/fast_hadamard_transform_cuda.cpython-312-x86_64-linux-gnu.so"
-    rm -rf fht-pkg fht-distinfo fht-cuda.so
-    python -c "import fast_hadamard_transform" && exit 0
-fi
-pip install --quiet --no-build-isolation "git+https://github.com/Dao-AILab/fast-hadamard-transform.git" 2>&1 | tail -1
-' >/dev/null
+# Runtime framework deps are image-baked. Validate them inside every container
+# so training does not silently fall back to CFS source checkouts.
+docker exec $V4_CONTAINER python -c 'import torch, fast_hadamard_transform, tile_kernels; import megatron.core.dist_checkpointing.core as c; from megatron.core.transformer.transformer_config import TransformerConfig; assert c.CONFIG_FNAME == "metadata.json"; assert "dsv4_hc_mult" in TransformerConfig.__dataclass_fields__; print("torch=" + torch.__version__ + " fht=ok megatron=dsv4 tile_kernels=ok")'
 echo "[$IP] container ready"
 EOF
 }
@@ -88,13 +73,6 @@ echo "=== Phase 1: starting containers on $V4_NUM_NODES nodes (parallel) ==="
 if [[ ! -d "$V4_MILES_REPO/.git" ]]; then
   echo "[info] cloning miles fork → $V4_MILES_REPO"
   git clone "$V4_MILES_REPO_URL" "$V4_MILES_REPO" 2>&1 | tail -3
-fi
-# pre-flight: make sure deepseek-ai/TileKernels source exists on CFS (run.sh
-# references it via PYTHONPATH). Do NOT pip install — that pulls a fresh torch
-# wheel that breaks transformer_engine ABI compatibility.
-if [[ -n "${V4_TILE_KERNELS:-}" ]] && [[ ! -d "$V4_TILE_KERNELS" ]]; then
-  echo "[info] cloning deepseek-ai/TileKernels → $V4_TILE_KERNELS"
-  git clone --depth 1 https://github.com/deepseek-ai/TileKernels.git "$V4_TILE_KERNELS" 2>&1 | tail -3
 fi
 for IP in $V4_ALL_IPS; do
   ( start_node_container "$IP" 2>&1 | tail -3 ) &
@@ -139,10 +117,14 @@ if [ -n "\$_REDIS_HOST" ]; then
 fi
 
 ray stop --force 2>/dev/null || true
+# Put ray temp dir (logs + spill) on the local NVMe data disk instead of overlayfs.
+# Reason: 10.0.8.7 has a 492G root vs 5.8T /data0; spill on / can fill overlay.
+mkdir -p /data0/ray
 ray start --head \\
     --node-ip-address=$V4_MASTER_IP \\
     --port=$V4_RAY_PORT \\
     --num-gpus=$V4_NUM_GPUS_PER_NODE \\
+    --temp-dir=/data0/ray \\
     --dashboard-host=0.0.0.0 \\
     --dashboard-port=$V4_DASHBOARD_PORT \\
     --disable-usage-stats "\${REDIS_ARGS[@]}"
@@ -156,9 +138,11 @@ set -e
 export TZ='__TZ__'
 WORKER_IP="$1"
 ray stop --force 2>/dev/null || true
+mkdir -p /data0/ray
 ray start --address=__MASTER_IP__:__RAY_PORT__ \
     --node-ip-address=$WORKER_IP \
     --num-gpus=__NUM_GPUS__ \
+    --temp-dir=/data0/ray \
     --disable-usage-stats
 EOF
 sed -i "s|__MASTER_IP__|$V4_MASTER_IP|g; s|__RAY_PORT__|$V4_RAY_PORT|g; s|__NUM_GPUS__|$V4_NUM_GPUS_PER_NODE|g; s|__TZ__|${V4_TZ:-Asia/Shanghai}|g" "$RAY_WORKER_SCRIPT"

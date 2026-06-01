@@ -1,0 +1,62 @@
+# Incremental DeepSeek V4 Flash SFT image.
+#
+# Use this when the base miles dev image already contains the expensive common
+# CUDA/Python stack, but still needs the V4-specific runtime pieces. The resulting
+# image should be sufficient for training together with:
+#   1. the miles framework checkout mounted by the cluster scripts,
+#   2. the per-run model/data artifacts,
+#   3. the repo-owned tokenizer/encoding_dsv4.py copied by preflight.
+#
+# It must not rely on a host-mounted Megatron-LM or TileKernels checkout.
+ARG BASE_IMAGE=radixark/miles:dev-fht-20260529
+FROM ${BASE_IMAGE}
+
+ARG MEGATRON_REPO=radixark/Megatron-LM
+ARG MEGATRON_BRANCH=miles-main
+ARG MEGATRON_COMMIT=d9a5080f2bafea5246add1489247f25368b8a120
+
+# TileKernels is required by the DSV4 Megatron code path. Keep it pinned here so
+# rebuilding this image on another cluster produces the same runtime imports.
+ARG TILEKERNELS_REPO=deepseek-ai/TileKernels
+ARG TILEKERNELS_COMMIT=36d9e45d38e204ebb87e6f6e833821eee0482fe5
+
+WORKDIR /root
+
+# The DSV4 Megatron changes are tracked as a local patch on top of miles-main.
+# This avoids depending on a temporary remote branch while still documenting the
+# exact base commit used to generate /root/Megatron-LM in the image.
+COPY docker/patch/v4-sft/megatron-dsv4-pr28.patch /tmp/megatron-dsv4-pr28.patch
+
+RUN rm -rf /root/Megatron-LM && \
+    git clone https://github.com/${MEGATRON_REPO}.git --recursive -b ${MEGATRON_BRANCH} /root/Megatron-LM && \
+    cd /root/Megatron-LM && \
+    git checkout ${MEGATRON_COMMIT} && \
+    git apply /tmp/megatron-dsv4-pr28.patch && \
+    pip install -e . --no-deps
+
+# Keep TileKernels in /root and expose it via PYTHONPATH at launch time. Installing
+# with --no-deps avoids silently replacing the torch/CUDA stack inherited from the
+# base image.
+RUN rm -rf /root/TileKernels && \
+    git clone https://github.com/${TILEKERNELS_REPO}.git /root/TileKernels && \
+    cd /root/TileKernels && \
+    git checkout ${TILEKERNELS_COMMIT} && \
+    pip install -e . --no-deps
+
+# These variables are informational handles for humans and scripts. The training
+# launchers still set PYTHONPATH explicitly to include both directories.
+ENV V4_MEGATRON_IMAGE=/root/Megatron-LM
+ENV V4_TILE_KERNELS_IMAGE=/root/TileKernels
+
+# Fail the image build if any required V4 runtime import is missing, or if the
+# patched Megatron tree does not expose the DSV4 config/checkpoint behavior used
+# by the training launcher.
+RUN PYTHONPATH=/root/Megatron-LM:/root/TileKernels python - <<'PY'
+import fast_hadamard_transform  # noqa: F401
+import tile_kernels  # noqa: F401
+import megatron.core.dist_checkpointing.core as dist_ckpt
+from megatron.core.transformer.transformer_config import TransformerConfig
+
+assert dist_ckpt.CONFIG_FNAME == "metadata.json"
+assert "dsv4_hc_mult" in TransformerConfig.__dataclass_fields__
+PY
