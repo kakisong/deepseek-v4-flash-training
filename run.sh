@@ -7,6 +7,7 @@
 #
 # Common overrides (each maps to a PRESET_* / HW_* variable):
 #   --num-rollout N           training steps
+#   --num-epoch N             full passes over prompt data (Miles derives rollout count)
 #   --lr X                    learning rate
 #   --lr-decay-style S        constant / cosine / linear
 #   --save-interval N         save ckpt every N steps
@@ -44,7 +45,8 @@ while [[ $# -gt 0 ]]; do
       echo "Available scales:    $(ls "$CLUSTER_DIR/scale/" | sed 's/\.env$//' | tr '\n' ' ')"
       echo "Available workloads: $(ls "$CLUSTER_DIR/workload/" | sed 's/\.env$//' | tr '\n' ' ')"
       exit 0 ;;
-    --num-rollout)           OVERRIDES[PRESET_NUM_ROLLOUT]="$2"; shift 2 ;;
+    --num-rollout)           OVERRIDES[PRESET_NUM_ROLLOUT]="$2"; OVERRIDES[PRESET_NUM_EPOCH]=""; shift 2 ;;
+    --num-epoch)             OVERRIDES[PRESET_NUM_EPOCH]="$2"; OVERRIDES[PRESET_NUM_ROLLOUT]=""; shift 2 ;;
     --lr)                    OVERRIDES[PRESET_LR]="$2"; shift 2 ;;
     --lr-decay-style)        OVERRIDES[PRESET_LR_DECAY_STYLE]="$2"; shift 2 ;;
     --lr-warmup-iters)       OVERRIDES[PRESET_LR_WARMUP_ITERS]="$2"; shift 2 ;;
@@ -104,6 +106,19 @@ esac
 SFT_TOOL_KEY_FLAGS=""
 if [[ -n "${PRESET_TOOL_KEY:-}" ]]; then
   SFT_TOOL_KEY_FLAGS="--tool-key $PRESET_TOOL_KEY"
+fi
+
+# Miles supports either explicit rollout count or epoch-derived rollout count.
+# Do not emit both: when both are present Miles ignores num_epoch, which is
+# surprising for post-train configs that are meant to be epoch-aligned.
+SFT_LENGTH_FLAGS=""
+if [[ -n "${PRESET_NUM_EPOCH:-}" ]]; then
+  SFT_LENGTH_FLAGS="--num-epoch $PRESET_NUM_EPOCH"
+elif [[ -n "${PRESET_NUM_ROLLOUT:-}" ]]; then
+  SFT_LENGTH_FLAGS="--num-rollout $PRESET_NUM_ROLLOUT"
+else
+  echo "[err] either PRESET_NUM_ROLLOUT or PRESET_NUM_EPOCH must be set" >&2
+  exit 1
 fi
 
 # Optional --lr-warmup-iters. Megatron's default with this unset is 0; we only emit
@@ -253,7 +268,7 @@ SFT_ARGS=(
   --prompt-data    $V4_SFT_DATA
   --input-key      messages
   --rollout-shuffle
-  --num-rollout            $PRESET_NUM_ROLLOUT
+  $SFT_LENGTH_FLAGS
   --rollout-batch-size     $PRESET_ROLLOUT_BATCH_SIZE
   --global-batch-size      $PRESET_GLOBAL_BATCH_SIZE
 
