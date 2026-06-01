@@ -191,11 +191,15 @@ fi
 # ---------- run id / save dir --------------------------------------------------
 RUN_ID="${PRESET_RUN_ID_PREFIX}-$(date +%Y%m%d-%H%M%S)"
 SAVE_DIR="$V4_OUT/$RUN_ID"
+CKPT_REF_LOAD_DIR="${PRESET_REF_LOAD_DIR:-$V4_TORCH_DIST}"
+CKPT_LOAD_DIR="${PRESET_LOAD_DIR:-$SAVE_DIR/checkpoints}"
 mkdir -p "$SAVE_DIR"
 echo "[info] config   : fleet=$V4_FLEET scale=$V4_SCALE workload=$V4_WORKLOAD"
 echo "[info] cluster  : $V4_CLUSTER_NAME ($V4_GPU_MODEL × $V4_NUM_NODES nodes × $V4_NUM_GPUS_PER_NODE gpus)"
 echo "[info] run id    : $RUN_ID"
 echo "[info] save dir  : $SAVE_DIR"
+echo "[info] ref load  : $CKPT_REF_LOAD_DIR"
+echo "[info] load dir  : $CKPT_LOAD_DIR"
 echo "[info] dashboard : http://$V4_MASTER_IP:$V4_DASHBOARD_PORT"
 
 # Finalize profile flags (needs SAVE_DIR).
@@ -218,8 +222,8 @@ source scripts/models/deepseek-v4-flash.sh
 
 CKPT_ARGS=(
   --hf-checkpoint  $V4_BF16_DIR
-  --ref-load       $V4_TORCH_DIST
-  --load           $SAVE_DIR/checkpoints
+  --ref-load       $CKPT_REF_LOAD_DIR
+  --load           $CKPT_LOAD_DIR
   --save           $SAVE_DIR/checkpoints
   --save-interval  $PRESET_SAVE_INTERVAL
   --save-retain-interval $PRESET_SAVE_RETAIN_INTERVAL
