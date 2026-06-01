@@ -14,6 +14,8 @@ PROVED_STATUSES = {
     "PASS_WITH_LOCALIZED_DRIFT",
     "PASS_WITH_ATTENTION_DRIFT_LOCALIZED",
     "PASS_WITH_LAYERWISE_ATTENTION_DRIFT_LOCALIZED",
+    "PASS_WITH_LAYERWISE_DRIFT_LOCALIZED",
+    "PASS_WITH_ATTENTION_CORE_LOCALIZED",
     "PASS_WITH_BF16_ATTENTION_IO_DRIFT_RECORDED",
     "PASS_WITH_ROUTING_REPLAY_BF16_TOLERANCE",
     "RUN_WITH_DRIFT_RECORDED",
@@ -152,6 +154,9 @@ def _main() -> int:
                 "deepseek-v4-mini-activation-replay-qatsim-20260531.json",
                 "deepseek-v4-mini-sublayer-activation-replay-qatsim-20260531.json",
                 "deepseek-v4-mini-attention-io-replay-qatsim-20260531.json",
+                "deepseek-v4-mini-layerwise-drift-localization-20260601.json",
+                "deepseek-v4-mini-layer0-attention-internal-localization-20260601.json",
+                "deepseek-v4-attention-core-external-oracle-20260601.json",
             ],
             "expected_failing_diagnostic_artifacts": [
                 "deepseek-v4-mini-forward-routing-replay-dense-vs-sparse-qatsim-20260531.json",
@@ -162,6 +167,9 @@ def _main() -> int:
                 "mini_checkpoint_activation_replay",
                 "mini_checkpoint_sublayer_activation_replay",
                 "mini_checkpoint_attention_io_replay",
+                "mini_checkpoint_layerwise_drift_localization",
+                "mini_checkpoint_layer0_attention_core_localization",
+                "mini_checkpoint_attention_core_external_oracle",
             ],
             "doc_sections": ["Mini Checkpoint Drift Probe"],
             "status": "PROVED_WITH_LOCALIZED_DRIFT",
@@ -368,6 +376,8 @@ def _main() -> int:
         "transformer-engine",
         "tilelang",
         "SFT loss explicit reference",
+        "attention_core",
+        "external FP64/FP32 attention formula",
     ]
     doc_checks = {phrase: (phrase in doc) for phrase in doc_required_phrases}
     for phrase, present in doc_checks.items():

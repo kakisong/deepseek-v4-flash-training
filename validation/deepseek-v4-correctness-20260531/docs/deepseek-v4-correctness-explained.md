@@ -244,6 +244,67 @@ attention-output replay 的 SFT one-step 结果：
 - 但当把已经定位的 attention forward-value drift replay 掉后，SFT loss 变为 exact，gradient/update 差异落入阈值。
 - 这说明训练链路本身可以闭合，剩余 strict 差异来自已定位的 BF16 forward drift。
 
+2026-06-01 又补跑了一次 layer-by-layer drift 定位，验证数据来自：
+
+- `artifacts/deepseek-v4-mini-layerwise-drift-localization-20260601.json`
+- `artifacts/deepseek-v4-mini-layerwise-dense-vs-sparse-routing-replay-20260601.json`
+- `artifacts/deepseek-v4-mini-layerwise-dense-vs-tilelang-routing-replay-20260601.json`
+
+这次复跑的做法是：先用 dense backend 记录 MoE routing，再让 sparse 和 tilelang 复用同一份 routing。这样可以把“离散路由翻转”固定住，只观察连续数值 drift。
+
+关键结果：
+
+| 检查点 | dense vs sparse | dense vs tilelang |
+| --- | ---: | ---: |
+| embedding 是否 exact | `true` | `true` |
+| layer 0 input_layernorm 是否 exact | `true` | `true` |
+| 第一个非零差异位置 | layer 0 self_attention | layer 0 self_attention |
+| layer 0 self_attention max_abs | `0.0625` | `0.0625` |
+| layer 0 self_attention mean_abs | `0.006124485284090042` | `0.00623230030760169` |
+| layer 0 self_attention relative_gap | `1.3518060894557316e-05` | `1.394314055302992e-05` |
+
+解释：
+
+- 差异不是从 embedding 或第一层 input norm 开始的。
+- 在固定 routing 后，第一个非零差异出现在 layer 0 self-attention output。
+- 结合之前的 activation replay：注入所有 dense attention 输出可以把最终 logprob 恢复到 bitwise exact；只注入 MLP 输出不能恢复。
+- 因此，strict logprob parity FAIL 的主要解释仍是：BF16 attention backend 的连续小差异沿 4 层传播，并被后续层、router/head 放大，而不是 SFT loss、MoE dispatcher、output head 或 optimizer 公式错误。
+
+随后又把 layer 0 self-attention 内部拆开，验证数据来自：
+
+- `artifacts/deepseek-v4-mini-layer0-attention-internal-localization-20260601.json`
+- `artifacts/deepseek-v4-mini-layer0-attention-dense-vs-sparse-internal-20260601.json`
+- `artifacts/deepseek-v4-mini-layer0-attention-dense-vs-tilelang-internal-20260601.json`
+
+关键结果：
+
+| 检查点 | dense vs sparse | dense vs tilelang |
+| --- | ---: | ---: |
+| Q path 是否 exact | `true` | `true` |
+| KV path 是否 exact | `true` | `true` |
+| 第一个内部非零差异位置 | attention_core | attention_core |
+| attention_core max_abs | `0.05810546875` | `0.0576171875` |
+| attention_core mean_abs | `0.0004757347342092544` | `0.000496836262755096` |
+| after_wo_b max_abs | `0.0625` | `0.0625` |
+
+这一步把 strict logprob parity FAIL 的解释继续缩小到 attention core：Q/KV projection、normalization、RoPE、KV QAT 都是 exact，差异从 dense/sparse/tilelang attention core 计算本身开始，然后经过 inverse RoPE、`wo_a/wo_b` 和后续 4 层传播放大。
+
+为了确认 attention core 不是“公式写错但三个 backend 一起错”，又补了一个外部公式 oracle：
+
+- `artifacts/deepseek-v4-attention-core-external-oracle-20260601.json`
+
+这个 oracle 不调用 Miles attention op，而是在脚本里显式实现 masked attention 公式：读 trace 里的 Q/KV，直接从 checkpoint 读 `attn_sink`，重建 sliding-window mask，然后用 PyTorch FP64/FP32 公式算 reference。
+
+关键结果：
+
+| backend attention_core vs external FP64 oracle | max_abs | mean_abs | p99_abs | relative_l2_gap |
+| --- | ---: | ---: | ---: | ---: |
+| dense | `0.0579252690076828` | `0.0006029420183040202` | `0.004292130470275879` | `4.812972581036412e-06` |
+| sparse | `0.015624523162841797` | `0.0003014612302649766` | `0.001910567283630371` | `1.4086557198478289e-06` |
+| tilelang | `0.019970417022705078` | `0.0003326234291307628` | `0.002046346664428711` | `1.6434363032669097e-06` |
+
+这一步的意义是：layer 0 attention_core 的 strict 差异不是公式级错误。三个 backend 都落在 external FP64/FP32 公式的 BF16 envelope 内；dense/sparse/tilelang 之间的剩余差异来自不同 backend 的数值路径和舍入方式。
+
 ## Step 6：验证完整 4-layer external forward
 
 为了进一步增强证据，我们又写了 loaded 4-layer full external reference。它不用 Miles/Megatron 的 block forward，而是显式重建：
@@ -426,7 +487,10 @@ coverage matrix 明确保留的 open strict gates：
 4. **loaded 4-layer mini checkpoint 的 framework-level correctness gate 在 BF16 训练容差下为 `PASS`。**
 5. **完整 4-layer full external forward/loss 在 routing replay BF16 容差下为 `PASS`。**
 6. **FP32 direct closure 在当前 Miles DeepSeek-V4 runtime 不可执行，不能用来关闭剩余 strict gate。**
-7. **strict logprob parity 和 full external one-step train selected-gradient strict parity 仍未关闭，已作为边界记录。**
+7. **2026-06-01 layer-by-layer 复跑把 backend drift 的第一个非零位置定位到 layer 0 self-attention output。**
+8. **layer 0 self-attention 内部复跑进一步证明 Q/KV path exact，第一处非零差异来自 attention core backend。**
+9. **attention-core external oracle 进一步证明 dense/sparse/tilelang 都符合外部 FP64/FP32 attention 公式的 BF16 envelope，不是 attention 公式级错误。**
+10. **strict logprob parity 没有被改写为 PASS，但已经解释为 BF16 attention-core backend 数值漂移；full external one-step train selected-gradient strict parity 仍作为边界记录。**
 
 所以，面向项目决策可以这样表述：
 
@@ -443,4 +507,6 @@ coverage matrix 明确保留的 open strict gates：
 | mini checkpoint 总 gate | `artifacts/deepseek-v4-mini-checkpoint-correctness-gate-20260531.json` |
 | full external forward/loss | `artifacts/deepseek-v4-mini-external-full-reference-bf16-routing-replay-tolerance-20260531.json` |
 | full external train diagnostic | `artifacts/deepseek-v4-mini-external-full-reference-bf16-routing-replay-train-tolerance-20260531.json` |
+| layer-by-layer drift localization | `artifacts/deepseek-v4-mini-layerwise-drift-localization-20260601.json` |
+| layer-0 attention internal localization | `artifacts/deepseek-v4-mini-layer0-attention-internal-localization-20260601.json` |
 | FP32 strict closure attempt | `artifacts/deepseek-v4-fp32-strict-closure-attempt-20260601.json` |

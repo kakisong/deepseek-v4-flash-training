@@ -1,0 +1,370 @@
+{
+  "boundary": "This is an external formula oracle for layer-0 attention_core. It validates that all runtime backends stay inside the declared BF16 attention-core envelope; it does not make full-model strict logprob parity pass.",
+  "comparisons": [
+    {
+      "actual_shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "exact_equal": false,
+      "expected_shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "finite": true,
+      "max_abs": 0.0579252690076828,
+      "mean_abs": 0.0006029420183040202,
+      "name": "dense_core_vs_external_fp64",
+      "nonzero_abs_count": 16777065,
+      "numel": 16777216,
+      "p95_abs": 0.002038240432739258,
+      "p99_abs": 0.004292130470275879,
+      "relative_l2_gap": 4.812972581036412e-06,
+      "status": "PASS",
+      "thresholds": {
+        "max_abs": 0.065,
+        "mean_abs": 0.001,
+        "p99_abs": 0.008,
+        "relative_l2_gap": 8e-06
+      }
+    },
+    {
+      "actual_shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "exact_equal": false,
+      "expected_shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "finite": true,
+      "max_abs": 0.015624523162841797,
+      "mean_abs": 0.0003014612302649766,
+      "name": "sparse_core_vs_external_fp64",
+      "nonzero_abs_count": 16776968,
+      "numel": 16777216,
+      "p95_abs": 0.0009281039237976074,
+      "p99_abs": 0.001910567283630371,
+      "relative_l2_gap": 1.4086557198478289e-06,
+      "status": "PASS",
+      "thresholds": {
+        "max_abs": 0.065,
+        "mean_abs": 0.001,
+        "p99_abs": 0.008,
+        "relative_l2_gap": 8e-06
+      }
+    },
+    {
+      "actual_shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "exact_equal": false,
+      "expected_shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "finite": true,
+      "max_abs": 0.019970417022705078,
+      "mean_abs": 0.0003326234291307628,
+      "name": "tilelang_core_vs_external_fp64",
+      "nonzero_abs_count": 16776997,
+      "numel": 16777216,
+      "p95_abs": 0.0009950995445251465,
+      "p99_abs": 0.002046346664428711,
+      "relative_l2_gap": 1.6434363032669097e-06,
+      "status": "PASS",
+      "thresholds": {
+        "max_abs": 0.065,
+        "mean_abs": 0.001,
+        "p99_abs": 0.008,
+        "relative_l2_gap": 8e-06
+      }
+    },
+    {
+      "actual_shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "exact_equal": false,
+      "expected_shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "finite": true,
+      "max_abs": 0.05810546875,
+      "mean_abs": 0.00047573435585945845,
+      "name": "dense_core_vs_external_fp64_rounded_bf16",
+      "nonzero_abs_count": 7158191,
+      "numel": 16777216,
+      "p95_abs": 0.001953125,
+      "p99_abs": 0.00390625,
+      "relative_l2_gap": 5.047732769769553e-06,
+      "status": "PASS",
+      "thresholds": {
+        "max_abs": 0.065,
+        "mean_abs": 0.001,
+        "p99_abs": 0.008,
+        "relative_l2_gap": 8e-06
+      }
+    },
+    {
+      "actual_shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "exact_equal": false,
+      "expected_shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "finite": true,
+      "max_abs": 0.015625,
+      "mean_abs": 4.497428207628218e-08,
+      "name": "sparse_core_vs_external_fp64_rounded_bf16",
+      "nonzero_abs_count": 3483,
+      "numel": 16777216,
+      "p95_abs": 0.0,
+      "p99_abs": 0.0,
+      "relative_l2_gap": -1.1738753569190408e-07,
+      "status": "PASS",
+      "thresholds": {
+        "max_abs": 0.065,
+        "mean_abs": 0.001,
+        "p99_abs": 0.008,
+        "relative_l2_gap": 8e-06
+      }
+    },
+    {
+      "actual_shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "exact_equal": false,
+      "expected_shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "finite": true,
+      "max_abs": 0.03125,
+      "mean_abs": 0.00011115750385215506,
+      "name": "tilelang_core_vs_external_fp64_rounded_bf16",
+      "nonzero_abs_count": 3328874,
+      "numel": 16777216,
+      "p95_abs": 0.00048828125,
+      "p99_abs": 0.001953125,
+      "relative_l2_gap": 8.217150648803795e-07,
+      "status": "PASS",
+      "thresholds": {
+        "max_abs": 0.065,
+        "mean_abs": 0.001,
+        "p99_abs": 0.008,
+        "relative_l2_gap": 8e-06
+      }
+    },
+    {
+      "actual_shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "exact_equal": false,
+      "expected_shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "finite": true,
+      "max_abs": 0.05810546875,
+      "mean_abs": 0.000475731969345361,
+      "name": "dense_core_vs_external_fp32_bf16_formula",
+      "nonzero_abs_count": 7158207,
+      "numel": 16777216,
+      "p95_abs": 0.001953125,
+      "p99_abs": 0.00390625,
+      "relative_l2_gap": 5.165121903960568e-06,
+      "status": "PASS",
+      "thresholds": {
+        "max_abs": 0.065,
+        "mean_abs": 0.001,
+        "p99_abs": 0.008,
+        "relative_l2_gap": 8e-06
+      }
+    },
+    {
+      "actual_shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "exact_equal": false,
+      "expected_shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "finite": true,
+      "max_abs": 0.015625,
+      "mean_abs": 1.077046363207046e-08,
+      "name": "sparse_core_vs_external_fp32_bf16_formula",
+      "nonzero_abs_count": 132,
+      "numel": 16777216,
+      "p95_abs": 0.0,
+      "p99_abs": 0.0,
+      "relative_l2_gap": 0.0,
+      "status": "PASS",
+      "thresholds": {
+        "max_abs": 0.065,
+        "mean_abs": 0.001,
+        "p99_abs": 0.008,
+        "relative_l2_gap": 8e-06
+      }
+    },
+    {
+      "actual_shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "exact_equal": false,
+      "expected_shape": [
+        1,
+        512,
+        64,
+        512
+      ],
+      "finite": true,
+      "max_abs": 0.03125,
+      "mean_abs": 0.00011116002860944718,
+      "name": "tilelang_core_vs_external_fp32_bf16_formula",
+      "nonzero_abs_count": 3328828,
+      "numel": 16777216,
+      "p95_abs": 0.00048828125,
+      "p99_abs": 0.001953125,
+      "relative_l2_gap": 9.391029313077226e-07,
+      "status": "PASS",
+      "thresholds": {
+        "max_abs": 0.065,
+        "mean_abs": 0.001,
+        "p99_abs": 0.008,
+        "relative_l2_gap": 8e-06
+      }
+    }
+  ],
+  "conclusion": "Layer-0 Q/KV inputs are exact across dense/sparse/tilelang, and all three backend attention_core tensors are within the external PyTorch FP64/FP32 BF16 envelope. The remaining dense/sparse/tilelang strict differences are therefore backend numerical choices around the same mathematical attention formula, not a different Q/KV/RoPE/QAT input or a formula-level error.",
+  "date": "2026-06-01",
+  "failures": [],
+  "inputs": {
+    "attn_sink_shape": [
+      64
+    ],
+    "checkpoint_name": "checkpoints",
+    "dense_trace_name": "dense-trace.pt",
+    "kv_shape": [
+      1,
+      512,
+      512
+    ],
+    "layer": 0,
+    "q_shape": [
+      1,
+      512,
+      64,
+      512
+    ],
+    "sparse_trace_name": "sparse-trace.pt",
+    "tilelang_trace_name": "tilelang-trace.pt"
+  },
+  "method": "Load recorded layer-0 q_after_rope, kv_vanilla_after_rope_qat, and backend attention_core tensors; load attn_sink directly from the distributed checkpoint; reconstruct the sliding-window top-k mask; compare dense/sparse/tilelang outputs against an in-script PyTorch FP64/FP32 masked-attention formula.",
+  "qkv_exact_checks": [
+    {
+      "exact_equal": true,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "name": "q_dense_vs_sparse",
+      "nonzero_abs_count": 0,
+      "shape": [
+        1,
+        512,
+        64,
+        512
+      ]
+    },
+    {
+      "exact_equal": true,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "name": "q_dense_vs_tilelang",
+      "nonzero_abs_count": 0,
+      "shape": [
+        1,
+        512,
+        64,
+        512
+      ]
+    },
+    {
+      "exact_equal": true,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "name": "kv_dense_vs_sparse",
+      "nonzero_abs_count": 0,
+      "shape": [
+        1,
+        512,
+        512
+      ]
+    },
+    {
+      "exact_equal": true,
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "name": "kv_dense_vs_tilelang",
+      "nonzero_abs_count": 0,
+      "shape": [
+        1,
+        512,
+        512
+      ]
+    }
+  ],
+  "runtime": {
+    "checkpoint_iteration": "iter_0000002",
+    "chunk_size": 32,
+    "device": "cuda",
+    "softmax_scale": 0.04419417382415922,
+    "window_size": 128
+  },
+  "scope": "DeepSeek-V4 mini checkpoint layer-0 attention-core external oracle",
+  "status": "PASS"
+}

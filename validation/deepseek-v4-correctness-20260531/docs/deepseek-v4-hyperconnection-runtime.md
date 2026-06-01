@@ -67,7 +67,7 @@ Miles 的正确性结论仍以本仓库 artifact 为准：operator math、trace 
 2. **核心训练数学已经通过分层验证。** 已覆盖 HC、RoPE、official-compatible KV QAT、dense/sparse/tilelang attention、Grouped MLP、EP=8 all-to-all dispatcher、真实 EP=8 MoELayer、TransformerBlock 训练步、optimizer update、fix regression guards。
 3. **external training reference 已经完成第一层闭环，并补上真实 EP=8 MoE 层。** 手写 PyTorch 训练态公式 reference 已经分别对齐 1-layer non-compressed、`compress_ratio=4` indexer path、deterministic `compress_ratio=128` compressed-attention block、score-routed MoE/shared expert block，以及真实 EP=8 MoELayer；c0/c128 forward/loss exact，c4、MoE block 和 EP=8 MoELayer 在声明 BF16 容差内，梯度和一步更新都在声明阈值内。
 4. **mini checkpoint 级训练正确性已经给出 PASS gate。** 新增 `deepseek-v4-mini-checkpoint-correctness-gate-20260531.json`，把 loaded 4-layer mini checkpoint、真实 SFT batch、显式 PyTorch SFT loss reference、SFT loss backward/update reference、routed MoE、EP=8 dispatcher、真实 EP=8 MoELayer reference、Grouped MLP、score-routed MoE external reference、attention I/O training step、c0/c4/c128 external training reference 和 BF16 tolerance envelope 串起来做机器校验。该 gate 的结论是：在声明 BF16 训练容差下，Miles 当前 DeepSeek-V4 mini checkpoint 训练路径为 `PASS`。
-5. **完整模型 strict parity 仍然是边界项。** mini checkpoint 和 official-vs-Miles 的真实非注入 forward strict logprob parity 仍记录为 `FAIL`；当前证据把它定位为 BF16/FP8 training runtime 与 official inference runtime 的数值漂移，并通过 BF16 tolerance envelope 约束，而不是把它改写成 strict pass。
+5. **完整模型 strict parity 仍然是边界项，但 mini backend 的第一处差异已经定位到 attention core。** mini checkpoint 和 official-vs-Miles 的真实非注入 forward strict logprob parity 仍记录为 `FAIL`；当前证据把 mini backend 的第一处非零差异定位到 layer 0 `attention_core`，其前面的 Q/KV projection、norm、RoPE、KV QAT 都是 exact。这个差异被 BF16 tolerance envelope 约束，而不是被改写成 strict pass。
 
 按问题拆开看：
 
@@ -76,7 +76,7 @@ Miles 的正确性结论仍以本仓库 artifact 为准：operator math、trace 
 | Miles 是否需要直接引入 Megatron PR #4839 的 HC 修复？ | 当前路径不需要直接引入同一份修复，因为 Miles 没走 upstream HC；但必须保留 HC 方向回归验证。 | `operator_math` 中的 HC orientation check。 |
 | Miles 的 HC 方向是否正确？ | 正确，等价于 `H_res.T @ residual`。 | `deepseek-v4-operator-math-20260531.json`。 |
 | 训练相关算子是否正确？ | 已覆盖的算子和训练步通过。 | attention / block training-step、Grouped MLP、EP=8 dispatcher、real EP=8 MoELayer、optimizer update artifacts。 |
-| official-vs-Miles 是否 strict 完全一致？ | 还不是。strict logprob parity 仍是 `FAIL`。 | official forward BF16 tolerance、mini drift probe、proof ledger。 |
+| official-vs-Miles 是否 strict 完全一致？ | 还不是。strict logprob parity 仍是 `FAIL`。mini backend 的第一处非零差异已经定位到 layer 0 `attention_core`。 | official forward BF16 tolerance、mini drift probe、layer-0 attention internal localization、proof ledger。 |
 | 这个 `FAIL` 是否说明训练无效？ | 不能这样判断。当前 evidence 显示训练链路在消除已定位 forward value drift 后闭合，真实 drift 落在声明 BF16 envelope 内。 | attention-output replay、end-to-end BF16 tolerance、external training reference。 |
 | mini checkpoint 级是否 PASS？ | 是，BF16 训练容差下的 framework-level correctness gate 为 `PASS`；它覆盖 loaded 4-layer checkpoint、SFT loss forward/backward/update reference、routed MoE 和 SFT one-step。 | `deepseek-v4-mini-checkpoint-correctness-gate-20260531.json`。 |
 | 还有什么没证明？ | SFT loss 公式和它的 backward/update 差分已经单独验证；完整 4-layer full external forward/loss reference 已经实现并在 routing replay BF16 容差下通过。但 full external one-step train delta 已真实运行并在 selected-gradient strict delta 上失败，记录为 `FAIL_DIAGNOSTIC`，不是最终训练 PASS。 | proof summary / coverage matrix / proof ledger。 |
@@ -861,6 +861,57 @@ top3_balanced_multiroute:
 
 因此，mini forward backend drift 不是某个后处理或 MLP 单点错误，而是 attention backend 在每层产生的 BF16 小差异沿着后续层传播；其中 layer 0 attention 差异最早进入完整链路并贡献最大。
 
+2026-06-01 复跑了更直接的 layer-by-layer trace 对比：
+
+- `artifacts/deepseek-v4-mini-layerwise-drift-localization-20260601.json`
+- `artifacts/deepseek-v4-mini-layerwise-dense-vs-sparse-routing-replay-20260601.json`
+- `artifacts/deepseek-v4-mini-layerwise-dense-vs-tilelang-routing-replay-20260601.json`
+
+这次复跑先用 dense 记录 routing，再让 sparse/tilelang 复用 dense routing，因此对比的是固定离散路由后的连续 tensor drift。
+
+| compare | embedding exact | layer 0 input_layernorm exact | first nonzero module | layer 0 self_attention max_abs | layer 0 self_attention mean_abs | layer 0 self_attention relative_gap |
+| --- | --- | --- | --- | ---: | ---: | ---: |
+| dense vs sparse | true | true | `module.decoder.layers.0.self_attention` | 0.0625 | 0.006124485284090042 | 1.3518060894557316e-05 |
+| dense vs tilelang | true | true | `module.decoder.layers.0.self_attention` | 0.0625 | 0.00623230030760169 | 1.394314055302992e-05 |
+
+同一批复跑中，dense-vs-sparse 的最大绝对 trace gap 出现在 `module.decoder.layers.1`：`max_abs=0.5, mean_abs=0.0003599604533519596, relative_gap=1.7128867751958765e-06`；dense-vs-tilelang 同样出现在 `module.decoder.layers.1`：`max_abs=0.5, mean_abs=0.0003675383923109621, relative_gap=1.855609593426344e-06`。最大相对 trace gap 都出现在 layer 2 local expert intermediate tensor，但这是在 layer 0 attention 已经产生差异后继续传播到 MoE 子路径的结果，不改变第一非零入口的定位。
+
+继续打开 layer 0 self-attention 内部 trace：
+
+- `artifacts/deepseek-v4-mini-layer0-attention-internal-localization-20260601.json`
+- `artifacts/deepseek-v4-mini-layer0-attention-dense-vs-sparse-internal-20260601.json`
+- `artifacts/deepseek-v4-mini-layer0-attention-dense-vs-tilelang-internal-20260601.json`
+
+这一步使用同一份 dense routing replay，并设置内部 trace 开关记录 layer 0 attention 的关键中间 tensor。结果如下：
+
+| compare | Q path exact | KV path exact | first internal nonzero tensor | attention_core max_abs | attention_core mean_abs | attention_core relative_gap | after_wo_b max_abs | after_wo_b mean_abs |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| dense vs sparse | true | true | `attention_core` | 0.05810546875 | 0.0004757347342092544 | 5.047732769769553e-06 | 0.0625 | 0.006124485284090042 |
+| dense vs tilelang | true | true | `attention_core` | 0.0576171875 | 0.000496836262755096 | 5.399915385728704e-06 | 0.0625 | 0.00623230030760169 |
+
+更细的 tensor 结果是：
+
+1. `wq_a`、`q_norm`、`wq_b`、`q_after_rope` 在 dense/sparse/tilelang 之间 exact。
+2. `wkv`、`kv_norm`、`kv_vanilla_after_rope_qat` 在 dense/sparse/tilelang 之间 exact。
+3. 第一处非零差异不是 projection、norm、RoPE 或 KV QAT，而是 `attention_core`。
+4. 之后差异继续经过 inverse RoPE、`wo_a`、`wo_b` 传播到 layer 0 attention 输出。
+
+因此 strict logprob parity 的剩余 FAIL 已经被解释到更窄的边界：在固定 routing 且 Q/KV 输入完全相同的情况下，dense/sparse/tilelang 的 BF16 attention-core backend math 产生了连续数值 drift。这个结论不把 strict parity 改判为 PASS；它说明 strict parity 为什么不应该作为 BF16 多 backend 完整模型的唯一通过条件。
+
+继续补一个 attention-core external oracle：
+
+- `artifacts/deepseek-v4-attention-core-external-oracle-20260601.json`
+
+这个 verifier 是 external FP64/FP32 attention formula gate，不调用 Miles attention core operator。它读取已记录的 layer 0 `q_after_rope`、`kv_vanilla_after_rope_qat`、dense/sparse/tilelang `attention_core` tensor；从分布式 checkpoint 直接加载 layer 0 `attn_sink`；重建 sliding-window top-k mask；然后在脚本内用 PyTorch FP64/FP32 masked-attention 公式计算 external reference。
+
+| backend attention_core vs external FP64 oracle | max_abs | mean_abs | p99_abs | relative_l2_gap | status |
+| --- | ---: | ---: | ---: | ---: | --- |
+| dense | 0.0579252690076828 | 0.0006029420183040202 | 0.004292130470275879 | 4.812972581036412e-06 | PASS |
+| sparse | 0.015624523162841797 | 0.0003014612302649766 | 0.001910567283630371 | 1.4086557198478289e-06 | PASS |
+| tilelang | 0.019970417022705078 | 0.0003326234291307628 | 0.002046346664428711 | 1.6434363032669097e-06 | PASS |
+
+同一 artifact 还检查了 FP64-rounded-BF16 和 FP32-BF16 external formula：dense/sparse/tilelang 全部 PASS。由此可以把边界再收紧一层：attention core 的数学公式是同一个，剩余差异是不同 backend 对同一公式的 BF16 数值路径和舍入差异，不是 Q/KV、RoPE、KV QAT、`attn_sink`、mask 或公式级错误。
+
 继续做 attention I/O replay：dense backend 记录每层 attention 的输入和输出；sparse/tilelang backend 在 forward pre-hook 中把 attention 输入替换为 dense 输入，再比较当前 backend 重新计算出的 attention 输出和 dense attention 输出。这样可以排除“输入状态不同”对 attention 输出对比的干扰。
 
 | backend | layer | input_pre_replay max_abs | output_from_dense_input max_abs | output mean_abs | output p99_abs |
@@ -1371,7 +1422,7 @@ coverage matrix 把本次目标拆成可检查 requirement，而不是只依赖�
 2. HyperConnection 方向验证能区分正确公式和错误公式：fixed formula diff 为 `2.384185791015625e-07`，wrong formula diff 为 `9.81311321258545`。
 3. routing replay 在三组 backend compare 上都降低 mismatch 和 relative L2 gap：dense-vs-sparse relative L2 降低 `4.3964252939698225x`，dense-vs-tilelang 降低 `5.329166485319148x`，sparse-vs-tilelang 降低 `6.371359406085763x`。
 4. sparse/tilelang 的 `prefix4`、`final_ln`、`all_attn`、`layerwise_all_attn` replay 都 bitwise 恢复 dense logprob；`all_mlp` replay 不能恢复，证明剩余 forward drift 的必要注入点是 attention output。
-5. attention I/O replay 中所有同输入 attention 输出 finite，最大差异不超过 `0.0625`，并且 layer 0 是两个 backend 上 mean_abs 最大的早期入口。
+5. attention I/O replay 中所有同输入 attention 输出 finite，最大差异不超过 `0.0625`，并且 layer 0 是两个 backend 上 mean_abs 最大的早期入口。layer-0 attention internal localization 进一步证明 Q/KV projection、norm、RoPE、KV QAT exact，第一处非零差异来自 `attention_core`。attention-core external oracle 进一步证明 dense/sparse/tilelang 都落在脚本内 PyTorch FP64/FP32 attention 公式的 BF16 envelope 内。
 6. attention I/O local training-step 的最大输入梯度差异为 `9.5367431640625e-07`，manual SGD 后最大 state 差异为 `0.0`。
 7. 完整 SFT one-step 的 attention-output straight-through replay 在三组 backend compare 上 `loss_abs_global_max=0.0`，selected gradient relative gap 仍显著低于 `0.002` 阈值。
 8. SFT loss explicit reference artifact 为 `PASS`：loss exact、token count exact、per-token logprob 最大差异为 `1.9073486328125e-06`；SFT loss backward/update reference 也为 `PASS`，selected-state 一步更新差为 `9.531504474580288e-10`。
@@ -1385,7 +1436,7 @@ coverage matrix 把本次目标拆成可检查 requirement，而不是只依赖�
 16. Environment provenance artifact 为 `PASS`。
 17. External reference provenance artifact 为 `PASS`。
 
-因此 ledger 给出的机器结论是：已记录的 artifact 能一致证明当前覆盖的数学算子、训练步、non-compressed / c4 indexer / deterministic c128 / score-routed MoE external training reference、真实 EP=8 MoELayer external reference、official forward BF16 tolerance、optimizer update math、修复项 source guard、coverage matrix、environment provenance、external reference provenance 和 dense/sparse/tilelang 训练链路；真实非注入 forward/train-step drift 落在声明的 BF16 tolerance envelope 内；剩余 strict parity 失败被一致定位为 BF16 attention forward-value drift 经过完整模型放大，而不是 HC、QAT、attention backward、MLP、EP=8 dispatcher、真实 EP=8 MoELayer、output head 或参数更新公式错误。
+因此 ledger 给出的机器结论是：已记录的 artifact 能一致证明当前覆盖的数学算子、训练步、attention-core external oracle、non-compressed / c4 indexer / deterministic c128 / score-routed MoE external training reference、真实 EP=8 MoELayer external reference、official forward BF16 tolerance、optimizer update math、修复项 source guard、coverage matrix、environment provenance、external reference provenance 和 dense/sparse/tilelang 训练链路；真实非注入 forward/train-step drift 落在声明的 BF16 tolerance envelope 内；剩余 strict parity 失败被一致定位为 BF16 attention-core / attention forward-value drift 经过完整模型放大，而不是 HC、QAT、attention formula、attention backward、MLP、EP=8 dispatcher、真实 EP=8 MoELayer、output head 或参数更新公式错误。
 
 ## 环境
 

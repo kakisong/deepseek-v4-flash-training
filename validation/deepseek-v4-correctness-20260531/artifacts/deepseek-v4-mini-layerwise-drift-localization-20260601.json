@@ -1,0 +1,628 @@
+{
+  "boundary": "This run localizes backend drift within the real Miles BF16 mini-checkpoint path. It does not turn strict logprob parity into PASS; it explains why strict logprob parity remains a BF16 backend boundary.",
+  "date": "2026-06-01",
+  "dense_vs_sparse": {
+    "max_abs_trace": {
+      "exact_equal": false,
+      "max_abs": 0.5,
+      "mean_abs": 0.0003599604533519596,
+      "name": "module.decoder.layers.1",
+      "nonzero_abs_count": 4267252,
+      "numel": 8388608,
+      "relative_gap": 1.7128867751958765e-06,
+      "shape": [
+        512,
+        1,
+        4,
+        4096
+      ],
+      "shape_mismatch": false
+    },
+    "max_relative_trace": {
+      "exact_equal": false,
+      "max_abs": 0.01171875,
+      "mean_abs": 0.0003470971423666924,
+      "name": "module.decoder.layers.2.mlp.experts",
+      "nonzero_abs_count": 11166088,
+      "numel": 12910592,
+      "relative_gap": 7.401729990141881e-05,
+      "shape": [
+        3152,
+        4096
+      ],
+      "shape_mismatch": false
+    },
+    "selected_traces": [
+      {
+        "exact_equal": true,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "name": "module.embedding.word_embeddings",
+        "nonzero_abs_count": 0,
+        "numel": 2097152,
+        "relative_gap": 0.0,
+        "shape": [
+          1,
+          512,
+          4096
+        ]
+      },
+      {
+        "exact_equal": true,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "name": "module.decoder.layers.0.input_layernorm",
+        "nonzero_abs_count": 0,
+        "numel": 2097152,
+        "relative_gap": 0.0,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.0625,
+        "mean_abs": 0.006124485284090042,
+        "name": "module.decoder.layers.0.self_attention",
+        "nonzero_abs_count": 1423174,
+        "numel": 2097152,
+        "relative_gap": 1.3518060894557316e-05,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.125,
+        "mean_abs": 0.001369244186207652,
+        "name": "module.decoder.layers.0.mlp",
+        "nonzero_abs_count": 1271361,
+        "numel": 2097152,
+        "relative_gap": 2.958205209013798e-06,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.125,
+        "mean_abs": 0.00021753448527306318,
+        "name": "module.decoder.layers.0",
+        "nonzero_abs_count": 2165526,
+        "numel": 8388608,
+        "relative_gap": 1.6045323546487467e-06,
+        "shape": [
+          512,
+          1,
+          4,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.0029296875,
+        "mean_abs": 0.00014455427299253643,
+        "name": "module.decoder.layers.1.input_layernorm",
+        "nonzero_abs_count": 1352756,
+        "numel": 2097152,
+        "relative_gap": 1.55390772274e-05,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.0625,
+        "mean_abs": 0.007500836625695229,
+        "name": "module.decoder.layers.1.self_attention",
+        "nonzero_abs_count": 1538699,
+        "numel": 2097152,
+        "relative_gap": 2.061264741215485e-05,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.25,
+        "mean_abs": 0.0010569128207862377,
+        "name": "module.decoder.layers.1.mlp",
+        "nonzero_abs_count": 1655221,
+        "numel": 2097152,
+        "relative_gap": 2.8710607463677817e-06,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.5,
+        "mean_abs": 0.0003599604533519596,
+        "name": "module.decoder.layers.1",
+        "nonzero_abs_count": 4267252,
+        "numel": 8388608,
+        "relative_gap": 1.7128867751958765e-06,
+        "shape": [
+          512,
+          1,
+          4,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.0234375,
+        "mean_abs": 0.00028538500191643834,
+        "name": "module.decoder.layers.2.input_layernorm",
+        "nonzero_abs_count": 1586003,
+        "numel": 2097152,
+        "relative_gap": 2.8938890652696614e-05,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.06640625,
+        "mean_abs": 0.0070840055122971535,
+        "name": "module.decoder.layers.2.self_attention",
+        "nonzero_abs_count": 1647994,
+        "numel": 2097152,
+        "relative_gap": 3.285716201328892e-05,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.0625,
+        "mean_abs": 0.0015589732211083174,
+        "name": "module.decoder.layers.2.mlp",
+        "nonzero_abs_count": 1701259,
+        "numel": 2097152,
+        "relative_gap": 1.4522839460573422e-05,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.5,
+        "mean_abs": 0.00041892853914760053,
+        "name": "module.decoder.layers.2",
+        "nonzero_abs_count": 4733597,
+        "numel": 8388608,
+        "relative_gap": 1.5423633688005367e-06,
+        "shape": [
+          512,
+          1,
+          4,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.00390625,
+        "mean_abs": 0.00024923207820393145,
+        "name": "module.decoder.layers.3.input_layernorm",
+        "nonzero_abs_count": 1582669,
+        "numel": 2097152,
+        "relative_gap": 2.826380871512324e-05,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.125,
+        "mean_abs": 0.0074103763327002525,
+        "name": "module.decoder.layers.3.self_attention",
+        "nonzero_abs_count": 1618643,
+        "numel": 2097152,
+        "relative_gap": 2.7812769860191544e-05,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.0234375,
+        "mean_abs": 0.0014065154828131199,
+        "name": "module.decoder.layers.3.mlp",
+        "nonzero_abs_count": 1659649,
+        "numel": 2097152,
+        "relative_gap": 3.952352666625192e-05,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.5,
+        "mean_abs": 0.0005151113145984709,
+        "name": "module.decoder.layers.3",
+        "nonzero_abs_count": 6030573,
+        "numel": 8388608,
+        "relative_gap": 1.6980556726275964e-06,
+        "shape": [
+          512,
+          1,
+          4,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.0234375,
+        "mean_abs": 0.001368710887618363,
+        "name": "module.decoder.final_layernorm",
+        "nonzero_abs_count": 1450580,
+        "numel": 2097152,
+        "relative_gap": 2.1873113443926506e-05,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      }
+    ]
+  },
+  "dense_vs_tilelang": {
+    "max_abs_trace": {
+      "exact_equal": false,
+      "max_abs": 0.5,
+      "mean_abs": 0.0003675383923109621,
+      "name": "module.decoder.layers.1",
+      "nonzero_abs_count": 4280135,
+      "numel": 8388608,
+      "relative_gap": 1.855609593426344e-06,
+      "shape": [
+        512,
+        1,
+        4,
+        4096
+      ],
+      "shape_mismatch": false
+    },
+    "max_relative_trace": {
+      "exact_equal": false,
+      "max_abs": 0.01171875,
+      "mean_abs": 0.0003448496572673321,
+      "name": "module.decoder.layers.2.mlp.experts",
+      "nonzero_abs_count": 11144416,
+      "numel": 12910592,
+      "relative_gap": 7.452137747732124e-05,
+      "shape": [
+        3152,
+        4096
+      ],
+      "shape_mismatch": false
+    },
+    "selected_traces": [
+      {
+        "exact_equal": true,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "name": "module.embedding.word_embeddings",
+        "nonzero_abs_count": 0,
+        "numel": 2097152,
+        "relative_gap": 0.0,
+        "shape": [
+          1,
+          512,
+          4096
+        ]
+      },
+      {
+        "exact_equal": true,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "name": "module.decoder.layers.0.input_layernorm",
+        "nonzero_abs_count": 0,
+        "numel": 2097152,
+        "relative_gap": 0.0,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.0625,
+        "mean_abs": 0.00623230030760169,
+        "name": "module.decoder.layers.0.self_attention",
+        "nonzero_abs_count": 1432896,
+        "numel": 2097152,
+        "relative_gap": 1.394314055302992e-05,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.125,
+        "mean_abs": 0.0014019437367096543,
+        "name": "module.decoder.layers.0.mlp",
+        "nonzero_abs_count": 1278216,
+        "numel": 2097152,
+        "relative_gap": 3.380566895749837e-06,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.125,
+        "mean_abs": 0.00022424192866310477,
+        "name": "module.decoder.layers.0",
+        "nonzero_abs_count": 2184904,
+        "numel": 8388608,
+        "relative_gap": 1.9253197354185403e-06,
+        "shape": [
+          512,
+          1,
+          4,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.0029296875,
+        "mean_abs": 0.0001452407450415194,
+        "name": "module.decoder.layers.1.input_layernorm",
+        "nonzero_abs_count": 1354854,
+        "numel": 2097152,
+        "relative_gap": 1.5613047416707104e-05,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.0703125,
+        "mean_abs": 0.007533159106969833,
+        "name": "module.decoder.layers.1.self_attention",
+        "nonzero_abs_count": 1539551,
+        "numel": 2097152,
+        "relative_gap": 2.080091230349801e-05,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.25,
+        "mean_abs": 0.0010561016388237476,
+        "name": "module.decoder.layers.1.mlp",
+        "nonzero_abs_count": 1654781,
+        "numel": 2097152,
+        "relative_gap": 3.039955143724349e-06,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.5,
+        "mean_abs": 0.0003675383923109621,
+        "name": "module.decoder.layers.1",
+        "nonzero_abs_count": 4280135,
+        "numel": 8388608,
+        "relative_gap": 1.855609593426344e-06,
+        "shape": [
+          512,
+          1,
+          4,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.015625,
+        "mean_abs": 0.0002872565237339586,
+        "name": "module.decoder.layers.2.input_layernorm",
+        "nonzero_abs_count": 1592770,
+        "numel": 2097152,
+        "relative_gap": 2.9193720362807873e-05,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.0625,
+        "mean_abs": 0.007102119270712137,
+        "name": "module.decoder.layers.2.self_attention",
+        "nonzero_abs_count": 1648005,
+        "numel": 2097152,
+        "relative_gap": 3.303778723562356e-05,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.0625,
+        "mean_abs": 0.0015655953902751207,
+        "name": "module.decoder.layers.2.mlp",
+        "nonzero_abs_count": 1702457,
+        "numel": 2097152,
+        "relative_gap": 1.4522306074793434e-05,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.5,
+        "mean_abs": 0.000425317557528615,
+        "name": "module.decoder.layers.2",
+        "nonzero_abs_count": 4737444,
+        "numel": 8388608,
+        "relative_gap": 1.7238030252109127e-06,
+        "shape": [
+          512,
+          1,
+          4,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.00390625,
+        "mean_abs": 0.0002497114473953843,
+        "name": "module.decoder.layers.3.input_layernorm",
+        "nonzero_abs_count": 1581839,
+        "numel": 2097152,
+        "relative_gap": 2.8377359861275764e-05,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.125,
+        "mean_abs": 0.0074761430732905865,
+        "name": "module.decoder.layers.3.self_attention",
+        "nonzero_abs_count": 1622870,
+        "numel": 2097152,
+        "relative_gap": 2.8422324263699394e-05,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.03125,
+        "mean_abs": 0.0014048921875655651,
+        "name": "module.decoder.layers.3.mlp",
+        "nonzero_abs_count": 1658198,
+        "numel": 2097152,
+        "relative_gap": 3.9275990169063135e-05,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.5,
+        "mean_abs": 0.000520584057085216,
+        "name": "module.decoder.layers.3",
+        "nonzero_abs_count": 6038154,
+        "numel": 8388608,
+        "relative_gap": 1.8767829438326444e-06,
+        "shape": [
+          512,
+          1,
+          4,
+          4096
+        ]
+      },
+      {
+        "exact_equal": false,
+        "max_abs": 0.0234375,
+        "mean_abs": 0.0013741261791437864,
+        "name": "module.decoder.final_layernorm",
+        "nonzero_abs_count": 1450920,
+        "numel": 2097152,
+        "relative_gap": 2.218563502009996e-05,
+        "shape": [
+          512,
+          1,
+          4096
+        ]
+      }
+    ]
+  },
+  "inputs": {
+    "actual_samples_forwarded": 1,
+    "checkpoint": "stageA-fp8-20260529-225009/checkpoints",
+    "global_batch_size_for_megatron_init": 8,
+    "max_samples": 1,
+    "rollout_data": "1_0.pt"
+  },
+  "localization": {
+    "dominant_continuous_source": "attention outputs are the first nonzero divergence point under fixed routing. Existing activation-replay evidence shows injecting all dense attention outputs recovers dense logprobs bitwise, while injecting all dense MLP outputs does not; therefore MLP/router-score gaps here are downstream of accumulated attention-output drift.",
+    "embedding_exact": true,
+    "excluded_by_existing_replay_evidence": [
+      "output head/logprob path after identical final hidden",
+      "standalone EP=8 MoE dispatcher/update math",
+      "full SFT loss formula/backward/update under attention-output replay"
+    ],
+    "first_nonzero_module": "module.decoder.layers.0.self_attention",
+    "layer0_input_layernorm_exact": true,
+    "layer0_self_attention_dense_vs_sparse": {
+      "max_abs": 0.0625,
+      "mean_abs": 0.006124485284090042,
+      "relative_gap": 1.3518060894557316e-05
+    },
+    "layer0_self_attention_dense_vs_tilelang": {
+      "max_abs": 0.0625,
+      "mean_abs": 0.00623230030760169,
+      "relative_gap": 1.394314055302992e-05
+    }
+  },
+  "logprob_sha256": {
+    "dense": "7877e2afc5c84cfc21904fbfac14cc8916ca18104109f6242263ba9eb2107b24",
+    "sparse": "41969834efd943f342176c30db32a0018aec255821961308a39771a76a14e818",
+    "tilelang": "d553b999f6b31d25dfb52c41c4f58cb9b0a47fef51148aadf4efba0fda1f3944"
+  },
+  "method": "Run dense as routing-record reference; replay the same MoE top-index decisions in sparse and tilelang; compare captured layer/module tensors against dense.",
+  "runtime": {
+    "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
+    "MEGATRON_USE_KV_QAT": "1",
+    "NCCL_ALGO": "Ring",
+    "bf16": true,
+    "deterministic_mode": true,
+    "world_size": 8
+  },
+  "scope": "DeepSeek-V4 loaded 4-layer mini checkpoint layer-by-layer backend drift localization with dense routing replay",
+  "status": "PASS_WITH_LAYERWISE_DRIFT_LOCALIZED"
+}

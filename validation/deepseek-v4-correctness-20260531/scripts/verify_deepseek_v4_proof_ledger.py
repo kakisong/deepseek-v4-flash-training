@@ -80,6 +80,7 @@ def _main() -> int:
         "official_attention_forward": ("deepseek-v4-official-attention-forward-20260531.json", "PASS"),
         "loaded_weight_mapping": ("deepseek-v4-loaded-weight-mapping-1layer-mlp-qatsim-20260531.json", "PASS"),
         "attention_trace_replay": ("deepseek-v4-attention-trace-replay-qatsim-0415-20260531.json", "PASS"),
+        "attention_core_external_oracle": ("deepseek-v4-attention-core-external-oracle-20260601.json", "PASS"),
         "attention_training_step": ("deepseek-v4-attention-training-step-qatsim-20260531.json", "PASS"),
         "transformer_block_training_step": ("deepseek-v4-transformer-block-training-step-qatsim-20260531.json", "PASS"),
         "grouped_mlp_math": ("deepseek-v4-grouped-mlp-math-20260531.json", "PASS"),
@@ -218,6 +219,127 @@ def _main() -> int:
     _check(io_finite, failures, "attention_io.all_outputs_finite")
     _check(io_max <= 0.0625, failures, "attention_io.max_output_abs_le_0_0625")
     _check(bool(io_layer0_largest), failures, "attention_io.layer0_largest")
+
+    layerwise_drift = _load(base, "deepseek-v4-mini-layerwise-drift-localization-20260601.json")
+    layerwise_loc = layerwise_drift["localization"]
+    gates["mini_checkpoint_layerwise_drift_localization"] = {
+        "artifact": "deepseek-v4-mini-layerwise-drift-localization-20260601.json",
+        "status": _status(layerwise_drift),
+        "embedding_exact": layerwise_loc["embedding_exact"],
+        "layer0_input_layernorm_exact": layerwise_loc["layer0_input_layernorm_exact"],
+        "first_nonzero_module": layerwise_loc["first_nonzero_module"],
+        "layer0_self_attention_dense_vs_sparse": layerwise_loc["layer0_self_attention_dense_vs_sparse"],
+        "layer0_self_attention_dense_vs_tilelang": layerwise_loc["layer0_self_attention_dense_vs_tilelang"],
+    }
+    _check(
+        _status(layerwise_drift) == "PASS_WITH_LAYERWISE_DRIFT_LOCALIZED",
+        failures,
+        "layerwise_drift.status",
+    )
+    _check(layerwise_loc["embedding_exact"], failures, "layerwise_drift.embedding_exact")
+    _check(layerwise_loc["layer0_input_layernorm_exact"], failures, "layerwise_drift.layer0_input_ln_exact")
+    _check(
+        layerwise_loc["first_nonzero_module"] == "module.decoder.layers.0.self_attention",
+        failures,
+        "layerwise_drift.first_nonzero_layer0_attention",
+    )
+    _check(
+        layerwise_loc["layer0_self_attention_dense_vs_sparse"]["max_abs"] <= 0.0625
+        and layerwise_loc["layer0_self_attention_dense_vs_tilelang"]["max_abs"] <= 0.0625,
+        failures,
+        "layerwise_drift.layer0_attention_output_bound",
+    )
+
+    attention_core = _load(base, "deepseek-v4-mini-layer0-attention-internal-localization-20260601.json")
+    attention_core_loc = attention_core["localization"]
+    gates["mini_checkpoint_layer0_attention_core_localization"] = {
+        "artifact": "deepseek-v4-mini-layer0-attention-internal-localization-20260601.json",
+        "status": _status(attention_core),
+        "q_path_exact_sparse": attention_core_loc["q_path_exact_sparse"],
+        "q_path_exact_tilelang": attention_core_loc["q_path_exact_tilelang"],
+        "kv_path_exact_sparse": attention_core_loc["kv_path_exact_sparse"],
+        "kv_path_exact_tilelang": attention_core_loc["kv_path_exact_tilelang"],
+        "first_nonzero_internal_module": attention_core_loc["first_nonzero_internal_module"],
+        "attention_core_dense_vs_sparse": attention_core_loc["attention_core_dense_vs_sparse"],
+        "attention_core_dense_vs_tilelang": attention_core_loc["attention_core_dense_vs_tilelang"],
+        "after_wo_b_dense_vs_sparse": attention_core_loc["after_wo_b_dense_vs_sparse"],
+        "after_wo_b_dense_vs_tilelang": attention_core_loc["after_wo_b_dense_vs_tilelang"],
+    }
+    _check(
+        _status(attention_core) == "PASS_WITH_ATTENTION_CORE_LOCALIZED",
+        failures,
+        "attention_core_localization.status",
+    )
+    _check(
+        attention_core_loc["q_path_exact_sparse"] and attention_core_loc["q_path_exact_tilelang"],
+        failures,
+        "attention_core_localization.q_path_exact",
+    )
+    _check(
+        attention_core_loc["kv_path_exact_sparse"] and attention_core_loc["kv_path_exact_tilelang"],
+        failures,
+        "attention_core_localization.kv_path_exact",
+    )
+    _check(
+        attention_core_loc["first_nonzero_internal_module"]
+        == "module.decoder.layers.0.self_attention.attention_core",
+        failures,
+        "attention_core_localization.first_nonzero_attention_core",
+    )
+    _check(
+        attention_core_loc["attention_core_dense_vs_sparse"]["max_abs"] <= 0.0625
+        and attention_core_loc["attention_core_dense_vs_tilelang"]["max_abs"] <= 0.0625,
+        failures,
+        "attention_core_localization.attention_core_bound",
+    )
+    _check(
+        attention_core_loc["after_wo_b_dense_vs_sparse"]["max_abs"] <= 0.0625
+        and attention_core_loc["after_wo_b_dense_vs_tilelang"]["max_abs"] <= 0.0625,
+        failures,
+        "attention_core_localization.after_wo_b_bound",
+    )
+
+    attention_core_oracle = _load(base, "deepseek-v4-attention-core-external-oracle-20260601.json")
+    oracle_rows = {item["name"]: item for item in attention_core_oracle["comparisons"]}
+    gates["attention_core_external_oracle_bounds"] = {
+        "artifact": "deepseek-v4-attention-core-external-oracle-20260601.json",
+        "status": _status(attention_core_oracle),
+        "qkv_exact_checks": attention_core_oracle["qkv_exact_checks"],
+        "dense_core_vs_external_fp64": oracle_rows["dense_core_vs_external_fp64"],
+        "sparse_core_vs_external_fp64": oracle_rows["sparse_core_vs_external_fp64"],
+        "tilelang_core_vs_external_fp64": oracle_rows["tilelang_core_vs_external_fp64"],
+        "dense_core_vs_external_fp64_rounded_bf16": oracle_rows[
+            "dense_core_vs_external_fp64_rounded_bf16"
+        ],
+        "sparse_core_vs_external_fp64_rounded_bf16": oracle_rows[
+            "sparse_core_vs_external_fp64_rounded_bf16"
+        ],
+        "tilelang_core_vs_external_fp64_rounded_bf16": oracle_rows[
+            "tilelang_core_vs_external_fp64_rounded_bf16"
+        ],
+    }
+    _check(_status(attention_core_oracle) == "PASS", failures, "attention_core_external_oracle.status")
+    _check(
+        all(item["exact_equal"] for item in attention_core_oracle["qkv_exact_checks"]),
+        failures,
+        "attention_core_external_oracle.qkv_exact",
+    )
+    for row_name in (
+        "dense_core_vs_external_fp64",
+        "sparse_core_vs_external_fp64",
+        "tilelang_core_vs_external_fp64",
+        "dense_core_vs_external_fp64_rounded_bf16",
+        "sparse_core_vs_external_fp64_rounded_bf16",
+        "tilelang_core_vs_external_fp64_rounded_bf16",
+        "dense_core_vs_external_fp32_bf16_formula",
+        "sparse_core_vs_external_fp32_bf16_formula",
+        "tilelang_core_vs_external_fp32_bf16_formula",
+    ):
+        _check(
+            oracle_rows[row_name]["status"] == "PASS",
+            failures,
+            f"attention_core_external_oracle.{row_name}",
+        )
 
     mini_forward = _load(base, "deepseek-v4-mini-forward-compare-20260531.json")
     routing_artifacts = {
@@ -777,7 +899,8 @@ def _main() -> int:
         "gates": gates,
         "failures": failures,
         "conclusion": (
-            "Recorded artifacts consistently prove the covered HC/QAT/attention/MLP/MoE/"
+            "Recorded artifacts consistently prove the covered HC/QAT/attention/attention-core "
+            "external oracle/MLP/MoE/"
             "training-step gates, validate the non-compressed, c4 indexer, and deterministic compressed "
             "external training-reference gates, validate the score-routed MoE external reference, "
             "validate the real EP=8 MoELayer external reference, "
@@ -786,8 +909,9 @@ def _main() -> int:
             "mini-checkpoint correctness gate, validate the loaded 4-layer "
             "full external forward reference with routing replay BF16 tolerance, and "
             "the official forward BF16 tolerance gate, and localize the remaining "
-            "real-forward strict parity failure to BF16 attention forward-value drift "
-            "amplified by the full model and selected-gradient strict delta."
+            "real-forward strict parity failure to BF16 attention-core / attention "
+            "forward-value drift amplified by the full model and selected-gradient "
+            "strict delta."
             if not failures
             else "Recorded artifacts are not mutually sufficient for the proof ledger."
         ),

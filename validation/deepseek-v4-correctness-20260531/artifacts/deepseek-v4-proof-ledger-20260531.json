@@ -1,9 +1,255 @@
 {
-  "artifacts_dir_name": "advanced",
-  "conclusion": "Recorded artifacts consistently prove the covered HC/QAT/attention/MLP/MoE/training-step gates, validate the non-compressed, c4 indexer, and deterministic compressed external training-reference gates, validate the score-routed MoE external reference, validate the real EP=8 MoELayer external reference, validate the SFT loss explicit reference and its backward/update explicit reference and mini-checkpoint correctness gate, validate the loaded 4-layer full external forward reference with routing replay BF16 tolerance, and the official forward BF16 tolerance gate, and localize the remaining real-forward strict parity failure to BF16 attention forward-value drift amplified by the full model and selected-gradient strict delta.",
+  "artifacts_dir_name": "artifacts",
+  "conclusion": "Recorded artifacts consistently prove the covered HC/QAT/attention/attention-core external oracle/MLP/MoE/training-step gates, validate the non-compressed, c4 indexer, and deterministic compressed external training-reference gates, validate the score-routed MoE external reference, validate the real EP=8 MoELayer external reference, validate the SFT loss explicit reference and its backward/update explicit reference and mini-checkpoint correctness gate, validate the loaded 4-layer full external forward reference with routing replay BF16 tolerance, and the official forward BF16 tolerance gate, and localize the remaining real-forward strict parity failure to BF16 attention-core / attention forward-value drift amplified by the full model and selected-gradient strict delta.",
   "date": "2026-05-31",
   "failures": [],
   "gates": {
+    "attention_core_external_oracle": {
+      "artifact": "deepseek-v4-attention-core-external-oracle-20260601.json",
+      "status": "PASS"
+    },
+    "attention_core_external_oracle_bounds": {
+      "artifact": "deepseek-v4-attention-core-external-oracle-20260601.json",
+      "dense_core_vs_external_fp64": {
+        "actual_shape": [
+          1,
+          512,
+          64,
+          512
+        ],
+        "exact_equal": false,
+        "expected_shape": [
+          1,
+          512,
+          64,
+          512
+        ],
+        "finite": true,
+        "max_abs": 0.0579252690076828,
+        "mean_abs": 0.0006029420183040202,
+        "name": "dense_core_vs_external_fp64",
+        "nonzero_abs_count": 16777065,
+        "numel": 16777216,
+        "p95_abs": 0.002038240432739258,
+        "p99_abs": 0.004292130470275879,
+        "relative_l2_gap": 4.812972581036412e-06,
+        "status": "PASS",
+        "thresholds": {
+          "max_abs": 0.065,
+          "mean_abs": 0.001,
+          "p99_abs": 0.008,
+          "relative_l2_gap": 8e-06
+        }
+      },
+      "dense_core_vs_external_fp64_rounded_bf16": {
+        "actual_shape": [
+          1,
+          512,
+          64,
+          512
+        ],
+        "exact_equal": false,
+        "expected_shape": [
+          1,
+          512,
+          64,
+          512
+        ],
+        "finite": true,
+        "max_abs": 0.05810546875,
+        "mean_abs": 0.00047573435585945845,
+        "name": "dense_core_vs_external_fp64_rounded_bf16",
+        "nonzero_abs_count": 7158191,
+        "numel": 16777216,
+        "p95_abs": 0.001953125,
+        "p99_abs": 0.00390625,
+        "relative_l2_gap": 5.047732769769553e-06,
+        "status": "PASS",
+        "thresholds": {
+          "max_abs": 0.065,
+          "mean_abs": 0.001,
+          "p99_abs": 0.008,
+          "relative_l2_gap": 8e-06
+        }
+      },
+      "qkv_exact_checks": [
+        {
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "name": "q_dense_vs_sparse",
+          "nonzero_abs_count": 0,
+          "shape": [
+            1,
+            512,
+            64,
+            512
+          ]
+        },
+        {
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "name": "q_dense_vs_tilelang",
+          "nonzero_abs_count": 0,
+          "shape": [
+            1,
+            512,
+            64,
+            512
+          ]
+        },
+        {
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "name": "kv_dense_vs_sparse",
+          "nonzero_abs_count": 0,
+          "shape": [
+            1,
+            512,
+            512
+          ]
+        },
+        {
+          "exact_equal": true,
+          "max_abs": 0.0,
+          "mean_abs": 0.0,
+          "name": "kv_dense_vs_tilelang",
+          "nonzero_abs_count": 0,
+          "shape": [
+            1,
+            512,
+            512
+          ]
+        }
+      ],
+      "sparse_core_vs_external_fp64": {
+        "actual_shape": [
+          1,
+          512,
+          64,
+          512
+        ],
+        "exact_equal": false,
+        "expected_shape": [
+          1,
+          512,
+          64,
+          512
+        ],
+        "finite": true,
+        "max_abs": 0.015624523162841797,
+        "mean_abs": 0.0003014612302649766,
+        "name": "sparse_core_vs_external_fp64",
+        "nonzero_abs_count": 16776968,
+        "numel": 16777216,
+        "p95_abs": 0.0009281039237976074,
+        "p99_abs": 0.001910567283630371,
+        "relative_l2_gap": 1.4086557198478289e-06,
+        "status": "PASS",
+        "thresholds": {
+          "max_abs": 0.065,
+          "mean_abs": 0.001,
+          "p99_abs": 0.008,
+          "relative_l2_gap": 8e-06
+        }
+      },
+      "sparse_core_vs_external_fp64_rounded_bf16": {
+        "actual_shape": [
+          1,
+          512,
+          64,
+          512
+        ],
+        "exact_equal": false,
+        "expected_shape": [
+          1,
+          512,
+          64,
+          512
+        ],
+        "finite": true,
+        "max_abs": 0.015625,
+        "mean_abs": 4.497428207628218e-08,
+        "name": "sparse_core_vs_external_fp64_rounded_bf16",
+        "nonzero_abs_count": 3483,
+        "numel": 16777216,
+        "p95_abs": 0.0,
+        "p99_abs": 0.0,
+        "relative_l2_gap": -1.1738753569190408e-07,
+        "status": "PASS",
+        "thresholds": {
+          "max_abs": 0.065,
+          "mean_abs": 0.001,
+          "p99_abs": 0.008,
+          "relative_l2_gap": 8e-06
+        }
+      },
+      "status": "PASS",
+      "tilelang_core_vs_external_fp64": {
+        "actual_shape": [
+          1,
+          512,
+          64,
+          512
+        ],
+        "exact_equal": false,
+        "expected_shape": [
+          1,
+          512,
+          64,
+          512
+        ],
+        "finite": true,
+        "max_abs": 0.019970417022705078,
+        "mean_abs": 0.0003326234291307628,
+        "name": "tilelang_core_vs_external_fp64",
+        "nonzero_abs_count": 16776997,
+        "numel": 16777216,
+        "p95_abs": 0.0009950995445251465,
+        "p99_abs": 0.002046346664428711,
+        "relative_l2_gap": 1.6434363032669097e-06,
+        "status": "PASS",
+        "thresholds": {
+          "max_abs": 0.065,
+          "mean_abs": 0.001,
+          "p99_abs": 0.008,
+          "relative_l2_gap": 8e-06
+        }
+      },
+      "tilelang_core_vs_external_fp64_rounded_bf16": {
+        "actual_shape": [
+          1,
+          512,
+          64,
+          512
+        ],
+        "exact_equal": false,
+        "expected_shape": [
+          1,
+          512,
+          64,
+          512
+        ],
+        "finite": true,
+        "max_abs": 0.03125,
+        "mean_abs": 0.00011115750385215506,
+        "name": "tilelang_core_vs_external_fp64_rounded_bf16",
+        "nonzero_abs_count": 3328874,
+        "numel": 16777216,
+        "p95_abs": 0.00048828125,
+        "p99_abs": 0.001953125,
+        "relative_l2_gap": 8.217150648803795e-07,
+        "status": "PASS",
+        "thresholds": {
+          "max_abs": 0.065,
+          "mean_abs": 0.001,
+          "p99_abs": 0.008,
+          "relative_l2_gap": 8e-06
+        }
+      }
+    },
     "attention_io_forward_drift": {
       "finite_all": true,
       "layer0_largest_output_mean_abs_for_both_backends": true,
@@ -251,6 +497,52 @@
         "real_non_injected_forward_strict_status": "FAIL",
         "real_non_injected_sft_one_step_strict_status": "FAIL"
       }
+    },
+    "mini_checkpoint_layer0_attention_core_localization": {
+      "after_wo_b_dense_vs_sparse": {
+        "max_abs": 0.0625,
+        "mean_abs": 0.006124485284090042,
+        "relative_gap": 1.3518060894557316e-05
+      },
+      "after_wo_b_dense_vs_tilelang": {
+        "max_abs": 0.0625,
+        "mean_abs": 0.00623230030760169,
+        "relative_gap": 1.394314055302992e-05
+      },
+      "artifact": "deepseek-v4-mini-layer0-attention-internal-localization-20260601.json",
+      "attention_core_dense_vs_sparse": {
+        "max_abs": 0.05810546875,
+        "mean_abs": 0.0004757347342092544,
+        "relative_gap": 5.047732769769553e-06
+      },
+      "attention_core_dense_vs_tilelang": {
+        "max_abs": 0.0576171875,
+        "mean_abs": 0.000496836262755096,
+        "relative_gap": 5.399915385728704e-06
+      },
+      "first_nonzero_internal_module": "module.decoder.layers.0.self_attention.attention_core",
+      "kv_path_exact_sparse": true,
+      "kv_path_exact_tilelang": true,
+      "q_path_exact_sparse": true,
+      "q_path_exact_tilelang": true,
+      "status": "PASS_WITH_ATTENTION_CORE_LOCALIZED"
+    },
+    "mini_checkpoint_layerwise_drift_localization": {
+      "artifact": "deepseek-v4-mini-layerwise-drift-localization-20260601.json",
+      "embedding_exact": true,
+      "first_nonzero_module": "module.decoder.layers.0.self_attention",
+      "layer0_input_layernorm_exact": true,
+      "layer0_self_attention_dense_vs_sparse": {
+        "max_abs": 0.0625,
+        "mean_abs": 0.006124485284090042,
+        "relative_gap": 1.3518060894557316e-05
+      },
+      "layer0_self_attention_dense_vs_tilelang": {
+        "max_abs": 0.0625,
+        "mean_abs": 0.00623230030760169,
+        "relative_gap": 1.394314055302992e-05
+      },
+      "status": "PASS_WITH_LAYERWISE_DRIFT_LOCALIZED"
     },
     "mini_external_full_reference": {
       "forward_artifact": "deepseek-v4-mini-external-full-reference-bf16-routing-replay-tolerance-20260531.json",
