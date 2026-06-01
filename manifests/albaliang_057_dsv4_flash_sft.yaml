@@ -13,7 +13,7 @@ framework:
   miles:
     repo: kakisong/miles
     branch: v4-flash-sft
-    commit: 34684df536fa30a5040b514f8a69fad81ff897d0
+    commit: 167ced7130126738445fa1c36daeb75848277341
   training_repo:
     repo: kakisong/deepseek-v4-flash-training
     commit: 029501db7893f4456338170f8d8786742a157779
