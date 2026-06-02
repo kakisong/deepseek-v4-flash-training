@@ -17,11 +17,52 @@ if [[ -z "${V4_IMAGE:-}" ]]; then
   echo "[err] env.sh failed to load" >&2; exit 1
 fi
 
+SSH_OPTS="-o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
+
 # Flatten V4_DOCKER_MOUNTS array into docker CLI flags (`-v src:dst -v src:dst ...`).
 DOCKER_MOUNT_FLAGS=""
 for m in "${V4_DOCKER_MOUNTS[@]}"; do
   DOCKER_MOUNT_FLAGS+=" -v $m"
 done
+
+check_node_data0() {
+  local IP="$1"
+  ssh $SSH_OPTS root@"$IP" "V4_DATA0_MAX_USE_PCT=${V4_DATA0_MAX_USE_PCT:-95} bash -s" <<'EOF'
+set -euo pipefail
+root_src="$(findmnt -n -T / -o SOURCE)"
+data_src="$(findmnt -n -T /data0 -o SOURCE 2>/dev/null || true)"
+if [[ -z "$data_src" ]]; then
+  echo "[err] /data0 is missing"
+  exit 1
+fi
+if [[ "$data_src" == "$root_src" ]]; then
+  echo "[err] /data0 resolves to root filesystem ($data_src); mount a local data disk before starting Ray"
+  exit 1
+fi
+use_pct="$(df -P /data0 | awk 'NR==2 {gsub(/%/, "", $5); print $5}')"
+if [[ -n "$use_pct" && "$use_pct" -ge "$V4_DATA0_MAX_USE_PCT" ]]; then
+  echo "[err] /data0 is ${use_pct}% full; Ray temp/object spill needs local disk headroom"
+  exit 1
+fi
+echo "[ok] /data0 source=$data_src use=${use_pct}%"
+EOF
+}
+
+echo "=== Preflight: validating /data0 local disks ==="
+DATA0_ERR=0
+for IP in $V4_ALL_IPS; do
+  if ! out="$(check_node_data0 "$IP" 2>&1)"; then
+    echo "[$IP] $out"
+    DATA0_ERR=1
+  else
+    echo "[$IP] $out"
+  fi
+done
+if (( DATA0_ERR != 0 )); then
+  echo "[err] fix /data0 mount/usage before starting containers" >&2
+  exit 1
+fi
+echo
 
 start_node_container() {
   local IP="$1"
@@ -79,8 +120,6 @@ for IP in $V4_ALL_IPS; do
 done
 wait
 echo
-
-SSH_OPTS="-o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
 
 # Materialize the in-container commands into temp scripts on CFS (shared with all workers).
 RAY_HEAD_SCRIPT=$V4_OUT/.ray_head.sh
@@ -166,6 +205,17 @@ echo
 echo "=== Phase 4: verifying ray cluster ==="
 sleep 3
 ssh $SSH_OPTS root@$V4_MASTER_IP "docker exec $V4_CONTAINER ray status" 2>&1 | head -25
+
+MONITORING_SYNC="$V4_WORK/monitoring/sync_ray_sd.sh"
+if [[ -x "$MONITORING_SYNC" ]]; then
+  echo
+  echo "=== Phase 5: syncing ray prometheus service discovery ==="
+  "$MONITORING_SYNC"
+  echo "[ok] synced $V4_WORK/monitoring/sd/ray.json"
+else
+  echo
+  echo "[warn] monitoring sync script not found or not executable: $MONITORING_SYNC"
+fi
 
 echo
 echo "=== done ==="

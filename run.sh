@@ -15,8 +15,13 @@
 #   --max-tokens-per-gpu N    per-CP-rank token cap (trade memory for batch)
 #   --global-batch-size N
 #   --attn-impl IMPL          tilelang / dense
+#   --recompute-granularity G none / selective / full
+#   --recompute-method M      uniform / block (when granularity=full)
+#   --recompute-num-layers N
+#   --no-cpu-offload          disable optimizer CPU offload for fit probes
 #
 # --dry-run: generate launch_in_container.sh but do NOT submit it to ray.
+# --no-wait: submit the ray job and return immediately instead of streaming logs until completion.
 #
 # Load order (later overrides earlier):
 #   cluster/fleet/$V4_FLEET.env  →  cluster/base.env  →  cluster/hw/$V4_GPU_MODEL.env  →
@@ -31,11 +36,13 @@ CLUSTER_DIR="$REPO_ROOT/cluster"
 DRY_RUN=0
 PROFILE_ENABLED=0
 NO_SAVE_OPTIM=0
+NO_WAIT=0
 declare -A OVERRIDES=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --dry-run) DRY_RUN=1; shift ;;
+    --no-wait) NO_WAIT=1; shift ;;
     --fleet)                 export V4_FLEET="$2"; shift 2 ;;
     --scale)                 export V4_SCALE="$2"; shift 2 ;;
     --workload)              export V4_WORKLOAD="$2"; shift 2 ;;
@@ -58,6 +65,10 @@ while [[ $# -gt 0 ]]; do
     --global-batch-size)     OVERRIDES[PRESET_GLOBAL_BATCH_SIZE]="$2"; shift 2 ;;
     --rollout-batch-size)    OVERRIDES[PRESET_ROLLOUT_BATCH_SIZE]="$2"; shift 2 ;;
     --attn-impl)             OVERRIDES[PRESET_ATTN_IMPL]="$2"; shift 2 ;;
+    --recompute-granularity) OVERRIDES[HW_RECOMPUTE_GRANULARITY]="$2"; shift 2 ;;
+    --recompute-method)      OVERRIDES[HW_RECOMPUTE_METHOD]="$2"; shift 2 ;;
+    --recompute-num-layers)  OVERRIDES[HW_RECOMPUTE_NUM_LAYERS]="$2"; shift 2 ;;
+    --no-cpu-offload)        OVERRIDES[PRESET_CPU_OFFLOAD_FLAGS]=""; shift ;;
     --)                      shift; break ;;
     *) echo "[err] unknown arg: $1 (see $0 --help)" >&2; exit 1 ;;
   esac
@@ -196,6 +207,11 @@ fi
 PROFILE_FLAGS=""
 PROFILE_TBDIR=""
 
+RAY_JOB_WAIT_FLAGS=""
+if (( NO_WAIT == 1 )); then
+  RAY_JOB_WAIT_FLAGS="--no-wait"
+fi
+
 # ---------- preflight ----------------------------------------------------------
 source "$CLUSTER_DIR/lib/preflight.sh"
 if [[ "$V4_WORKLOAD" == "sft_smoke" ]]; then
@@ -230,15 +246,27 @@ fi
 
 # Wandb flags (workload sets PRESET_USE_WANDB=1 to enable).
 WANDB_FLAGS=""
-WANDB_RUNTIME_ENV_VARS=""
 if [[ "${PRESET_USE_WANDB:-0}" == "1" ]]; then
   : "${PRESET_WANDB_PROJECT:?PRESET_WANDB_PROJECT required when PRESET_USE_WANDB=1}"
-  : "${PRESET_WANDB_API_KEY:?PRESET_WANDB_API_KEY required when PRESET_USE_WANDB=1}"
   WANDB_DIR="$SAVE_DIR/wandb"
   mkdir -p "$WANDB_DIR"
-  WANDB_FLAGS="--use-wandb --wandb-project $PRESET_WANDB_PROJECT --wandb-key $PRESET_WANDB_API_KEY --wandb-dir $WANDB_DIR --wandb-group $RUN_ID"
+  if [[ -z "${PRESET_WANDB_API_KEY_FILE:-}" ]]; then
+    if [[ -n "${PRESET_WANDB_API_KEY:-${WANDB_API_KEY:-}}" ]]; then
+      export PRESET_WANDB_API_KEY_FILE="$SAVE_DIR/.wandb_api_key"
+      umask 077
+      printf '%s' "${PRESET_WANDB_API_KEY:-$WANDB_API_KEY}" > "$PRESET_WANDB_API_KEY_FILE"
+    else
+      echo "[err] PRESET_WANDB_API_KEY_FILE or PRESET_WANDB_API_KEY required when PRESET_USE_WANDB=1" >&2
+      exit 1
+    fi
+  fi
+  [[ -f "$PRESET_WANDB_API_KEY_FILE" ]] || {
+    echo "[err] W&B key file not found: $PRESET_WANDB_API_KEY_FILE" >&2
+    exit 1
+  }
+  WANDB_FLAGS="--use-wandb --wandb-project $PRESET_WANDB_PROJECT --wandb-dir $WANDB_DIR --wandb-group $RUN_ID"
   [[ -n "${PRESET_WANDB_TEAM:-}" ]] && WANDB_FLAGS="$WANDB_FLAGS --wandb-team $PRESET_WANDB_TEAM"
-  echo "[info] wandb    : ON  project=$PRESET_WANDB_PROJECT team=${PRESET_WANDB_TEAM:-<default>} group=$RUN_ID"
+  echo "[info] wandb    : ON  project=$PRESET_WANDB_PROJECT team=${PRESET_WANDB_TEAM:-<default>} group=$RUN_ID key_source=file"
   echo "[info]            MFU on wandb: derive as actor_train_tflops / ${HW_GPU_PEAK_TFLOPS_BF16:-148} (H20 BF16 peak)"
 fi
 
@@ -336,25 +364,55 @@ MISC_ARGS=(
   $WANDB_FLAGS
 )
 
-RUNTIME_ENV='{
-  "env_vars": {
-    "PYTHONPATH": "$V4_RUNTIME_PYTHONPATH",
+WANDB_API_KEY_VALUE=""
+if [[ "${PRESET_USE_WANDB:-0}" == "1" ]]; then
+  WANDB_API_KEY_FILE="$PRESET_WANDB_API_KEY_FILE"
+  if [[ -n "\$WANDB_API_KEY_FILE" && -f "\$WANDB_API_KEY_FILE" ]]; then
+    WANDB_API_KEY_VALUE="\$(tr -d '\r\n' < "\$WANDB_API_KEY_FILE")"
+  elif [[ -n "\${WANDB_API_KEY:-}" ]]; then
+    WANDB_API_KEY_VALUE="\$WANDB_API_KEY"
+  else
+    echo "[err] W&B enabled but no key available in key file or WANDB_API_KEY" >&2
+    exit 1
+  fi
+fi
+
+RUNTIME_ENV="\$(PYTHONPATH_VALUE="$V4_RUNTIME_PYTHONPATH" \\
+  MASTER_ADDR_VALUE="$V4_MASTER_IP" \\
+  NCCL_NVLS_ENABLE_VALUE="$HW_NCCL_NVLS_ENABLE" \\
+  MEGATRON_SPARSE_ATTN_IMPL_VALUE="$PRESET_ATTN_IMPL" \\
+  PYTORCH_CUDA_ALLOC_CONF_VALUE="${HW_PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}" \\
+  CUDA_LAUNCH_BLOCKING_VALUE="${HW_CUDA_LAUNCH_BLOCKING:-0}" \\
+  TORCH_USE_CUDA_DSA_VALUE="${HW_TORCH_USE_CUDA_DSA:-0}" \\
+  WANDB_API_KEY_VALUE="\$WANDB_API_KEY_VALUE" \\
+  python3 - <<'PY'
+import json
+import os
+
+env = {
+    "PYTHONPATH": os.environ["PYTHONPATH_VALUE"],
     "CUDA_DEVICE_MAX_CONNECTIONS": "1",
-    "MASTER_ADDR": "$V4_MASTER_IP",
+    "MASTER_ADDR": os.environ["MASTER_ADDR_VALUE"],
     "MILES_DSV4_THINKING_MODE": "chat",
     "MILES_DSV4_DROP_THINKING": "0",
-    "NCCL_NVLS_ENABLE": "$HW_NCCL_NVLS_ENABLE",
+    "NCCL_NVLS_ENABLE": os.environ["NCCL_NVLS_ENABLE_VALUE"],
     "GLOO_SOCKET_IFNAME": "eth0",
     "NCCL_SOCKET_IFNAME": "eth0",
     "LD_PRELOAD": "/usr/local/lib/python3.12/dist-packages/torch_memory_saver_hook_mode_preload.abi3.so",
-    "MEGATRON_SPARSE_ATTN_IMPL": "$PRESET_ATTN_IMPL",
-    "PYTORCH_CUDA_ALLOC_CONF": "${HW_PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}",
-    "CUDA_LAUNCH_BLOCKING": "${HW_CUDA_LAUNCH_BLOCKING:-0}",
-    "TORCH_USE_CUDA_DSA": "${HW_TORCH_USE_CUDA_DSA:-0}"
-  }
-}'
+    "MEGATRON_SPARSE_ATTN_IMPL": os.environ["MEGATRON_SPARSE_ATTN_IMPL_VALUE"],
+    "PYTORCH_CUDA_ALLOC_CONF": os.environ["PYTORCH_CUDA_ALLOC_CONF_VALUE"],
+    "CUDA_LAUNCH_BLOCKING": os.environ["CUDA_LAUNCH_BLOCKING_VALUE"],
+    "TORCH_USE_CUDA_DSA": os.environ["TORCH_USE_CUDA_DSA_VALUE"],
+}
+wandb_key = os.environ.get("WANDB_API_KEY_VALUE")
+if wandb_key:
+    env["WANDB_API_KEY"] = wandb_key
+print(json.dumps({"env_vars": env}))
+PY
+)"
 
 ray job submit --address=http://127.0.0.1:$V4_DASHBOARD_PORT \\
+   $RAY_JOB_WAIT_FLAGS \\
    --runtime-env-json="\$RUNTIME_ENV" \\
    -- python3 train.py \\
    "\${MODEL_ARGS[@]}" \\
