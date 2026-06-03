@@ -1,0 +1,183 @@
+# DeepSeek V4 Flash SFT-only image.
+#
+# This image intentionally does not inherit from lmsysorg/sglang and does not
+# install sglang, sglang-router, flashinfer, or sglang-kernel. It is meant for
+# Miles SFT runs using:
+#   --sft-only --debug-train-only
+#
+# The image still contains the training stack: torch/cu129, Ray, Megatron, Apex,
+# Transformer Engine, TileKernels, fast-hadamard-transform, and torch_memory_saver.
+
+ARG CUDA_IMAGE=nvidia/cuda:12.9.1-cudnn-devel-ubuntu24.04
+FROM ${CUDA_IMAGE}
+
+ARG DEBIAN_FRONTEND=noninteractive
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+ENV PIP_NO_CACHE_DIR=1
+
+ARG TORCH_VERSION=2.9.1
+ARG TORCH_CUDA_INDEX=https://download.pytorch.org/whl/cu129
+
+ARG WHEELS_REPO=yueming-yuan/miles-wheels
+ARG WHEELS_TAG=cu129-x86_64
+
+ARG MEGATRON_REPO=radixark/Megatron-LM
+ARG MEGATRON_BRANCH=miles-main
+ARG MEGATRON_COMMIT=d9a5080f2bafea5246add1489247f25368b8a120
+
+ARG TILEKERNELS_REPO=deepseek-ai/TileKernels
+ARG TILEKERNELS_COMMIT=36d9e45d38e204ebb87e6f6e833821eee0482fe5
+
+ARG FAST_HADAMARD_TRANSFORM_COMMIT=1cc807efbd6cc001df359822d60bf6052dd66859
+
+ARG MILES_REPO=https://github.com/kakisong/miles.git
+ARG MILES_COMMIT=6713301501e5401939b500b4d365cbfa3d24aa57
+
+WORKDIR /root
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      bash \
+      ca-certificates \
+      curl \
+      dnsutils \
+      ethtool \
+      git \
+      git-lfs \
+      ibverbs-providers \
+      infiniband-diags \
+      less \
+      libibumad3 \
+      libibverbs1 \
+      libnl-3-200 \
+      libnl-route-3-200 \
+      librdmacm1 \
+      ninja-build \
+      nvtop \
+      openssh-client \
+      openssh-server \
+      perftest \
+      python3 \
+      python3-dev \
+      python3-pip \
+      python3-venv \
+      rdma-core \
+      rsync \
+      tmux \
+      vim \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m pip install --upgrade --ignore-installed setuptools wheel packaging ninja
+
+# Torch/cu129 is installed from PyTorch wheels instead of inherited from SGLang.
+RUN python3 -m pip install --index-url ${TORCH_CUDA_INDEX} --extra-index-url https://pypi.org/simple torch==${TORCH_VERSION}
+
+# nccl-tests for cluster diagnostics.
+RUN git clone https://github.com/NVIDIA/nccl-tests.git /tmp/nccl-tests && \
+    cd /tmp/nccl-tests && \
+    git checkout ae98985f5599617be94042f4aa3637d10014ce89 && \
+    make -j"$(nproc)" CUDA_HOME=/usr/local/cuda && \
+    cp /tmp/nccl-tests/build/*_perf /usr/local/bin/ && \
+    rm -rf /tmp/nccl-tests
+
+# Prebuilt wheels shared with the existing Miles image. These are training-side
+# wheels only; do not install sglang-router/flashinfer assets from this release.
+RUN mkdir -p /tmp/wheels && \
+    curl -sL "https://api.github.com/repos/${WHEELS_REPO}/releases/tags/${WHEELS_TAG}" \
+    | python3 -c "import sys, json, subprocess; \
+[subprocess.run(['curl', '-fSL', '-o', '/tmp/wheels/' + a['name'], a['browser_download_url']], check=True) \
+ for a in json.load(sys.stdin)['assets'] if a['name'].endswith('.whl')]" && \
+    ls -lh /tmp/wheels/
+
+RUN python3 -m pip install /tmp/wheels/flash_attn-*.whl
+RUN python3 -m pip install /tmp/wheels/flash_attn_3-*.whl && \
+    python_path="$(python3 -c 'import site; print(site.getsitepackages()[0])')" && \
+    mkdir -p "$python_path/flash_attn_3" && \
+    curl -fSL https://raw.githubusercontent.com/Dao-AILab/flash-attention/fbf24f67cf7f6442c5cfb2c1057f4bfc57e72d89/hopper/flash_attn_interface.py \
+      -o "$python_path/flash_attn_3/flash_attn_interface.py"
+
+RUN python3 -m pip install git+https://github.com/ISEEKYAN/mbridge.git@89eb10887887bc74853f89a4de258c0702932a1c --no-deps
+RUN python3 -m pip install flash-linear-attention==0.4.2
+RUN python3 -m pip install tilelang -f https://tile-ai.github.io/whl/nightly/cu128/
+RUN python3 -m pip install --no-build-isolation "transformer_engine[pytorch]==2.10.0"
+RUN python3 -m pip install /tmp/wheels/apex-*.whl
+
+COPY docker/patch/v4-sft/megatron-dsv4-pr28.patch /tmp/megatron-dsv4-pr28.patch
+RUN git clone https://github.com/${MEGATRON_REPO}.git --recursive -b ${MEGATRON_BRANCH} /root/Megatron-LM && \
+    cd /root/Megatron-LM && \
+    git checkout ${MEGATRON_COMMIT} && \
+    git apply /tmp/megatron-dsv4-pr28.patch && \
+    python3 -m pip install -e . --no-deps
+
+RUN git clone https://github.com/${TILEKERNELS_REPO}.git /root/TileKernels && \
+    cd /root/TileKernels && \
+    git checkout ${TILEKERNELS_COMMIT} && \
+    python3 -m pip install -e . --no-deps
+
+RUN python3 -m pip install git+https://github.com/fzyzcjy/torch_memory_saver.git@d64a639 --no-cache-dir --force-reinstall
+RUN python3 -m pip install "nvidia-modelopt[torch]>=0.37.0" --no-build-isolation
+RUN python3 -m pip install git+https://github.com/radixark/Megatron-Bridge.git@bridge --no-deps --no-build-isolation
+RUN python3 -m pip install megatron-energon --no-deps
+RUN python3 -m pip install multi-storage-client --no-deps
+RUN MAX_JOBS=64 python3 -m pip install --no-cache-dir --no-build-isolation --no-deps \
+    git+https://github.com/Dao-AILab/fast-hadamard-transform.git@${FAST_HADAMARD_TRANSFORM_COMMIT}
+
+COPY docker/requirements.sft-only.txt /tmp/requirements.sft-only.txt
+RUN python3 -m pip install -r /tmp/requirements.sft-only.txt
+
+# Match the existing training image's cuDNN Python package and Megatron numpy pin.
+RUN python3 -m pip install nvidia-cudnn-cu12==9.16.0.29
+RUN python3 -m pip install "numpy<2"
+
+RUN git clone ${MILES_REPO} /root/miles && \
+    cd /root/miles && \
+    git checkout ${MILES_COMMIT} && \
+    python3 -m pip install -e . --no-deps
+
+ENV V4_MEGATRON_IMAGE=/root/Megatron-LM
+ENV V4_TILE_KERNELS_IMAGE=/root/TileKernels
+ENV PYTHONPATH=/root/Megatron-LM:/root/TileKernels
+ENV MILES_SFT_ONLY=1
+
+RUN ln -sf /usr/bin/python3 /usr/local/bin/python
+RUN rm -rf /root/.cache/pip /tmp/wheels
+
+RUN PYTHONPATH=/root/Megatron-LM:/root/TileKernels MILES_SFT_ONLY=1 python - <<'PY'
+import argparse
+import importlib.util
+import sys
+
+import fast_hadamard_transform  # noqa: F401
+import ray  # noqa: F401
+import tile_kernels  # noqa: F401
+import torch
+import megatron.core.dist_checkpointing.core as dist_ckpt
+from megatron.core.transformer.transformer_config import TransformerConfig
+from miles.utils.arguments import get_miles_extra_args_provider
+
+assert dist_ckpt.CONFIG_FNAME == "metadata.json"
+assert "dsv4_hc_mult" in TransformerConfig.__dataclass_fields__
+
+for module_name in [
+    "sglang",
+    "sglang_router",
+    "flashinfer",
+    "flashinfer_python",
+    "flashinfer_cubin",
+    "sglang_kernel",
+]:
+    assert importlib.util.find_spec(module_name) is None, f"{module_name} must not be installed"
+
+sys.argv = [
+    "check",
+    "--sft-only",
+    "--rollout-batch-size",
+    "1",
+    "--num-rollout",
+    "1",
+]
+parser = argparse.ArgumentParser()
+get_miles_extra_args_provider()(parser)
+parser.parse_known_args()
+
+print("torch=" + torch.__version__ + " sft_only=ok megatron=dsv4 tile_kernels=ok")
+PY

@@ -1,0 +1,17 @@
+accelerate
+blobfile
+datasets
+httpx[http2]
+mcp[cli]
+memray
+omegaconf
+pillow
+pybase64
+pylatexenc
+pyyaml
+qwen_vl_utils
+ray[default]==2.55.1
+ring_flash_attn
+tensorboard
+transformers
+wandb

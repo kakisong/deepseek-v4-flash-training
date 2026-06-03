@@ -61,6 +61,7 @@ SFT_ARGS=(
   --loss-type sft_loss
   --calculate-per-token-loss
   --disable-compute-advantages-and-returns
+  --sft-only
   --debug-train-only
 
   --loss-mask-type deepseek_v4
