@@ -6,6 +6,7 @@ DeepSeek V4-Flash SFT 训练任务的启动脚本与数据/ckpt 准备工具。�
 
 - `run.sh` — 训练任务提交主入口（control/fleet/scale/workload 组合）；前提是 Ray 集群和监控已准备好
 - `cluster/` — Ray/容器/监控/Caddy 控制面工具，以及 control/fleet/scale/workload 配置
+- `kuberay/` — KubeRay 迁移草案：RayCluster 模板、K8s 前置检查、迁移说明
 - `smoke/` — Stage A/B、FP8 smoke 等端到端探测脚本
 - `verification/` — loss mask、chat template、QA-fit、DeepSeek-V4 correctness 验证工具
 - `manifests/` — 每次训练输入包的索引、版本和 checksum

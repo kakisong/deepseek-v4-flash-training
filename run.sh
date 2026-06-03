@@ -370,7 +370,7 @@ MISC_ARGS=(
 
 WANDB_API_KEY_VALUE=""
 if [[ "${PRESET_USE_WANDB:-0}" == "1" ]]; then
-  WANDB_API_KEY_FILE="$PRESET_WANDB_API_KEY_FILE"
+  WANDB_API_KEY_FILE="${PRESET_WANDB_API_KEY_FILE:-}"
   if [[ -n "\$WANDB_API_KEY_FILE" && -f "\$WANDB_API_KEY_FILE" ]]; then
     WANDB_API_KEY_VALUE="\$(tr -d '\r\n' < "\$WANDB_API_KEY_FILE")"
   elif [[ -n "\${WANDB_API_KEY:-}" ]]; then

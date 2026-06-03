@@ -1,0 +1,170 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: v4-train
+---
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  name: v4-h20-16node
+  namespace: v4-train
+  labels:
+    app.kubernetes.io/name: deepseek-v4-flash-training
+    v4.echo/fleet: h20-16node
+spec:
+  rayVersion: "2.55.1"
+  enableInTreeAutoscaling: false
+  headGroupSpec:
+    serviceType: ClusterIP
+    rayStartParams:
+      dashboard-host: "0.0.0.0"
+      num-gpus: "0"
+      temp-dir: "/ray_local/ray"
+    template:
+      metadata:
+        labels:
+          v4.echo/component: ray-head
+      spec:
+        hostNetwork: true
+        dnsPolicy: ClusterFirstWithHostNet
+        nodeSelector:
+          v4.echo/gpu-model: h20
+          v4.echo/ray-head: "true"
+        containers:
+          - name: ray-head
+            image: radixark/miles:dev-fht-v4deps-20260529
+            imagePullPolicy: IfNotPresent
+            workingDir: /data_train/kaynzhang/v4-sft/miles
+            ports:
+              - containerPort: 6379
+                name: gcs
+              - containerPort: 8265
+                name: dashboard
+              - containerPort: 10001
+                name: client
+            env:
+              - name: PYTHONPATH
+                value: /root/Megatron-LM:/root/TileKernels
+              - name: HF_HOME
+                value: /data_train/kaynzhang/v4-sft/.cache/huggingface
+              - name: HF_DATASETS_CACHE
+                value: /data_train/kaynzhang/v4-sft/.cache/huggingface/datasets
+              - name: TRANSFORMERS_CACHE
+                value: /data_train/kaynzhang/v4-sft/.cache/huggingface/transformers
+              - name: HUGGINGFACE_HUB_CACHE
+                value: /data_train/kaynzhang/v4-sft/.cache/huggingface/hub
+              - name: CUDA_DEVICE_MAX_CONNECTIONS
+                value: "1"
+              - name: NCCL_IB_DISABLE
+                value: "0"
+              - name: TZ
+                value: Asia/Shanghai
+              - name: NVIDIA_VISIBLE_DEVICES
+                value: "void"
+            resources:
+              requests:
+                cpu: "16"
+                memory: 128Gi
+              limits:
+                memory: 256Gi
+            volumeMounts:
+              - name: data-train
+                mountPath: /data_train
+              - name: ray-local
+                mountPath: /ray_local
+              - name: infiniband
+                mountPath: /dev/infiniband
+            securityContext:
+              privileged: true
+        volumes:
+          - name: data-train
+            hostPath:
+              path: /data_train
+              type: Directory
+          - name: ray-local
+            hostPath:
+              path: /data0
+              type: Directory
+          - name: infiniband
+            hostPath:
+              path: /dev/infiniband
+              type: Directory
+  workerGroupSpecs:
+    - groupName: h20-8gpu-workers
+      replicas: 16
+      minReplicas: 16
+      maxReplicas: 16
+      rayStartParams:
+        num-gpus: "8"
+        temp-dir: "/ray_local/ray"
+      template:
+        metadata:
+          labels:
+            v4.echo/component: ray-worker
+            v4.echo/fleet: h20-16node
+        spec:
+          hostNetwork: true
+          dnsPolicy: ClusterFirstWithHostNet
+          nodeSelector:
+            v4.echo/gpu-model: h20
+            v4.echo/fleet: h20-16node
+          tolerations:
+            - key: nvidia.com/gpu
+              operator: Exists
+              effect: NoSchedule
+          containers:
+            - name: ray-worker
+              image: radixark/miles:dev-fht-v4deps-20260529
+              imagePullPolicy: IfNotPresent
+              workingDir: /data_train/kaynzhang/v4-sft/miles
+              env:
+                - name: PYTHONPATH
+                  value: /root/Megatron-LM:/root/TileKernels
+                - name: HF_HOME
+                  value: /data_train/kaynzhang/v4-sft/.cache/huggingface
+                - name: HF_DATASETS_CACHE
+                  value: /data_train/kaynzhang/v4-sft/.cache/huggingface/datasets
+                - name: TRANSFORMERS_CACHE
+                  value: /data_train/kaynzhang/v4-sft/.cache/huggingface/transformers
+                - name: HUGGINGFACE_HUB_CACHE
+                  value: /data_train/kaynzhang/v4-sft/.cache/huggingface/hub
+                - name: CUDA_DEVICE_MAX_CONNECTIONS
+                  value: "1"
+                - name: NCCL_IB_DISABLE
+                  value: "0"
+                - name: GLOO_SOCKET_IFNAME
+                  value: eth0
+                - name: NCCL_SOCKET_IFNAME
+                  value: eth0
+                - name: TZ
+                  value: Asia/Shanghai
+              resources:
+                requests:
+                  cpu: "64"
+                  memory: 512Gi
+                  nvidia.com/gpu: "8"
+                limits:
+                  memory: 1024Gi
+                  nvidia.com/gpu: "8"
+              volumeMounts:
+                - name: data-train
+                  mountPath: /data_train
+                - name: ray-local
+                  mountPath: /ray_local
+                - name: infiniband
+                  mountPath: /dev/infiniband
+              securityContext:
+                privileged: true
+          volumes:
+            - name: data-train
+              hostPath:
+                path: /data_train
+                type: Directory
+            - name: ray-local
+              hostPath:
+                path: /data0
+                type: Directory
+            - name: infiniband
+              hostPath:
+                path: /dev/infiniband
+                type: Directory

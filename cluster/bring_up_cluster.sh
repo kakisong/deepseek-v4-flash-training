@@ -99,7 +99,7 @@ docker run -d --name $V4_CONTAINER \
     -w $V4_MILES_REPO \
     $V4_IMAGE \
     sleep infinity >/dev/null
-docker exec $V4_CONTAINER bash -lc 'pip install -e . --quiet --no-deps 2>&1 | tail -1' >/dev/null
+docker exec $V4_CONTAINER bash -lc 'pip install -e . --quiet --no-deps --no-build-isolation 2>&1 | tail -1' >/dev/null
 # Runtime framework deps are image-baked. Validate them inside every container
 # so training does not silently fall back to CFS source checkouts.
 docker exec $V4_CONTAINER python -c 'import torch, fast_hadamard_transform, tile_kernels; import megatron.core.dist_checkpointing.core as c; from megatron.core.transformer.transformer_config import TransformerConfig; assert c.CONFIG_FNAME == "metadata.json"; assert "dsv4_hc_mult" in TransformerConfig.__dataclass_fields__; print("torch=" + torch.__version__ + " fht=ok megatron=dsv4 tile_kernels=ok")'

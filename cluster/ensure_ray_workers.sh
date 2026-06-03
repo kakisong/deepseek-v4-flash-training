@@ -66,6 +66,15 @@ ensure_worker() {
   ssh $SSH_OPTS root@"$IP" "WORKER_IP='$IP' RESTART_RAY='$RESTART_RAY' bash -s" <<EOF
 set -euo pipefail
 
+if docker ps -a --format '{{.Names}}' | grep -qx '$V4_CONTAINER'; then
+  current_image=\$(docker inspect -f '{{.Config.Image}}' $V4_CONTAINER 2>/dev/null || true)
+  current_workdir=\$(docker inspect -f '{{.Config.WorkingDir}}' $V4_CONTAINER 2>/dev/null || true)
+  if [[ "\$current_image" != "$V4_IMAGE" || "\$current_workdir" != "$V4_MILES_REPO" ]]; then
+    echo "[\$WORKER_IP] replacing container $V4_CONTAINER image=\$current_image workdir=\$current_workdir"
+    docker rm -f $V4_CONTAINER >/dev/null
+  fi
+fi
+
 if docker ps --format '{{.Names}}' | grep -qx '$V4_CONTAINER'; then
   echo "[\$WORKER_IP] reusing running container $V4_CONTAINER"
 elif docker ps -a --format '{{.Names}}' | grep -qx '$V4_CONTAINER'; then
@@ -96,7 +105,7 @@ else
   echo "[\$WORKER_IP] created container $V4_CONTAINER"
 fi
 
-docker exec $V4_CONTAINER bash -lc 'pip install -e . --quiet --no-deps >/tmp/miles-pip-install.log 2>&1 || { tail -20 /tmp/miles-pip-install.log; exit 1; }'
+docker exec $V4_CONTAINER bash -lc 'pip install -e . --quiet --no-deps --no-build-isolation >/tmp/miles-pip-install.log 2>&1 || { tail -20 /tmp/miles-pip-install.log; exit 1; }'
 docker exec $V4_CONTAINER python -c 'import torch, fast_hadamard_transform, tile_kernels; import megatron.core.dist_checkpointing.core as c; from megatron.core.transformer.transformer_config import TransformerConfig; assert c.CONFIG_FNAME == "metadata.json"; assert "dsv4_hc_mult" in TransformerConfig.__dataclass_fields__'
 
 raylet_matches_head=0
