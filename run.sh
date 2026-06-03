@@ -2,8 +2,8 @@
 # Unified launch entry.
 #
 # 用法 (任选):
-#   bash run.sh --fleet h20_16node --scale tp8pp16ep8_layout --workload sft_prod
-#   V4_FLEET=h20_16node V4_SCALE=tp8pp16ep8_layout V4_WORKLOAD=sft_prod bash run.sh
+#   bash run.sh --control current --fleet h20_16node --scale tp8pp16ep8_layout --workload sft_prod
+#   V4_CONTROL=current V4_FLEET=h20_16node V4_SCALE=tp8pp16ep8_layout V4_WORKLOAD=sft_prod bash run.sh
 #
 # Common overrides (each maps to a PRESET_* / HW_* variable):
 #   --num-rollout N           training steps
@@ -24,8 +24,9 @@
 # --no-wait: submit the ray job and return immediately instead of streaming logs until completion.
 #
 # Load order (later overrides earlier):
-#   cluster/fleet/$V4_FLEET.env  →  cluster/base.env  →  cluster/hw/$V4_GPU_MODEL.env  →
-#   cluster/scale/$V4_SCALE.env  →  cluster/workload/$V4_WORKLOAD.env  →  CLI overrides
+#   cluster/fleet/$V4_FLEET.env  →  cluster/control/$V4_CONTROL.env  →  cluster/base.env  →
+#   cluster/hw/$V4_GPU_MODEL.env  →  cluster/scale/$V4_SCALE.env  →
+#   cluster/workload/$V4_WORKLOAD.env  →  CLI overrides
 
 set -euo pipefail
 
@@ -43,11 +44,13 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --dry-run) DRY_RUN=1; shift ;;
     --no-wait) NO_WAIT=1; shift ;;
+    --control)               export V4_CONTROL="$2"; shift 2 ;;
     --fleet)                 export V4_FLEET="$2"; shift 2 ;;
     --scale)                 export V4_SCALE="$2"; shift 2 ;;
     --workload)              export V4_WORKLOAD="$2"; shift 2 ;;
     -h|--help)
       sed -n '2,/^set -euo/p' "$0" | sed 's/^# \?//; /^set -euo/d'
+      echo "Available controls:  $(ls "$CLUSTER_DIR/control/" 2>/dev/null | sed 's/\.env$//' | tr '\n' ' ')"
       echo "Available fleets:    $(ls "$CLUSTER_DIR/fleet/" | sed 's/\.env$//' | tr '\n' ' ')"
       echo "Available scales:    $(ls "$CLUSTER_DIR/scale/" | sed 's/\.env$//' | tr '\n' ' ')"
       echo "Available workloads: $(ls "$CLUSTER_DIR/workload/" | sed 's/\.env$//' | tr '\n' ' ')"
@@ -226,13 +229,13 @@ SAVE_DIR="$V4_OUT/$RUN_ID"
 CKPT_REF_LOAD_DIR="${PRESET_REF_LOAD_DIR:-$V4_TORCH_DIST}"
 CKPT_LOAD_DIR="${PRESET_LOAD_DIR:-$SAVE_DIR/checkpoints}"
 mkdir -p "$SAVE_DIR"
-echo "[info] config   : fleet=$V4_FLEET scale=$V4_SCALE workload=$V4_WORKLOAD"
+echo "[info] config   : control=${V4_CONTROL:-<legacy>} fleet=$V4_FLEET scale=$V4_SCALE workload=$V4_WORKLOAD"
 echo "[info] cluster  : $V4_CLUSTER_NAME ($V4_GPU_MODEL × $V4_NUM_NODES nodes × $V4_NUM_GPUS_PER_NODE gpus)"
 echo "[info] run id    : $RUN_ID"
 echo "[info] save dir  : $SAVE_DIR"
 echo "[info] ref load  : $CKPT_REF_LOAD_DIR"
 echo "[info] load dir  : $CKPT_LOAD_DIR"
-echo "[info] dashboard : http://$V4_MASTER_IP:$V4_DASHBOARD_PORT"
+echo "[info] dashboard : http://$V4_RAY_HEAD_IP:$V4_DASHBOARD_PORT"
 
 # Finalize profile flags (needs SAVE_DIR).
 if (( PROFILE_ENABLED == 1 )); then
@@ -378,7 +381,7 @@ if [[ "${PRESET_USE_WANDB:-0}" == "1" ]]; then
 fi
 
 RUNTIME_ENV="\$(PYTHONPATH_VALUE="$V4_RUNTIME_PYTHONPATH" \\
-  MASTER_ADDR_VALUE="$V4_MASTER_IP" \\
+  MASTER_ADDR_VALUE="$V4_TRAINING_MASTER_IP" \\
   NCCL_NVLS_ENABLE_VALUE="$HW_NCCL_NVLS_ENABLE" \\
   MEGATRON_SPARSE_ATTN_IMPL_VALUE="$PRESET_ATTN_IMPL" \\
   PYTORCH_CUDA_ALLOC_CONF_VALUE="${HW_PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}" \\
@@ -433,4 +436,4 @@ fi
 
 echo
 echo "=== submit ray job (live logs mirrored to $SAVE_DIR/job.log) ==="
-ssh "root@$V4_MASTER_IP" "docker exec $V4_CONTAINER bash $LAUNCH" 2>&1 | tee "$SAVE_DIR/job.log"
+ssh "root@$V4_RAY_HEAD_IP" "docker exec $V4_CONTAINER bash $LAUNCH" 2>&1 | tee "$SAVE_DIR/job.log"

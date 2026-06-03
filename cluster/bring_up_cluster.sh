@@ -2,8 +2,8 @@
 # Bring up miles containers + ray cluster on V4_NUM_NODES nodes.
 # After completion:
 #   - V4_NUM_NODES containers named $V4_CONTAINER are running
-#   - master is the ray head, workers have joined
-#   - dashboard is reachable at http://$V4_MASTER_IP:$V4_DASHBOARD_PORT
+#   - ray head is started on $V4_RAY_HEAD_IP, workers have joined
+#   - dashboard is reachable at http://$V4_RAY_HEAD_IP:$V4_DASHBOARD_PORT
 #
 # Idempotent: if a container already exists, remove and recreate (to guarantee config consistency).
 # Failure: exit immediately on any node failure.
@@ -27,28 +27,29 @@ done
 
 check_node_data0() {
   local IP="$1"
-  ssh $SSH_OPTS root@"$IP" "V4_DATA0_MAX_USE_PCT=${V4_DATA0_MAX_USE_PCT:-95} bash -s" <<'EOF'
+  ssh $SSH_OPTS root@"$IP" "V4_HOST_RAY_LOCAL_DIR='${V4_HOST_RAY_LOCAL_DIR:-/data0}' V4_DATA0_MAX_USE_PCT=${V4_DATA0_MAX_USE_PCT:-95} bash -s" <<'EOF'
 set -euo pipefail
+host_dir="${V4_HOST_RAY_LOCAL_DIR:-/data0}"
 root_src="$(findmnt -n -T / -o SOURCE)"
-data_src="$(findmnt -n -T /data0 -o SOURCE 2>/dev/null || true)"
+data_src="$(findmnt -n -T "$host_dir" -o SOURCE 2>/dev/null || true)"
 if [[ -z "$data_src" ]]; then
-  echo "[err] /data0 is missing"
+  echo "[err] $host_dir is missing"
   exit 1
 fi
 if [[ "$data_src" == "$root_src" ]]; then
-  echo "[err] /data0 resolves to root filesystem ($data_src); mount a local data disk before starting Ray"
+  echo "[err] $host_dir resolves to root filesystem ($data_src); mount a local data disk before starting Ray"
   exit 1
 fi
-use_pct="$(df -P /data0 | awk 'NR==2 {gsub(/%/, "", $5); print $5}')"
+use_pct="$(df -P "$host_dir" | awk 'NR==2 {gsub(/%/, "", $5); print $5}')"
 if [[ -n "$use_pct" && "$use_pct" -ge "$V4_DATA0_MAX_USE_PCT" ]]; then
-  echo "[err] /data0 is ${use_pct}% full; Ray temp/object spill needs local disk headroom"
+  echo "[err] $host_dir is ${use_pct}% full; Ray temp/object spill needs local disk headroom"
   exit 1
 fi
-echo "[ok] /data0 source=$data_src use=${use_pct}%"
+echo "[ok] $host_dir source=$data_src use=${use_pct}%"
 EOF
 }
 
-echo "=== Preflight: validating /data0 local disks ==="
+echo "=== Preflight: validating local Ray disks ($V4_HOST_RAY_LOCAL_DIR -> $V4_CONTAINER_RAY_LOCAL_DIR) ==="
 DATA0_ERR=0
 for IP in $V4_ALL_IPS; do
   if ! out="$(check_node_data0 "$IP" 2>&1)"; then
@@ -59,7 +60,7 @@ for IP in $V4_ALL_IPS; do
   fi
 done
 if (( DATA0_ERR != 0 )); then
-  echo "[err] fix /data0 mount/usage before starting containers" >&2
+  echo "[err] fix $V4_HOST_RAY_LOCAL_DIR mount/usage before starting containers" >&2
   exit 1
 fi
 echo
@@ -92,7 +93,7 @@ docker run -d --name $V4_CONTAINER \
     -e TRANSFORMERS_CACHE=$V4_HF_HOME/transformers \
     -e HUGGINGFACE_HUB_CACHE=$V4_HF_HOME/hub \
     -e CUDA_DEVICE_MAX_CONNECTIONS=1 \
-    -e MASTER_ADDR=$V4_MASTER_IP \
+    -e MASTER_ADDR=$V4_TRAINING_MASTER_IP \
     -e NCCL_IB_DISABLE=0 \
     -e TZ=${V4_TZ:-Asia/Shanghai} \
     -w $V4_MILES_REPO \
@@ -157,13 +158,13 @@ fi
 
 ray stop --force 2>/dev/null || true
 # Put ray temp dir (logs + spill) on the local NVMe data disk instead of overlayfs.
-# Reason: 10.0.8.7 has a 492G root vs 5.8T /data0; spill on / can fill overlay.
-mkdir -p /data0/ray
+# Reason: 10.0.8.7 has a 492G root vs 5.8T local data disk; spill on / can fill overlay.
+mkdir -p $V4_RAY_TEMP_DIR
 ray start --head \\
-    --node-ip-address=$V4_MASTER_IP \\
+    --node-ip-address=$V4_RAY_HEAD_IP \\
     --port=$V4_RAY_PORT \\
     --num-gpus=$V4_NUM_GPUS_PER_NODE \\
-    --temp-dir=/data0/ray \\
+    --temp-dir=$V4_RAY_TEMP_DIR \\
     --dashboard-host=0.0.0.0 \\
     --dashboard-port=$V4_DASHBOARD_PORT \\
     --disable-usage-stats "\${REDIS_ARGS[@]}"
@@ -177,18 +178,18 @@ set -e
 export TZ='__TZ__'
 WORKER_IP="$1"
 ray stop --force 2>/dev/null || true
-mkdir -p /data0/ray
+mkdir -p __RAY_TEMP_DIR__
 ray start --address=__MASTER_IP__:__RAY_PORT__ \
     --node-ip-address=$WORKER_IP \
     --num-gpus=__NUM_GPUS__ \
-    --temp-dir=/data0/ray \
+    --temp-dir=__RAY_TEMP_DIR__ \
     --disable-usage-stats
 EOF
-sed -i "s|__MASTER_IP__|$V4_MASTER_IP|g; s|__RAY_PORT__|$V4_RAY_PORT|g; s|__NUM_GPUS__|$V4_NUM_GPUS_PER_NODE|g; s|__TZ__|${V4_TZ:-Asia/Shanghai}|g" "$RAY_WORKER_SCRIPT"
+sed -i "s|__MASTER_IP__|$V4_RAY_HEAD_IP|g; s|__RAY_PORT__|$V4_RAY_PORT|g; s|__NUM_GPUS__|$V4_NUM_GPUS_PER_NODE|g; s|__RAY_TEMP_DIR__|$V4_RAY_TEMP_DIR|g; s|__TZ__|${V4_TZ:-Asia/Shanghai}|g" "$RAY_WORKER_SCRIPT"
 chmod +x "$RAY_WORKER_SCRIPT"
 
 echo "=== Phase 2: starting ray head on master ==="
-ssh $SSH_OPTS root@$V4_MASTER_IP "docker exec $V4_CONTAINER bash $RAY_HEAD_SCRIPT" 2>&1 | tail -10
+ssh $SSH_OPTS root@$V4_RAY_HEAD_IP "docker exec $V4_CONTAINER bash $RAY_HEAD_SCRIPT" 2>&1 | tail -10
 
 echo
 echo "=== Phase 3: $((V4_NUM_NODES - 1)) worker join ray ==="
@@ -204,7 +205,7 @@ wait
 echo
 echo "=== Phase 4: verifying ray cluster ==="
 sleep 3
-ssh $SSH_OPTS root@$V4_MASTER_IP "docker exec $V4_CONTAINER ray status" 2>&1 | head -25
+ssh $SSH_OPTS root@$V4_RAY_HEAD_IP "docker exec $V4_CONTAINER ray status" 2>&1 | head -25
 
 MONITORING_SYNC="$V4_WORK/monitoring/sync_ray_sd.sh"
 if [[ -x "$MONITORING_SYNC" ]]; then
@@ -219,5 +220,5 @@ fi
 
 echo
 echo "=== done ==="
-echo "Dashboard: http://$V4_MASTER_IP:$V4_DASHBOARD_PORT"
+echo "Dashboard: http://$V4_RAY_HEAD_IP:$V4_DASHBOARD_PORT"
 echo "Master container: docker exec -it $V4_CONTAINER bash"

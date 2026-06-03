@@ -8,7 +8,7 @@
 # 幂等:容器已存在则删旧启新。
 # 跑完后:
 #   - 本地 curl http://localhost:$V4_CADDY_PORT/ray/ 能拿到 Ray dashboard
-#   - WOA 前置跳板机转发目标改成 $V4_MASTER_IP:$V4_CADDY_PORT 后,
+#   - WOA 前置跳板机转发目标改成 $V4_RAY_HEAD_IP:$V4_CADDY_PORT 后,
 #     https://kaynzhang.woa.com/ray|/grafana|/promql 三条都通
 
 set -euo pipefail
@@ -89,4 +89,4 @@ echo "  $V4_PUBLIC_URL/promql    — Prometheus"
 echo "  $V4_PUBLIC_URL/docs/     — 文档目录(browse)"
 echo "  $V4_PUBLIC_URL/docs/WRITEUP.html — 项目实录"
 echo
-echo "下一步:WOA 后台把前置跳板机转发目标改成 $V4_MASTER_IP:$V4_CADDY_PORT"
+echo "下一步:WOA 后台把前置跳板机转发目标改成 $V4_RAY_HEAD_IP:$V4_CADDY_PORT"

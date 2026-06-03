@@ -12,7 +12,7 @@ SSH_OPTS="-o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/de
 [[ -d "$V4_BF16_DIR" ]] || { echo "[err] BF16 dir missing: $V4_BF16_DIR" >&2; exit 1; }
 [[ -f "$V4_BF16_DIR/model.safetensors.index.json" ]] || { echo "[err] BF16 not finished casting" >&2; exit 1; }
 
-ssh $SSH_OPTS root@$V4_MASTER_IP "docker exec $V4_CONTAINER ray status" 2>&1 | grep -qiE "active|node_" || {
+ssh $SSH_OPTS root@$V4_RAY_HEAD_IP "docker exec $V4_CONTAINER ray status" 2>&1 | grep -qiE "active|node_" || {
   echo "[err] ray cluster not healthy. cluster_up.sh first." >&2
   exit 1
 }
@@ -93,7 +93,7 @@ EOF
 chmod +x "$CONV_SH"
 
 echo "[info] launching: $CONV_SH"
-ssh $SSH_OPTS root@$V4_MASTER_IP "docker exec $V4_CONTAINER bash $CONV_SH" 2>&1 | tee "$V4_OUT/.convert_v4.log"
+ssh $SSH_OPTS root@$V4_RAY_HEAD_IP "docker exec $V4_CONTAINER bash $CONV_SH" 2>&1 | tee "$V4_OUT/.convert_v4.log"
 echo
 echo "[done] check $V4_TORCH_DIST"
 ls "$V4_TORCH_DIST" 2>/dev/null | head

@@ -2,22 +2,27 @@
 # Layered env loader.
 #
 # 维度 (互相正交):
-#   fleet/<name>.env       — 哪批物理机 + image/ports/redis/mounts (V4_*)
+#   control/<name>.env     — 固定 Ray head/job-server + web/monitoring 入口 (V4_RAY_HEAD_IP 等)
+#   fleet/<name>.env       — 本次 job 希望使用的物理机池 + image/mounts/capacity (V4_*)
 #   hw/<gpu_model>.env     — 机型默认硬件参数 (HW_*)
 #   scale/<name>.env       — 并行策略 TP/PP/CP/EP/VPP/layout (PRESET_*)
 #   workload/<name>.env    — data/lr/steps/save/optim 算法 (PRESET_*)
 #   base.env               — 路径派生 (V4_MILES, V4_DATA, ...)
 #
 # 入口三种用法 (任选):
-#   1. V4_FLEET=h20_16node V4_SCALE=tp8pp16ep8_layout V4_WORKLOAD=sft_prod bash run.sh
-#   2. bash run.sh --fleet h20_16node --scale tp8pp16ep8_layout --workload sft_prod
+#   1. V4_CONTROL=current V4_FLEET=h20_16node V4_SCALE=tp8pp16ep8_layout V4_WORKLOAD=sft_prod bash run.sh
+#   2. bash run.sh --control current --fleet h20_16node --scale tp8pp16ep8_layout --workload sft_prod
 #   3. bash run.sh prod                  (向后兼容: 走老 presets/<preset>.env 路径)
 #
-# 直接被 bring_up_cluster.sh / tear_down.sh / bring_up_caddy.sh source 时,只需要
-# fleet 维度 (这些脚本不关心训练参数)。
+# 直接被 prepare_ray_head.sh / ensure_ray_workers.sh / bring_up_caddy.sh source 时,
+# 只需要 control + fleet 维度 (这些脚本不关心训练参数)。
 
 set -u
 _SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+
+export V4_HOST_RAY_LOCAL_DIR="${V4_HOST_RAY_LOCAL_DIR:-/data0}"
+export V4_CONTAINER_RAY_LOCAL_DIR="${V4_CONTAINER_RAY_LOCAL_DIR:-/ray_local}"
+export V4_RAY_TEMP_DIR="${V4_RAY_TEMP_DIR:-$V4_CONTAINER_RAY_LOCAL_DIR/ray}"
 
 _load_or_die() {
   local kind="$1" name="$2"
@@ -31,9 +36,23 @@ _load_or_die() {
   source "$path"
 }
 
-# Fleet (always required).
+# Fleet (always required): job node pool and capacity.
 _FLEET="${V4_FLEET:-h20_16node}"
 _load_or_die fleet "$_FLEET" || { return 1 2>/dev/null || exit 1; }
+
+# Control plane (optional for backward compatibility): fixed submit/head entry.
+_CONTROL="${V4_CONTROL:-}"
+if [[ -n "$_CONTROL" ]]; then
+  _load_or_die control "$_CONTROL" || { return 1 2>/dev/null || exit 1; }
+fi
+
+# Compatibility aliases. New code should use V4_RAY_HEAD_IP for the Ray control
+# plane and V4_MASTER_IP only as the first node in a legacy fleet definition.
+: "${V4_RAY_HEAD_IP:=${V4_MASTER_IP:?V4_MASTER_IP or V4_RAY_HEAD_IP required}}"
+: "${V4_MASTER_IP:=$V4_RAY_HEAD_IP}"
+: "${V4_TRAINING_MASTER_IP:=$V4_RAY_HEAD_IP}"
+: "${V4_GRAFANA_HOST:=http://${V4_RAY_HEAD_IP}:${V4_GRAFANA_PORT:-7777}}"
+: "${V4_PROMETHEUS_HOST:=http://${V4_RAY_HEAD_IP}:${V4_PROMETHEUS_PORT:-40001}/promql}"
 
 # Project paths derive from V4_WORK set by fleet.
 # shellcheck disable=SC1091
@@ -50,5 +69,5 @@ if [[ -n "${V4_WORKLOAD:-}" ]]; then
   _load_or_die workload "$V4_WORKLOAD" || { return 1 2>/dev/null || exit 1; }
 fi
 
-unset _SCRIPT_DIR _FLEET
+unset _SCRIPT_DIR _FLEET _CONTROL
 unset -f _load_or_die
