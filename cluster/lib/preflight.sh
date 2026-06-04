@@ -40,8 +40,8 @@ check_runtime_framework_deps() {
 
 check_ray_capacity() {
   local expected_nodes expected_gpus
-  expected_nodes="$V4_NUM_NODES"
-  expected_gpus="$((V4_NUM_NODES * V4_NUM_GPUS_PER_NODE))"
+  expected_nodes="$V4_EXPECTED_RAY_NODES"
+  expected_gpus="$V4_EXPECTED_GPUS"
 
   ssh -o StrictHostKeyChecking=no -o LogLevel=ERROR "root@$V4_RAY_HEAD_IP" \
     "docker exec -i -e EXPECTED_NODES=$expected_nodes -e EXPECTED_GPUS=$expected_gpus -e RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO=0 $V4_CONTAINER python3 - <<'PY'

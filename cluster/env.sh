@@ -54,6 +54,13 @@ fi
 : "${V4_GRAFANA_HOST:=http://${V4_RAY_HEAD_IP}:${V4_GRAFANA_PORT:-7777}}"
 : "${V4_PROMETHEUS_HOST:=http://${V4_RAY_HEAD_IP}:${V4_PROMETHEUS_PORT:-40001}/promql}"
 
+# Ray capacity defaults. Most fleets run the Ray head on a GPU node, so the
+# expected Ray resources match the training actor capacity. CPU-only head
+# fleets can override these explicitly.
+: "${V4_RAY_HEAD_NUM_GPUS:=$V4_NUM_GPUS_PER_NODE}"
+: "${V4_EXPECTED_RAY_NODES:=$V4_NUM_NODES}"
+: "${V4_EXPECTED_GPUS:=$((V4_NUM_NODES * V4_NUM_GPUS_PER_NODE))}"
+
 # Project paths derive from V4_WORK set by fleet.
 # shellcheck disable=SC1091
 source "$_SCRIPT_DIR/base.env"

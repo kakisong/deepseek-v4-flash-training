@@ -153,8 +153,8 @@ echo
 
 if (( VERIFY == 1 )); then
   echo "=== Verifying Ray capacity ==="
-  EXPECTED_NODES="$V4_NUM_NODES"
-  EXPECTED_GPUS="$((V4_NUM_NODES * V4_NUM_GPUS_PER_NODE))"
+  EXPECTED_NODES="$V4_EXPECTED_RAY_NODES"
+  EXPECTED_GPUS="$V4_EXPECTED_GPUS"
   for attempt in $(seq 1 60); do
     if ssh $SSH_OPTS root@"$V4_RAY_HEAD_IP" "docker exec -i -e EXPECTED_NODES=$EXPECTED_NODES -e EXPECTED_GPUS=$EXPECTED_GPUS -e RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO=0 $V4_CONTAINER python3 - <<'PY'
 import os

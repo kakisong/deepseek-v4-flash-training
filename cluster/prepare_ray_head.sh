@@ -19,6 +19,11 @@ for m in "${V4_DOCKER_MOUNTS[@]}"; do
   DOCKER_MOUNT_FLAGS+=" -v $m"
 done
 
+HEAD_DOCKER_GPU_FLAGS=""
+if [[ "${V4_RAY_HEAD_NUM_GPUS:-$V4_NUM_GPUS_PER_NODE}" -gt 0 ]]; then
+  HEAD_DOCKER_GPU_FLAGS="--gpus all"
+fi
+
 check_node_data0() {
   local IP="$1"
   ssh $SSH_OPTS root@"$IP" "V4_HOST_RAY_LOCAL_DIR='${V4_HOST_RAY_LOCAL_DIR:-/data0}' V4_DATA0_MAX_USE_PCT=${V4_DATA0_MAX_USE_PCT:-95} bash -s" <<'EOF'
@@ -66,7 +71,7 @@ elif docker ps -a --format '{{.Names}}' | grep -qx '$V4_CONTAINER'; then
   echo "[head] started existing container $V4_CONTAINER"
 else
   docker run -d --name $V4_CONTAINER \\
-      --gpus all \\
+      $HEAD_DOCKER_GPU_FLAGS \\
       --network host \\
       --shm-size=200g \\
       --ulimit memlock=-1 \\
@@ -121,7 +126,7 @@ mkdir -p $V4_RAY_TEMP_DIR
 ray start --head \\
     --node-ip-address=$V4_RAY_HEAD_IP \\
     --port=$V4_RAY_PORT \\
-    --num-gpus=$V4_NUM_GPUS_PER_NODE \\
+    --num-gpus=$V4_RAY_HEAD_NUM_GPUS \\
     --temp-dir=$V4_RAY_TEMP_DIR \\
     --dashboard-host=0.0.0.0 \\
     --dashboard-port=$V4_DASHBOARD_PORT \\

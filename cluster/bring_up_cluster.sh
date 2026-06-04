@@ -67,6 +67,10 @@ echo
 
 start_node_container() {
   local IP="$1"
+  local docker_gpu_flags="--gpus all"
+  if [[ "$IP" == "$V4_RAY_HEAD_IP" && "${V4_RAY_HEAD_NUM_GPUS:-$V4_NUM_GPUS_PER_NODE}" -eq 0 ]]; then
+    docker_gpu_flags=""
+  fi
   echo "[$(date +%H:%M:%S)] [$IP] starting container $V4_CONTAINER"
   ssh -o BatchMode=yes -o ConnectTimeout=10 \
       -o StrictHostKeyChecking=no \
@@ -79,7 +83,7 @@ if docker ps -a --format '{{.Names}}' | grep -qx '$V4_CONTAINER'; then
   docker rm -f $V4_CONTAINER >/dev/null
 fi
 docker run -d --name $V4_CONTAINER \
-    --gpus all \
+    $docker_gpu_flags \
     --network host \
     --shm-size=200g \
     --ulimit memlock=-1 \
@@ -107,7 +111,7 @@ echo "[$IP] container ready"
 EOF
 }
 
-echo "=== Phase 1: starting containers on $V4_NUM_NODES nodes (parallel) ==="
+echo "=== Phase 1: starting containers on $(wc -w <<< "$V4_ALL_IPS") Ray nodes (parallel) ==="
 # pre-flight: make sure miles fork is on CFS (used as the workdir + pip install
 # target inside containers). Default V4_MILES_REPO_URL points at our public fork
 # (kakisong/miles); override env var to swap (e.g. internal mirror).
@@ -163,7 +167,7 @@ mkdir -p $V4_RAY_TEMP_DIR
 ray start --head \\
     --node-ip-address=$V4_RAY_HEAD_IP \\
     --port=$V4_RAY_PORT \\
-    --num-gpus=$V4_NUM_GPUS_PER_NODE \\
+    --num-gpus=$V4_RAY_HEAD_NUM_GPUS \\
     --temp-dir=$V4_RAY_TEMP_DIR \\
     --dashboard-host=0.0.0.0 \\
     --dashboard-port=$V4_DASHBOARD_PORT \\
@@ -192,7 +196,7 @@ echo "=== Phase 2: starting ray head on master ==="
 ssh $SSH_OPTS root@$V4_RAY_HEAD_IP "docker exec $V4_CONTAINER bash $RAY_HEAD_SCRIPT" 2>&1 | tail -10
 
 echo
-echo "=== Phase 3: $((V4_NUM_NODES - 1)) worker join ray ==="
+echo "=== Phase 3: $(wc -w <<< "$V4_WORKER_IPS") workers join ray ==="
 for IP in $V4_WORKER_IPS; do
   (
     ssh $SSH_OPTS root@$IP "docker exec $V4_CONTAINER bash $RAY_WORKER_SCRIPT $IP" 2>&1 \
