@@ -2,6 +2,9 @@
 # Unified launch entry.
 #
 # 用法 (任选):
+#   bash run.sh
+#   # 默认等价于当前 H200 42-node P3-derived 配置:
+#   #   --fleet h200_k8s_42node --scale tp8pp7cp6ep8 --workload sft_kaynzhang_077_134k_3epoch
 #   bash run.sh --control current --fleet h20_16node --scale tp8pp16ep8_layout --workload sft_prod
 #   V4_CONTROL=current V4_FLEET=h20_16node V4_SCALE=tp8pp16ep8_layout V4_WORKLOAD=sft_prod bash run.sh
 #
@@ -12,6 +15,7 @@
 #   --lr-decay-style S        constant / cosine / linear
 #   --save-interval N         save ckpt every N steps
 #   --save-retain-interval N  keep a permanent ckpt every N steps (rolling)
+#   --seq-length N            Megatron sequence length
 #   --max-tokens-per-gpu N    per-CP-rank token cap (trade memory for batch)
 #   --global-batch-size N
 #   --attn-impl IMPL          tilelang / dense
@@ -22,6 +26,8 @@
 #
 # --dry-run: generate launch_in_container.sh but do NOT submit it to ray.
 # --no-wait: submit the ray job and return immediately instead of streaming logs until completion.
+# --submit-mode ssh|k8s: run the generated launch script through SSH/docker or
+#   through kubectl exec against the configured Ray head pod.
 #
 # Load order (later overrides earlier):
 #   cluster/fleet/$V4_FLEET.env  →  cluster/control/$V4_CONTROL.env  →  cluster/base.env  →
@@ -48,6 +54,7 @@ while [[ $# -gt 0 ]]; do
     --fleet)                 export V4_FLEET="$2"; shift 2 ;;
     --scale)                 export V4_SCALE="$2"; shift 2 ;;
     --workload)              export V4_WORKLOAD="$2"; shift 2 ;;
+    --submit-mode)           export V4_SUBMIT_MODE="$2"; shift 2 ;;
     -h|--help)
       sed -n '2,/^set -euo/p' "$0" | sed 's/^# \?//; /^set -euo/d'
       echo "Available controls:  $(ls "$CLUSTER_DIR/control/" 2>/dev/null | sed 's/\.env$//' | tr '\n' ' ')"
@@ -64,6 +71,7 @@ while [[ $# -gt 0 ]]; do
     --no-save-optim)         NO_SAVE_OPTIM=1; shift ;;
     --save-interval)         OVERRIDES[PRESET_SAVE_INTERVAL]="$2"; shift 2 ;;
     --save-retain-interval)  OVERRIDES[PRESET_SAVE_RETAIN_INTERVAL]="$2"; shift 2 ;;
+    --seq-length)            OVERRIDES[HW_SEQ_LENGTH]="$2"; shift 2 ;;
     --max-tokens-per-gpu)    OVERRIDES[HW_MAX_TOKENS_PER_GPU]="$2"; shift 2 ;;
     --global-batch-size)     OVERRIDES[PRESET_GLOBAL_BATCH_SIZE]="$2"; shift 2 ;;
     --rollout-batch-size)    OVERRIDES[PRESET_ROLLOUT_BATCH_SIZE]="$2"; shift 2 ;;
@@ -72,13 +80,18 @@ while [[ $# -gt 0 ]]; do
     --recompute-method)      OVERRIDES[HW_RECOMPUTE_METHOD]="$2"; shift 2 ;;
     --recompute-num-layers)  OVERRIDES[HW_RECOMPUTE_NUM_LAYERS]="$2"; shift 2 ;;
     --no-cpu-offload)        OVERRIDES[PRESET_CPU_OFFLOAD_FLAGS]=""; shift ;;
+    --cpu-offload)           OVERRIDES[PRESET_CPU_OFFLOAD_FLAGS]="--optimizer-cpu-offload --overlap-cpu-optimizer-d2h-h2d --use-precision-aware-optimizer"; shift ;;
     --)                      shift; break ;;
     *) echo "[err] unknown arg: $1 (see $0 --help)" >&2; exit 1 ;;
   esac
 done
 
-: "${V4_SCALE:?[err] V4_SCALE / --scale required (see $0 --help)}"
-: "${V4_WORKLOAD:?[err] V4_WORKLOAD / --workload required (see $0 --help)}"
+# Current default: H200 42-node P3-derived config for kaynzhang_077 134K SFT.
+# Explicit CLI/env values still override these.
+: "${V4_FLEET:=h200_k8s_42node}"
+: "${V4_SCALE:=tp8pp7cp6ep8}"
+: "${V4_WORKLOAD:=sft_kaynzhang_077_134k_3epoch}"
+export V4_FLEET V4_SCALE V4_WORKLOAD
 
 # ---------- layered source ---------------------------------------------------
 # env.sh handles: fleet → base → hw → scale → workload.
@@ -122,6 +135,13 @@ if [[ -n "${PRESET_TOOL_KEY:-}" ]]; then
   SFT_TOOL_KEY_FLAGS="--tool-key $PRESET_TOOL_KEY"
 fi
 
+SFT_DEBUG_FLAGS=""
+if [[ "${PRESET_DEBUG_TRAIN_ONLY:-1}" == "1" ]]; then
+  SFT_DEBUG_FLAGS="--debug-train-only"
+fi
+
+DUMP_DETAILS_FLAGS=""
+
 # Miles supports either explicit rollout count or epoch-derived rollout count.
 # Do not emit both: when both are present Miles ignores num_epoch, which is
 # surprising for post-train configs that are meant to be epoch-aligned.
@@ -133,6 +153,11 @@ elif [[ -n "${PRESET_NUM_ROLLOUT:-}" ]]; then
 else
   echo "[err] either PRESET_NUM_ROLLOUT or PRESET_NUM_EPOCH must be set" >&2
   exit 1
+fi
+
+SEQ_LENGTH_FLAGS=""
+if [[ -n "${HW_SEQ_LENGTH:-}" ]]; then
+  SEQ_LENGTH_FLAGS="--seq-length $HW_SEQ_LENGTH"
 fi
 
 # Optional --lr-warmup-iters. Megatron's default with this unset is 0; we only emit
@@ -192,7 +217,9 @@ fi
 # (Megatron transformer_config.moe_deepep_num_sms default); raise via PRESET_MOE_DEEPEP_NUM_SMS.
 DEEPEP_FLAGS=""
 if [[ "${PRESET_MOE_DEEPEP:-0}" == "1" ]]; then
-  DEEPEP_FLAGS="--moe-token-dispatcher-type flex --moe-enable-deepep"
+  # --moe-enable-deepep is deprecated in mcore 0.16 (auto-rewrites to backend=deepep with
+  # a per-rank warning); use the current --moe-flex-dispatcher-backend deepep directly.
+  DEEPEP_FLAGS="--moe-token-dispatcher-type flex --moe-flex-dispatcher-backend deepep"
   if [[ -n "${PRESET_MOE_DEEPEP_NUM_SMS:-}" ]]; then
     DEEPEP_FLAGS="$DEEPEP_FLAGS --moe-deepep-num-sms $PRESET_MOE_DEEPEP_NUM_SMS"
   fi
@@ -206,6 +233,26 @@ if [[ -n "${PRESET_MOE_ROUTER_DTYPE:-}" ]]; then
   ROUTER_DTYPE_FLAGS="--moe-router-dtype $PRESET_MOE_ROUTER_DTYPE"
 fi
 
+# Launch-overhead reducers. This workload is overhead/launch-bound (94% of credited FLOPs are
+# phantom dense attention; ~128 microbatches x 43 MoE layers x 336 ranks per step), so cutting
+# CPU-side jitter and kernel-launch count moves measured TFLOPS ~1:1.
+#   - manual-gc: aligns Python GC across all ranks; otherwise one rank's stop-the-world GC
+#     straggles the whole 7-stage pipeline every step. (Megatron MoE perf recipe default.)
+#   - router/permute fusion: collapse MoE router top-k/softmax and permute/unpermute into single
+#     kernels (needs TE>=2.1; image has 2.10). Zero-comm, numerics-safe.
+# Default OFF to keep A/B baselines byte-equal; flip to 1 in the workload env once validated.
+MANUAL_GC_FLAGS=""
+if [[ "${PRESET_MANUAL_GC:-0}" == "1" ]]; then
+  MANUAL_GC_FLAGS="--manual-gc --manual-gc-interval ${PRESET_MANUAL_GC_INTERVAL:-10}"
+fi
+MOE_FUSION_FLAGS=""
+if [[ "${PRESET_MOE_FUSION:-0}" == "1" ]]; then
+  # NOTE: --moe-router-fusion only supports softmax/sigmoid score functions; V4 uses
+  # sqrtsoftplus -> "score_function must be softmax or sigmoid for router fusion". So we
+  # enable only --moe-permute-fusion (permute/unpermute around grouped-GEMM, score-agnostic).
+  MOE_FUSION_FLAGS="--moe-permute-fusion"
+fi
+
 # Profile flags are finalized below after RUN_ID is set (needs $SAVE_DIR for tb_dir).
 PROFILE_FLAGS=""
 PROFILE_TBDIR=""
@@ -213,6 +260,16 @@ PROFILE_TBDIR=""
 RAY_JOB_WAIT_FLAGS=""
 if (( NO_WAIT == 1 )); then
   RAY_JOB_WAIT_FLAGS="--no-wait"
+fi
+RAY_JOB_ENTRYPOINT_FLAGS=""
+if [[ -n "${V4_RAY_ENTRYPOINT_RESOURCES:-}" ]]; then
+  RAY_JOB_ENTRYPOINT_FLAGS="--entrypoint-resources '$V4_RAY_ENTRYPOINT_RESOURCES'"
+fi
+RAY_JOB_ENTRYPOINT_ENV_PREFIX=""
+if [[ -n "${V4_RAY_DRIVER_CUDA_VISIBLE_DEVICES:-}" || -n "${V4_RAY_DRIVER_NOSET_CUDA_VISIBLE_DEVICES:-}" ]]; then
+  RAY_JOB_ENTRYPOINT_ENV_PREFIX="env"
+  [[ -n "${V4_RAY_DRIVER_CUDA_VISIBLE_DEVICES:-}" ]] && RAY_JOB_ENTRYPOINT_ENV_PREFIX+=" CUDA_VISIBLE_DEVICES=$V4_RAY_DRIVER_CUDA_VISIBLE_DEVICES"
+  [[ -n "${V4_RAY_DRIVER_NOSET_CUDA_VISIBLE_DEVICES:-}" ]] && RAY_JOB_ENTRYPOINT_ENV_PREFIX+=" RAY_EXPERIMENTAL_NOSET_CUDA_VISIBLE_DEVICES=$V4_RAY_DRIVER_NOSET_CUDA_VISIBLE_DEVICES"
 fi
 
 # ---------- preflight ----------------------------------------------------------
@@ -227,8 +284,16 @@ fi
 RUN_ID="${PRESET_RUN_ID_PREFIX}-$(date +%Y%m%d-%H%M%S)"
 SAVE_DIR="$V4_OUT/$RUN_ID"
 CKPT_REF_LOAD_DIR="${PRESET_REF_LOAD_DIR:-$V4_TORCH_DIST}"
+# Throughput-probe shortcut: PRESET_REF_LOAD_DIR=none skips --ref-load (random init,
+# no dist-ckpt reshard) -- tok/s is weight-value-independent, so config sweeps run fast.
+REF_LOAD_FLAGS="--ref-load $CKPT_REF_LOAD_DIR"
+if [[ "${PRESET_REF_LOAD_DIR:-}" == "none" ]]; then REF_LOAD_FLAGS=""; CKPT_REF_LOAD_DIR="(none: random init)"; fi
 CKPT_LOAD_DIR="${PRESET_LOAD_DIR:-$SAVE_DIR/checkpoints}"
 mkdir -p "$SAVE_DIR"
+DUMP_DETAILS_FLAGS=""
+if [[ "${PRESET_DUMP_DETAILS:-1}" == "1" ]]; then
+  DUMP_DETAILS_FLAGS="--dump-details $SAVE_DIR/dump_details"
+fi
 echo "[info] config   : control=${V4_CONTROL:-<legacy>} fleet=$V4_FLEET scale=$V4_SCALE workload=$V4_WORKLOAD"
 echo "[info] cluster  : $V4_CLUSTER_NAME ($V4_GPU_MODEL × $V4_NUM_NODES nodes × $V4_NUM_GPUS_PER_NODE gpus)"
 echo "[info] run id    : $RUN_ID"
@@ -270,7 +335,48 @@ if [[ "${PRESET_USE_WANDB:-0}" == "1" ]]; then
   WANDB_FLAGS="--use-wandb --wandb-project $PRESET_WANDB_PROJECT --wandb-dir $WANDB_DIR --wandb-group $RUN_ID"
   [[ -n "${PRESET_WANDB_TEAM:-}" ]] && WANDB_FLAGS="$WANDB_FLAGS --wandb-team $PRESET_WANDB_TEAM"
   echo "[info] wandb    : ON  project=$PRESET_WANDB_PROJECT team=${PRESET_WANDB_TEAM:-<default>} group=$RUN_ID key_source=file"
-  echo "[info]            MFU on wandb: derive as actor_train_tflops / ${HW_GPU_PEAK_TFLOPS_BF16:-148} (H20 BF16 peak)"
+  echo "[info]            MFU on wandb: derive as actor_train_tflops / ${HW_GPU_PEAK_TFLOPS_BF16:-148} (${V4_GPU_MODEL:-gpu} BF16 peak)"
+fi
+
+# ---------- EFA / aws-ofi-nccl env -------------------------------------------
+# When V4_EFA_ENABLE=1 (set in the fleet env), point NCCL at the fsx-staged
+# aws-ofi-nccl plugin + libfabric so inter-node collectives use EFA RDMA instead
+# of the TCP-socket fallback. These values are baked into the generated launch
+# script and injected into the Ray runtime_env so all ranks pick them up.
+V4_EFA_LD_LIBRARY_PATH=""
+V4_NCCL_NET_PLUGIN_VAL=""
+V4_FI_PROVIDER_VAL=""
+V4_FI_EFA_USE_DEVICE_RDMA_VAL=""
+V4_FI_EFA_FORK_SAFE_VAL=""
+V4_NCCL_PROTO_VAL=""
+if [[ "${V4_EFA_ENABLE:-0}" == "1" ]]; then
+  V4_EFA_LD_LIBRARY_PATH="$V4_EFA_ROOT/opt/amazon/ofi-nccl/lib:$V4_EFA_ROOT/opt/amazon/efa/lib:$V4_EFA_ROOT/usr/lib/x86_64-linux-gnu:/usr/local/cuda/lib64"
+  V4_NCCL_NET_PLUGIN_VAL="$V4_EFA_ROOT/opt/amazon/ofi-nccl/lib/libnccl-net.so"
+  V4_FI_PROVIDER_VAL="${V4_FI_PROVIDER:-efa}"
+  V4_FI_EFA_USE_DEVICE_RDMA_VAL="${V4_FI_EFA_USE_DEVICE_RDMA:-1}"
+  V4_FI_EFA_FORK_SAFE_VAL="${V4_FI_EFA_FORK_SAFE:-1}"
+  V4_NCCL_PROTO_VAL="${V4_NCCL_PROTO:-simple}"
+  # hostNetwork pods have per-node NIC names (enp74s0/enp75s0/...); prefix-match the
+  # routable host NIC for NCCL OOB bootstrap and avoid the eni*/veth link-local ones.
+  : "${V4_NCCL_SOCKET_IFNAME:=enp}"
+  echo "[info] EFA      : ON  plugin=$V4_NCCL_NET_PLUGIN_VAL provider=$V4_FI_PROVIDER_VAL ifname=$V4_NCCL_SOCKET_IFNAME"
+else
+  echo "[info] EFA      : OFF (NCCL will fall back to TCP sockets)"
+fi
+
+# ---------- FP8 (TransformerEngine MoE grouped GEMM) -------------------------
+# HW_FP8_ENABLED=1 routes the MoE expert GEMMs (bulk of the FLOPs) through TE
+# blockwise FP8 (~2x matmul) while the tilelang sparse-MLA attention stays bf16.
+# Mirrors the tested smoke/run_stage_a_fp8_smoke.sh recipe. Params stay bf16
+# (no --fp8-param-gather) so the deepseek_v4 bf16 weight assert holds.
+FP8_FLAGS=""
+V4_FP8_NVTE_VALUE=""
+if [[ "${HW_FP8_ENABLED:-0}" == "1" ]]; then
+  FP8_FLAGS="--transformer-impl transformer_engine --bf16 --fp8-format ${HW_FP8_FORMAT:-e4m3} --fp8-recipe ${HW_FP8_RECIPE:-blockwise}"
+  V4_FP8_NVTE_VALUE="1"
+  echo "[info] FP8      : ON  format=${HW_FP8_FORMAT:-e4m3} recipe=${HW_FP8_RECIPE:-blockwise} (MoE grouped GEMM)"
+else
+  echo "[info] FP8      : OFF (bf16 GEMMs)"
 fi
 
 # ---------- generate in-container launch script ------------------------------
@@ -283,7 +389,7 @@ source scripts/models/deepseek-v4-flash.sh
 
 CKPT_ARGS=(
   --hf-checkpoint  $V4_BF16_DIR
-  --ref-load       $CKPT_REF_LOAD_DIR
+  $REF_LOAD_FLAGS
   --load           $CKPT_LOAD_DIR
   --save           $SAVE_DIR/checkpoints
   --save-interval  $PRESET_SAVE_INTERVAL
@@ -307,7 +413,7 @@ SFT_ARGS=(
   --calculate-per-token-loss
   --disable-compute-advantages-and-returns
   --sft-only
-  --debug-train-only
+  $SFT_DEBUG_FLAGS
 
   --loss-mask-type deepseek_v4
   $SFT_TOOL_KEY_FLAGS
@@ -325,11 +431,14 @@ PERF_ARGS=(
   $EP_OVERLAP_FLAGS
   $DEEPEP_FLAGS
   $ROUTER_DTYPE_FLAGS
+  $MANUAL_GC_FLAGS
+  $MOE_FUSION_FLAGS
 
   $HW_RECOMPUTE_FLAGS
 
   --micro-batch-size 1
   --use-dynamic-batch-size
+  $SEQ_LENGTH_FLAGS
   --max-tokens-per-gpu $HW_MAX_TOKENS_PER_GPU
 )
 
@@ -353,8 +462,13 @@ MISC_ARGS=(
   --qkv-format thd
   --moe-router-freeze-gate
   --freeze-e-score-correction-bias
+  $FP8_FLAGS
   --update-weight-buffer-size 1073741824
   --train-memory-margin-bytes 3221225472
+  # Raise the default 10-min NCCL/PG watchdog so slow init paths (e.g. optimizer
+  # cpu-offload pinned-buffer alloc, dist-ckpt reshard reads) don't trip a 600s
+  # collective timeout during startup before training even begins.
+  --distributed-timeout-minutes ${HW_DIST_TIMEOUT_MINUTES:-60}
 
   --actor-num-nodes $V4_NUM_NODES
   --actor-num-gpus-per-node $V4_NUM_GPUS_PER_NODE
@@ -363,7 +477,7 @@ MISC_ARGS=(
   --no-offload-train
   --no-offload-rollout
   --use-fault-tolerance
-  --dump-details $SAVE_DIR/dump_details
+  $DUMP_DETAILS_FLAGS
   $PROFILE_FLAGS
   $WANDB_FLAGS
 )
@@ -384,7 +498,18 @@ fi
 RUNTIME_ENV="\$(PYTHONPATH_VALUE="$V4_RUNTIME_PYTHONPATH" \\
   MASTER_ADDR_VALUE="$V4_TRAINING_MASTER_IP" \\
   NCCL_NVLS_ENABLE_VALUE="$HW_NCCL_NVLS_ENABLE" \\
+  GLOO_SOCKET_IFNAME_VALUE="${V4_GLOO_SOCKET_IFNAME:-}" \\
+  NCCL_SOCKET_IFNAME_VALUE="${V4_NCCL_SOCKET_IFNAME:-}" \\
+  EFA_LD_LIBRARY_PATH_VALUE="$V4_EFA_LD_LIBRARY_PATH" \\
+  NCCL_NET_PLUGIN_VALUE="$V4_NCCL_NET_PLUGIN_VAL" \\
+  FI_PROVIDER_VALUE="$V4_FI_PROVIDER_VAL" \\
+  FI_EFA_USE_DEVICE_RDMA_VALUE="$V4_FI_EFA_USE_DEVICE_RDMA_VAL" \\
+  FI_EFA_FORK_SAFE_VALUE="$V4_FI_EFA_FORK_SAFE_VAL" \\
+  NCCL_PROTO_VALUE="$V4_NCCL_PROTO_VAL" \\
+  NCCL_MAX_NCHANNELS_VALUE="${V4_NCCL_MAX_NCHANNELS:-}" \\
+  NVTE_FP8_BLOCK_SCALING_FP32_SCALES_VALUE="$V4_FP8_NVTE_VALUE" \\
   MEGATRON_SPARSE_ATTN_IMPL_VALUE="$PRESET_ATTN_IMPL" \\
+  MILES_ROLLOUT_MANAGER_RESOURCES_VALUE='${V4_ROLLOUT_MANAGER_RESOURCES:-}' \\
   PYTORCH_CUDA_ALLOC_CONF_VALUE="${HW_PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}" \\
   CUDA_LAUNCH_BLOCKING_VALUE="${HW_CUDA_LAUNCH_BLOCKING:-0}" \\
   TORCH_USE_CUDA_DSA_VALUE="${HW_TORCH_USE_CUDA_DSA:-0}" \\
@@ -400,14 +525,35 @@ env = {
     "MILES_DSV4_THINKING_MODE": "chat",
     "MILES_DSV4_DROP_THINKING": "0",
     "NCCL_NVLS_ENABLE": os.environ["NCCL_NVLS_ENABLE_VALUE"],
-    "GLOO_SOCKET_IFNAME": "eth0",
-    "NCCL_SOCKET_IFNAME": "eth0",
     "LD_PRELOAD": "/usr/local/lib/python3.12/dist-packages/torch_memory_saver_hook_mode_preload.abi3.so",
     "MEGATRON_SPARSE_ATTN_IMPL": os.environ["MEGATRON_SPARSE_ATTN_IMPL_VALUE"],
     "PYTORCH_CUDA_ALLOC_CONF": os.environ["PYTORCH_CUDA_ALLOC_CONF_VALUE"],
     "CUDA_LAUNCH_BLOCKING": os.environ["CUDA_LAUNCH_BLOCKING_VALUE"],
     "TORCH_USE_CUDA_DSA": os.environ["TORCH_USE_CUDA_DSA_VALUE"],
 }
+gloo_socket_ifname = os.environ.get("GLOO_SOCKET_IFNAME_VALUE")
+if gloo_socket_ifname:
+    env["GLOO_SOCKET_IFNAME"] = gloo_socket_ifname
+nccl_socket_ifname = os.environ.get("NCCL_SOCKET_IFNAME_VALUE")
+if nccl_socket_ifname:
+    env["NCCL_SOCKET_IFNAME"] = nccl_socket_ifname
+# EFA / aws-ofi-nccl: only injected when the fleet enables it (values non-empty).
+for _src, _dst in (
+    ("EFA_LD_LIBRARY_PATH_VALUE", "LD_LIBRARY_PATH"),
+    ("NCCL_NET_PLUGIN_VALUE", "NCCL_NET_PLUGIN"),
+    ("FI_PROVIDER_VALUE", "FI_PROVIDER"),
+    ("FI_EFA_USE_DEVICE_RDMA_VALUE", "FI_EFA_USE_DEVICE_RDMA"),
+    ("FI_EFA_FORK_SAFE_VALUE", "FI_EFA_FORK_SAFE"),
+    ("NCCL_PROTO_VALUE", "NCCL_PROTO"),
+    ("NCCL_MAX_NCHANNELS_VALUE", "NCCL_MAX_NCHANNELS"),
+    ("NVTE_FP8_BLOCK_SCALING_FP32_SCALES_VALUE", "NVTE_FP8_BLOCK_SCALING_FP32_SCALES"),
+):
+    _v = os.environ.get(_src)
+    if _v:
+        env[_dst] = _v
+rollout_manager_resources = os.environ.get("MILES_ROLLOUT_MANAGER_RESOURCES_VALUE")
+if rollout_manager_resources:
+    env["MILES_ROLLOUT_MANAGER_RESOURCES"] = rollout_manager_resources
 wandb_key = os.environ.get("WANDB_API_KEY_VALUE")
 if wandb_key:
     env["WANDB_API_KEY"] = wandb_key
@@ -417,8 +563,9 @@ PY
 
 ray job submit --address=http://127.0.0.1:$V4_DASHBOARD_PORT \\
    $RAY_JOB_WAIT_FLAGS \\
+   $RAY_JOB_ENTRYPOINT_FLAGS \\
    --runtime-env-json="\$RUNTIME_ENV" \\
-   -- python3 train.py \\
+   -- $RAY_JOB_ENTRYPOINT_ENV_PREFIX python3 train.py \\
    "\${MODEL_ARGS[@]}" \\
    "\${CKPT_ARGS[@]}" \\
    "\${SFT_ARGS[@]}" \\
@@ -437,4 +584,22 @@ fi
 
 echo
 echo "=== submit ray job (live logs mirrored to $SAVE_DIR/job.log) ==="
-ssh "root@$V4_RAY_HEAD_IP" "docker exec $V4_CONTAINER bash $LAUNCH" 2>&1 | tee "$SAVE_DIR/job.log"
+case "${V4_SUBMIT_MODE:-ssh}" in
+  k8s)
+    K8S_NAMESPACE="${V4_K8S_NAMESPACE:-ray-system}"
+    K8S_HEAD_DEPLOY="${V4_K8S_HEAD_DEPLOY:-ray-head-gpu-node-64}"
+    K8S_HEAD_CONTAINER="${V4_K8S_HEAD_CONTAINER:-}"
+    if [[ -n "$K8S_HEAD_CONTAINER" ]]; then
+      kubectl exec -n "$K8S_NAMESPACE" "deploy/$K8S_HEAD_DEPLOY" -c "$K8S_HEAD_CONTAINER" -- bash "$LAUNCH" 2>&1 | tee "$SAVE_DIR/job.log"
+    else
+      kubectl exec -n "$K8S_NAMESPACE" "deploy/$K8S_HEAD_DEPLOY" -- bash "$LAUNCH" 2>&1 | tee "$SAVE_DIR/job.log"
+    fi
+    ;;
+  ssh|"")
+    ssh "root@$V4_RAY_HEAD_IP" "docker exec $V4_CONTAINER bash $LAUNCH" 2>&1 | tee "$SAVE_DIR/job.log"
+    ;;
+  *)
+    echo "[err] unknown V4_SUBMIT_MODE=${V4_SUBMIT_MODE:-}" >&2
+    exit 1
+    ;;
+esac

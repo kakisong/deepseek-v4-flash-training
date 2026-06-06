@@ -14,6 +14,7 @@ It keeps the training stack required by the current V4 Megatron path:
 - Ray
 - Megatron-LM with `patch/v4-sft/megatron-dsv4-pr28.patch`
 - TileKernels
+- DeepEP v1.2.1 for Megatron flex MoE dispatch
 - Transformer Engine
 - Apex
 - fast-hadamard-transform
@@ -30,12 +31,12 @@ docker build \
   -f docker/Dockerfile.sft-only \
   --build-arg MILES_REPO=https://github.com/kakisong/miles.git \
   --build-arg MILES_COMMIT=6713301501e5401939b500b4d365cbfa3d24aa57 \
-  -t radixark/miles:sft-only-v4deps-20260603 \
+  -t radixark/miles:sft-only-v4deps-deepep-20260604 \
   .
 ```
 
 The build validates that V4 Megatron/TileKernels import correctly and that
-SGLang/FlashInfer packages are absent.
+DeepEP v1.2.1 imports correctly while SGLang/FlashInfer packages are absent.
 
 ## Runtime
 

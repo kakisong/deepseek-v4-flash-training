@@ -95,6 +95,16 @@ Ray 的日志、临时文件和 object spill 放在容器内 `/ray_local/ray`。
 ## 训练提交
 
 ```bash
+# 当前 H200 42-node 默认配置，P3-derived:
+# fleet=h200_k8s_42node, scale=tp8pp7cp6ep8, workload=sft_kaynzhang_077_134k_3epoch
+bash run.sh
+
+# 等价显式写法
+bash run.sh \
+  --fleet h200_k8s_42node \
+  --scale tp8pp7cp6ep8 \
+  --workload sft_kaynzhang_077_134k_3epoch
+
 # 4K SFT prod (winner: 5.23s/step, WRITEUP §4.18)
 bash run.sh \
   --control current \
