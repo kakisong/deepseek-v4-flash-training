@@ -294,6 +294,12 @@ DUMP_DETAILS_FLAGS=""
 if [[ "${PRESET_DUMP_DETAILS:-1}" == "1" ]]; then
   DUMP_DETAILS_FLAGS="--dump-details $SAVE_DIR/dump_details"
 fi
+# SFT rollout/train overlap: prefetch next batch's CPU tokenization during the current
+# train step (hides the ~30% idle-GPU train_wait). Safe only for weight-independent SFT rollout.
+ASYNC_PREFETCH_FLAGS=""
+if [[ "${PRESET_ASYNC_ROLLOUT_PREFETCH:-0}" == "1" ]]; then
+  ASYNC_PREFETCH_FLAGS="--async-rollout-prefetch"
+fi
 echo "[info] config   : control=${V4_CONTROL:-<legacy>} fleet=$V4_FLEET scale=$V4_SCALE workload=$V4_WORKLOAD"
 echo "[info] cluster  : $V4_CLUSTER_NAME ($V4_GPU_MODEL × $V4_NUM_NODES nodes × $V4_NUM_GPUS_PER_NODE gpus)"
 echo "[info] run id    : $RUN_ID"
@@ -477,6 +483,7 @@ MISC_ARGS=(
   --no-offload-train
   --no-offload-rollout
   --use-fault-tolerance
+  $ASYNC_PREFETCH_FLAGS
   $DUMP_DETAILS_FLAGS
   $PROFILE_FLAGS
   $WANDB_FLAGS
@@ -524,6 +531,10 @@ env = {
     "MASTER_ADDR": os.environ["MASTER_ADDR_VALUE"],
     "MILES_DSV4_THINKING_MODE": "chat",
     "MILES_DSV4_DROP_THINKING": "0",
+    # Persist tilelang @jit kernel-compile cache to fsx (default /root/.tilelang is
+    # container-ephemeral -> a pod restart re-pays the ~40min first-step recompile for
+    # each new sequence shape). fsx path persists across restarts and is shared by all nodes.
+    "TILELANG_CACHE_DIR": "/mnt/fsx-cdsn/kaynzhang/deepseek-v4-flash/.cache/tilelang",
     "NCCL_NVLS_ENABLE": os.environ["NCCL_NVLS_ENABLE_VALUE"],
     "LD_PRELOAD": "/usr/local/lib/python3.12/dist-packages/torch_memory_saver_hook_mode_preload.abi3.so",
     "MEGATRON_SPARSE_ATTN_IMPL": os.environ["MEGATRON_SPARSE_ATTN_IMPL_VALUE"],
