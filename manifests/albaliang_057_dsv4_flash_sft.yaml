@@ -41,9 +41,9 @@ model:
       target: models/DeepSeek-V4-Flash-bf16-unpacked/encoding/encoding_dsv4.py
       sha256: bdbd57c132a1b3725042323d02b98b9d1df28e5f388f134399555d041f5055e0
   torch_dist_checkpoint:
-    path: models/DeepSeek-V4-Flash-FP8_torch_dist
+    path: models/DeepSeek-V4-Flash-bf16_torch_dist
     marker:
-      path: models/DeepSeek-V4-Flash-FP8_torch_dist/latest_checkpointed_iteration.txt
+      path: models/DeepSeek-V4-Flash-bf16_torch_dist/latest_checkpointed_iteration.txt
       sha256: a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829
 
 data:
