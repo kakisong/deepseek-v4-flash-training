@@ -275,6 +275,120 @@ The production question is therefore **CP7-DP2 (42 nodes, keeps 37.5K/rank, +DP2
 mem) vs CP14-DP1 (42 nodes, 18.7K/rank, safe 84% mem, 15.0%)** — see the CP7-DP2 row. Reproduce: `--workload sft_pp3_scan_smoke --scale tp8pp3cp<N>ep8
 --fleet h200_k8s_<12|21|42>node --max-tokens-per-gpu <seq/N>` (seq 262416; one workload, CLI overrides).
 
+## 11. Light-PP unlocks long-CP — and MFU SATURATES at ~20% above ~32K/rank (2026-06-09)
+
+PP3's memory wall (14-layer/stage weights) capped per-rank seq at 37.5K (CP7, ragged). Going to **light
+PP** (PP8 = 5-6 layers/stage, ~33GB weights after init; PP4 = 11 layers/stage) frees memory to push
+CP *down* (per-rank seq *up*) at **DP1, no DP penalty**, all on 32 nodes (256 GPU). Measured (same
+`sft_pp3_scan_smoke` workload, init iter_1164, full/uniform-1 recompute, EFA on):
+
+| scale | PP | CP | per-rank | nodes | MFU (perf1) | tflops/GPU | peak mem | actor_train/step |
+|---|---|---|---|---|---|---|---|---|
+| tp8pp4cp8ep8 | 4 | 8 | 32,802 | 32 | **19.4%** | 191.8 | ~110GB (78%) | 290s |
+| tp8pp8cp4ep8 | 8 | 4 | 65,604 | 32 | **20.0%** | 197.3 | ~106GB (76%) | 282s |
+
+**The decisive refinement — the MFU-vs-per-rank-seq curve SATURATES.** Normalizing to DP1 (the clean,
+penalty-free points) across the whole sweep:
+
+| per-rank | config | DP | nodes | MFU |
+|---|---|---|---|---|
+| 18.7K | PP3 CP14 | 1 | 42 | 15.0% |
+| **32K** | **PP4 CP8** | 1 | 32 | **19.4%** |
+| 37.5K | PP3 CP7 | 1 | 21 | 20.0% |
+| 64K | PP8 CP4 | 1 | 32 | 20.0% |
+
+The knee is **~32K/rank**: 18.7K→32K is steep (**+4.4pp**), but 32K→37.5K→64K is **flat (+0.6pp, then 0)**.
+**64K buys NO MFU over 37.5K** — the earlier "does MFU keep climbing at 64K?" question resolves to *no, it
+saturates*. So long per-rank seq is necessary only up to the ~32K knee; beyond that the sparse-MLA atomic
+floor (§7) caps per-GPU efficiency at ~20% (≈198 tflops, the HBM-bound ceiling) regardless.
+
+**Absolute efficiency (the metric that actually picks production — not MFU%).** Within one data/seq,
+`tflops/GPU ∝ tok/s/GPU ∝ MFU` (FLOPs/token fixed), so MFU *is* a valid per-GPU proxy here (the "MFU
+misleads" caveat of §1–4 is **cross-chip only**). What MFU% hides is **node count**. Same 256K data,
+GBS=128 (~12.5M tok/step):
+
+| config | nodes | tok/s/GPU | cluster tok/s | **GPU-h/step** (cost) | 2-epoch ETA¹ (wall-clock) |
+|---|---|---|---|---|---|
+| **PP8 CP4** | 32 | 173 | 44.3k | **20.1** ✅ cheapest | ~61h |
+| PP4 CP8 | 32 | 168 | 43.1k | 20.6 | ~63h |
+| PP3 CP7-DP1 | 21 | 174 | 29.2k | 20.0 | ~92h |
+| PP3 CP7-DP2 | 42 | 166 | 55.8k | 20.9 | **~48h** ✅ fastest |
+| PP3 CP14 | 42 | 127 | 42.6k | 27.3 | ~63h |
+¹ ~778 steps (2×49,785 samples / GBS 128), compute-only; real wall-clock higher (periodic saves/eval).
+
+- **Cheapest (min GPU-hours): PP8 CP4 (32 nodes)** — highest per-GPU efficiency + fewest GPUs → ~15,600
+  GPU-h, and frees 10 nodes. Safe 76% memory. **MFU% and GPU-hours agree it's the per-GPU optimum.**
+- **Fastest wall-clock: CP7-DP2 (42 nodes)** — but *only* by throwing 31% more GPUs; it is 4% *less*
+  GPU-efficient than PP8 CP4 and runs ragged at 99.5% mem. Speed bought with GPUs, not efficiency.
+- **PP4 CP8 ≈ PP8 CP4** on cost (both 32-node, ~20 GPU-h/step); PP4's 32K/rank is already past the knee.
+
+**Open production lever (needs a 40-node fleet):** the ~20% ceiling is per-GPU; wall-clock = 20% × N_gpu.
+The DP1 ≥20% configs cap at 32 nodes (PP8CP4) or 21 (CP7). **PP8 CP5 (51.2K/rank, 40 nodes, DP1)** sits
+above the 32K knee → should hold ~20% on **40 nodes with safe PP8 memory and no DP penalty** — i.e. CP7-DP2's
+wall-clock *without* its DP2 penalty or memory raggedness. That is the one untested config that could beat
+both PP8CP4 (more nodes) and CP7-DP2 (higher MFU + safe). **PP4 CP10 (25.6K/rank, 40 nodes)** is below the
+knee → predicted ~17-18%, a worse use of 40 nodes. Both need seq÷(2·5),(2·10): seq 262416 lacks a factor of
+5 → use **seq 262400** (÷80 → CP5 52480 / CP10 26240) + scales `tp8pp8cp5ep8`/`tp8pp4cp10ep8` + an
+`h200_k8s_40node` fleet.
+
+### 40-node measured results (2026-06-09, in progress)
+Same `sft_pp3_scan_smoke`, seq 262400, init iter_1164, full/uniform-1, EFA on, DP1 unless noted. Each is a
+throwaway smoke (ckpt deleted after reading perf 1-2); these numbers are the only durable record.
+
+| scale | PP | CP | DP | per-rank | nodes | MFU | tflops/GPU | tok/s (total) | peak mem | step |
+|---|---|---|---|---|---|---|---|---|---|---|
+| tp8pp8cp5ep8 | 8 | 5 | 1 | 52,480 | 40 | **18.4%** | 182 | 50,829 | **~93GB (66%, safe)** | ~245s |
+| tp8pp4cp10ep8 | 4 | 10 | 1 | 26,240 | 40 | **17.1%** | 169 | 46,968 | ~104GB (74%, safe) | ~267s |
+| tp8pp4cp5ep8 | 4 | 5 | 2 | 52,480 | 40 | **20.5%** | 203 | ~57,000 | ~122GB (88%, ragged) | ~217s |
+
+(PP4CP5DP2 steady = perf 2/3 = 21.0%/20.1%; perf 1 was anomalous at 10.6%/424s — the forced-save
+tail bled into that step's timing. perf 0/1 tok/s 32.0k/29.4k are from those contaminated steps.)
+
+**PP8 CP5 REFUTED the ~20% prediction — it lands 18.4%, BELOW PP8 CP4's 20.0% at the SAME PP8.** So the
+"saturates flat above 32K" picture was too simple: holding PP8 fixed, 51.2K (CP5) = 18.4% < 64K (CP4) =
+20.0%. Memory came in as predicted (safe 66%, PP8's light weights), but the MFU did not.
+
+### Final synthesis — three hypotheses REFUTED, and the production winner (2026-06-09)
+The PP4CP5DP2 A/B settled it. **At the SAME 51.2K/rank on the SAME 40 nodes: PP4 CP5 DP2 = 20.5% beats
+PP8 CP5 DP1 = 18.4%.** That single comparison overturns three earlier guesses:
+
+1. **"Light-PP (PP8) is better" — REFUTED.** PP8's 8-stage pipeline *costs* ~1.6pp vs PP4 at equal
+   per-rank seq (18.4% vs 20.5%). Its weight-memory headroom is real but not worth the deeper-pipeline
+   overhead. PP8CP5's low MFU was **PP8, not CP5.**
+2. **"CP5 (non-power-of-2) has a comm penalty" — REFUTED.** PP4 *CP5* DP2 hits 20.5% — CP5 is fine. The
+   prior message's CP5-penalty guess was wrong; CP10/CP14 being low is just their short per-rank seq.
+3. **"DP2 costs ~1.1pp" — REFUTED (mostly).** PP4CP5DP2 (DP2) = 20.5%, fully at the ~20% saturation. DP2's
+   bubble/all-reduce is cheap when microbatches stay high (GBS128/DP2 = 64 µb → bubble 4.7%). The earlier
+   CP7 DP1→DP2 −1.1pp drop was **CP7-DP2's 99.5% memory raggedness** (recompute/batch thrashing), not DP2.
+
+**Clean per-PP saturation curves (per-rank → MFU, each PP monotonic, all saturate ~20%):**
+- PP3: 18.7K→15.0%, 37.5K→20.0%   · PP4: 25.6K→17.1%, 32K→19.4%, 51.2K→20.5%   · PP8: 51.2K→18.4%, 64K→20.0%
+
+The knee is ~32K; the ceiling is ~20% (≈198 tflops, the sparse-MLA atomic/HBM wall). Going past 32K/rank
+buys little; **PP choice (≤4) and keeping memory off the ragged edge matter more than chasing seq length.**
+
+### PRODUCTION VERDICT (256K 2-epoch) — absolute efficiency, not MFU%
+GPU-h/step = step·GPU/3600 (cost); 2-epoch ETA = 778 steps × step, compute-only.
+
+| config | nodes | MFU | tok/s | **GPU-h/step** | step | peak mem | 2-ep ETA |
+|---|---|---|---|---|---|---|---|
+| **PP4 CP5 DP2** | 40 | **20.5%** | **~57.0k** | **19.3** ✅ | **217s** ✅ | 88% (ragged) | **~47h** ✅ |
+| PP8 CP4 | 32 | 20.0% | 44.3k | 20.1 | 282s | 76% (safe) | ~61h |
+| PP3 CP7 DP2 | 42 | 18.9% | 55.8k | 20.9 | 224s | 99.5% (ragged) | ~48h |
+| PP8 CP5 | 40 | 18.4% | 50.8k | 21.8 | 245s | 66% (safe) | ~53h |
+| PP7 CP6 (old baseline) | 42 | 17.6% | 51.4k | 22.7 | 243s | 64% (safe) | ~53h |
+
+- **Fastest AND cheapest: PP4 CP5 DP2 (40 nodes)** — highest tok/s (57k), lowest GPU-h/step (19.3),
+  shortest wall-clock (~47h). It **strictly dominates the old CP7-DP2 candidate** (higher MFU, more memory
+  margin 88% vs 99.5%, faster). The one catch is ragged 88% memory → trim `max-tokens-per-gpu` 52480→~50000
+  for dynamic-batch margin on a multi-day run (small MFU cost).
+- **Safest cheap pick: PP8 CP4 (32 nodes)** — 20.0% at safe 76% memory, 20.1 GPU-h/step, and frees 10
+  nodes; ~61h (slower only because it runs on fewer GPUs, not less efficient per-GPU).
+- **Recommendation:** run production on **PP4 CP5 DP2 (40 nodes, max_tokens ~50000)** for ~47h at the lowest
+  GPU-hours; fall back to **PP8 CP4 (32 nodes)** if the 88% memory proves OOM-prone or 10 nodes are needed
+  elsewhere. PP7CP6 (the original baseline) and PP8CP5 are both dominated. All of this lives in the ~15–20%
+  MFU band capped by the sparse-MLA atomic kernel (§7–9) — the real ceiling is that kernel, not the config.
+
 ## Appendix — reproducibility
 - 16-node launch + the 4 infra blockers/fixes: see memory `h200-k8s-16node-runbook`.
 - NCCL sweep knob: `V4_NCCL_MAX_NCHANNELS` (wired into run.sh runtime_env).
