@@ -1,0 +1,28 @@
+# Lean image for the FP8/FP4 (re)quantization half of the checkpoint pipeline:
+# step (2) HF BF16 -> dpsk FP8+FP4 and all of verify_roundtrip.py. Those are
+# pure PyTorch and need NONE of the training stack (megatron / transformer_engine
+# / tilelang / sglang / deep_ep / FHT / TileKernels).
+#
+#   step (1) torch_dist -> HF BF16  uses the TRAINING image instead: it goes
+#   through miles' megatron_to_hf, which hard-imports sglang. Don't try to run
+#   step (1) here. See tools/ckpt_to_fp8fp4.sh / docs/CKPT_TO_FP8FP4.md.
+#
+# Required components (step 2 + verification):
+#   - torch 2.9.x  (float4_e2m1fn_x2 / float8_e8m0fnu / float8_e4m3fn dtypes)
+#   - safetensors, transformers, tqdm, numpy
+#
+# The conversion CODE is mounted at runtime, not baked in, to avoid drift:
+#   $V4_TRAINING_REPO/tools/{hf_bf16_to_megablocks,verify_roundtrip,megablocks_to_hf_bf16}.py
+#
+# Build:
+#   docker build -f docker/Dockerfile.convert -t v4-convert:latest docker/
+
+FROM pytorch/pytorch:2.9.1-cuda12.8-cudnn9-runtime
+
+# numpy + typing_extensions already ship with the base torch image.
+RUN pip install --no-cache-dir \
+        "safetensors>=0.4" \
+        "transformers>=4.40,<6" \
+        "tqdm>=4.65"
+
+WORKDIR /work
