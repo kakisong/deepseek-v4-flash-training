@@ -6,7 +6,7 @@
 #   --sft-only --debug-train-only
 #
 # The image still contains the training stack: torch/cu129, Ray, Megatron, Apex,
-# Transformer Engine, TileKernels, fast-hadamard-transform, and torch_memory_saver.
+# Transformer Engine, TileKernels, DeepEP, fast-hadamard-transform, and torch_memory_saver.
 
 ARG CUDA_IMAGE=nvidia/cuda:12.9.1-cudnn-devel-ubuntu24.04
 FROM ${CUDA_IMAGE}
@@ -29,6 +29,8 @@ ARG TILEKERNELS_REPO=deepseek-ai/TileKernels
 ARG TILEKERNELS_COMMIT=36d9e45d38e204ebb87e6f6e833821eee0482fe5
 
 ARG FAST_HADAMARD_TRANSFORM_COMMIT=1cc807efbd6cc001df359822d60bf6052dd66859
+ARG DEEPEP_REPO=deepseek-ai/DeepEP
+ARG DEEPEP_COMMIT=9af0e0d0e74f3577af1979c9b9e1ac2cad0104ee
 
 ARG MILES_REPO=https://github.com/kakisong/miles.git
 ARG MILES_COMMIT=6713301501e5401939b500b4d365cbfa3d24aa57
@@ -47,9 +49,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       infiniband-diags \
       less \
       libibumad3 \
+      libibverbs-dev \
       libibverbs1 \
       libnl-3-200 \
       libnl-route-3-200 \
+      librdmacm-dev \
       librdmacm1 \
       ninja-build \
       nvtop \
@@ -70,6 +74,20 @@ RUN python3 -m pip install --upgrade --ignore-installed setuptools wheel packagi
 
 # Torch/cu129 is installed from PyTorch wheels instead of inherited from SGLang.
 RUN python3 -m pip install --index-url ${TORCH_CUDA_INDEX} --extra-index-url https://pypi.org/simple torch==${TORCH_VERSION}
+
+# Megatron's flex MoE dispatcher uses the legacy DeepEP API (`deep_ep.Buffer`,
+# `deep_ep_cpp`). Pin v1.2.1 (commit ${DEEPEP_COMMIT}); DeepEP main now exposes the
+# EPv2 API and requires newer NCCL device headers than this cu129 stack ships.
+#
+# Install the KNOWN-GOOD PREBUILT WHEEL (built for this cu129/cp312 stack, commit
+# 9af0e0d, runtime-verified 2026-06) rather than an nvcc `setup.py bdist_wheel`
+# source build. Why: the source build is slow, needs nvcc at build time, and was
+# silently ABSENT from the deployed sft-only-v4deps-20260603 tag -- which forced a
+# fsx-wheel pip-install at every ray-worker startup. Baking the wheel makes deep_ep
+# part of the image; the import-check near the end of this file fail-fasts if it is
+# ever missing again. (Source-build recipe preserved in this file's git history.)
+COPY docker/wheels/deep_ep-1.2.1+9af0e0d-cp312-cp312-linux_x86_64.whl /tmp/deep_ep.whl
+RUN python3 -m pip install /tmp/deep_ep.whl --no-deps && rm -f /tmp/deep_ep.whl
 
 # nccl-tests for cluster diagnostics.
 RUN git clone https://github.com/NVIDIA/nccl-tests.git /tmp/nccl-tests && \
@@ -147,6 +165,8 @@ import importlib.util
 import sys
 
 import fast_hadamard_transform  # noqa: F401
+import deep_ep  # noqa: F401
+import deep_ep_cpp  # noqa: F401
 import ray  # noqa: F401
 import tile_kernels  # noqa: F401
 import torch
