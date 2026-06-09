@@ -23,6 +23,12 @@ It keeps the training stack required by the current V4 Megatron path:
 
 ## Build
 
+Image-naming convention: the repository is the project, `e1/deepseek-v4-flash`; the
+tag is `<flavor>-<date>`, e.g. `sft-only-20260609` (the SFT-only flavor, built
+2026-06-09). The `e1/` prefix is the registry namespace k8s pulls from
+(`docker.io/e1/deepseek-v4-flash:<tag>`). The sft-only flavor bakes deep_ep. Pin a
+dated tag per build — do not deploy `:latest`.
+
 After the Miles SFT-only patch is committed and pushed, build with an immutable
 Miles commit instead of the branch default:
 
@@ -31,7 +37,7 @@ docker build \
   -f docker/Dockerfile.sft-only \
   --build-arg MILES_REPO=https://github.com/kakisong/miles.git \
   --build-arg MILES_COMMIT=6713301501e5401939b500b4d365cbfa3d24aa57 \
-  -t radixark/miles:sft-only-v4deps-deepep-20260606 \
+  -t e1/deepseek-v4-flash:sft-only-20260609 \
   .
 ```
 
@@ -42,11 +48,26 @@ forced a fsx-wheel pip-install at every ray-worker startup). The build still
 fail-fast-validates that V4 Megatron/TileKernels and `deep_ep`/`deep_ep_cpp` import
 correctly while SGLang/FlashInfer are absent — so a deep_ep-less image cannot ship.
 
-**Deploy:** after building, push this tag and set it as the ray-gpu-worker
-DaemonSet image (and `V4_IMAGE` in the k8s fleet env). Then run
-`cluster/k8s/patch_ray_worker_storage.sh` once to re-apply the ray-worker storage
-fixes (temp-dir → big overlay disk, object-store cap) that are NOT bakeable into the
-image. Background: `docs/h200_bottleneck_analysis.md`.
+**Deploy (order matters — push the image BEFORE the cluster pulls it, otherwise k8s
+ImagePullBackOff):** the fleet/manifest references already pin
+`e1/deepseek-v4-flash:sft-only-20260609`. After building, push it (and make sure the
+cluster can pull the `e1/` namespace — add an `imagePullSecret` if it is private):
+
+```bash
+docker push e1/deepseek-v4-flash:sft-only-20260609
+```
+
+The references that pin this tag (bump them together for the next build):
+
+- `V4_IMAGE` in `cluster/fleet/h200_k8s_{12,16,21,32,40,42}node.env` and `h200_main.env`
+- `image:` (and the tag-mentioning comments) in
+  `kuberay/h200-k8s-42node/ray-head.yaml` and `ray-gpu-worker.yaml`
+
+Then run `cluster/k8s/patch_ray_worker_storage.sh` once to re-apply the ray-worker
+storage fixes (temp-dir → big overlay disk, object-store cap) that are NOT bakeable
+into the image. With deep_ep now baked into the image, the worker DaemonSet's startup
+`pip install deep_ep` line becomes a no-op and can be dropped. Background:
+`docs/h200_bottleneck_analysis.md`.
 
 ## Runtime
 

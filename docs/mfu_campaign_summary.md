@@ -23,7 +23,7 @@ codex 在**不知道 NCCL 走 TCP** 的前提下系统扫了配置（全程 ~2% 
 
 ## 2. 本次：根因 = NCCL 没走 EFA（已修复，3×）
 
-**铁证**（在运行中的 worker 上实测）：GPU 100% util 但仅 120W（TDP 700W）；训练进程没加载 `libnccl-net.so`/`libfabric.so`；ENA 网卡 11GB/s 而 16 张 EFA 网卡 0 流量。镜像 `radixark/miles:sft-only-v4deps-20260603` 没打 aws-ofi-nccl 插件 → NCCL 静默退回 TCP socket。
+**铁证**（在运行中的 worker 上实测）：GPU 100% util 但仅 120W（TDP 700W）；训练进程没加载 `libnccl-net.so`/`libfabric.so`；ENA 网卡 11GB/s 而 16 张 EFA 网卡 0 流量。镜像 `e1/deepseek-v4-flash:sft-only-20260609` 没打 aws-ofi-nccl 插件 → NCCL 静默退回 TCP socket。
 
 **2 节点 nccl-test 对照**：all_reduce **5.6→410 GB/s (73×)**，all_to_all **1.3→82.8 GB/s (64×)**。
 

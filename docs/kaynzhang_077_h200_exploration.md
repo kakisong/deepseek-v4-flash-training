@@ -595,7 +595,7 @@
 
 R1-P6 期间约 2% MFU / 19-23 TFLOPS 的平台并不是 recompute/拓扑
 问题。问题出在网络:miles 镜像
-(`radixark/miles:sft-only-v4deps-20260603`) **未携带 aws-ofi-nccl plugin**,因此
+(`e1/deepseek-v4-flash:sft-only-20260609`) **未携带 aws-ofi-nccl plugin**,因此
 NCCL 在所有跨节点 collective(CP ring-attention、EP all-to-all、PP P2P)上
 静默回退到 **ENA 上的 TCP socket**。16 个 EFA NIC(约 400 GB/s)处于闲置。
 

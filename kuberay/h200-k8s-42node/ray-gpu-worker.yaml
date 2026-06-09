@@ -13,7 +13,7 @@
 #      hostPath /ray_local) so object spill can't fill the node NVMe and OOM-kill workers.
 #   2. --object-store-memory=230000000000 (fits the 256 Gi /dev/shm, fewer spills).
 #   3. deep_ep installed at startup from the prebuilt wheel on fsx (the stock image
-#      radixark/miles:sft-only-v4deps-20260603 ships without it; required by PRESET_MOE_DEEPEP=1).
+#      e1/deepseek-v4-flash:sft-only-20260609 ships without it; required by PRESET_MOE_DEEPEP=1).
 #   4. (NCCL 600s dist-ckpt timeout + 3.7 TB warmup save are run.sh-side: --distributed-timeout-minutes
 #      / --no-save-optim, not here.)
 # cluster/k8s/patch_ray_worker_storage.sh stays as a re-apply tool for #1/#2 if a future raw
@@ -104,7 +104,7 @@ spec:
                 - hyperpod-i-0c8d4d1145f08a50a
       containers:
       - name: ray-worker
-        image: docker.io/radixark/miles:sft-only-v4deps-20260603
+        image: docker.io/e1/deepseek-v4-flash:sft-only-20260609
         imagePullPolicy: IfNotPresent
         command:
         - bash

@@ -53,7 +53,7 @@ spec:
         kubernetes.io/hostname: hyperpod-i-0d4e32b7b3a91c397
       containers:
       - name: ray-head
-        image: docker.io/radixark/miles:sft-only-v4deps-20260603
+        image: docker.io/e1/deepseek-v4-flash:sft-only-20260609
         imagePullPolicy: IfNotPresent
         command:
         - bash

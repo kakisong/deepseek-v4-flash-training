@@ -41,7 +41,7 @@ NCCL 600 s dist-ckpt timeout and the 3.7 TB warmup save are run.sh-side (`--dist
 
 The 42 worker instance IDs in `ray-gpu-worker.yaml` (`nodeAffinity`) ARE the fleet; keep them in
 sync with `cluster/fleet/h200_k8s_42node.env` `V4_WORKER_IPS`. The image tag
-(`radixark/miles:sft-only-v4deps-20260603`) appears in both manifests and the fleet env — bump all
+(`e1/deepseek-v4-flash:sft-only-20260609`) appears in both manifests and the fleet env — bump all
 three together.
 
 ## Verify against live
