@@ -12,7 +12,7 @@
 # NOTE: deep_ep is now baked into the image (docker/Dockerfile.sft-only). This script
 # does NOT add the old startup `pip install deep_ep ...` line; ensure the DaemonSet's
 # image is a build that includes deep_ep (rebuild Dockerfile.sft-only -> push -> set
-# the DaemonSet/fleet image). See docs/H200_BOTTLENECK_ANALYSIS.md and the
+# the DaemonSet/fleet image). See docs/h200_bottleneck_analysis.md and the
 # h200-k8s-16node-runbook memory.
 #
 # Usage: cluster/k8s/patch_ray_worker_storage.sh [daemonset-name] [namespace]

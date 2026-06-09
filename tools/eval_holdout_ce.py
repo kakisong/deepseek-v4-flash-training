@@ -31,7 +31,7 @@ Aggregate: token-weighted mean CE (nats) per file, plus per-sample distribution.
 
 USAGE (post-run, after GPUs free; ~8xH200 for one BF16 replica)
 ---------------------------------------------------------------
-  # 1. convert a checkpoint to HF (CPU-only, no GPU; see POSTRUN_EVAL_RUNBOOK.md)
+  # 1. convert a checkpoint to HF (CPU-only, no GPU; see postrun_eval_runbook.md)
   # 2. serve it (NOTE: bump context-length to >=131072 for the albaliang held-out set):
   #      python3 -m sglang.launch_server --model-path <hf_dir> --tp 8 --trust-remote-code \
   #        --attention-backend triton --context-length 131072 --port 30000 --host 0.0.0.0

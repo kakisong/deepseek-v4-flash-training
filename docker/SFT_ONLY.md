@@ -46,7 +46,7 @@ correctly while SGLang/FlashInfer are absent — so a deep_ep-less image cannot 
 DaemonSet image (and `V4_IMAGE` in the k8s fleet env). Then run
 `cluster/k8s/patch_ray_worker_storage.sh` once to re-apply the ray-worker storage
 fixes (temp-dir → big overlay disk, object-store cap) that are NOT bakeable into the
-image. Background: `docs/H200_BOTTLENECK_ANALYSIS.md`.
+image. Background: `docs/h200_bottleneck_analysis.md`.
 
 ## Runtime
 

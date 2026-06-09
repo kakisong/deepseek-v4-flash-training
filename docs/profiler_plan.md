@@ -1,4 +1,4 @@
-# V4-Flash SFT Profiler Capture Plan
+# V4-Flash SFT Profiler 抓取方案
 
 > 自包含执行手册。新对话直接读这一份就能跑。
 > 上下文承接:2026-05-11 讨论 — 训练 TFLOPS 和 MFU 都偏低,需要一份 profiler trace 来定位时间花在哪。
@@ -243,11 +243,11 @@ trace 抓完后:
 
 新对话开场建议这样起:
 
-> 我现在要按 `examples/deepseek_v4_sft/PROFILER_PLAN.md` 跑一次 profiler 验证。当前训练已结束,集群空闲。请按文档 §3 做 3 处 patch,§4 提交 job,跑完按 §5 读图,§6 给我决策建议。
+> 我现在要按 `examples/deepseek_v4_sft/profiler_plan.md` 跑一次 profiler 验证。当前训练已结束,集群空闲。请按文档 §3 做 3 处 patch,§4 提交 job,跑完按 §5 读图,§6 给我决策建议。
 
 或者更具体:
 
-> profile 已经跑完,trace 在 `$V4_OUT/profiler_traces/stageBval-<ts>/`。请按 PROFILER_PLAN.md §5 + §6 帮我读图、出结论。
+> profile 已经跑完,trace 在 `$V4_OUT/profiler_traces/stageBval-<ts>/`。请按 profiler_plan.md §5 + §6 帮我读图、出结论。
 
 ---
 
