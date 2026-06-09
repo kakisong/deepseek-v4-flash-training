@@ -1,4 +1,19 @@
-# KubeRay migration draft
+# Kubernetes Ray manifests
+
+This directory holds two unrelated things — keep them straight:
+
+- **`h200-k8s-42node/` — the REAL, production H200 fleet.** Plain Kubernetes manifests
+  (Deployment + Service + DaemonSet) captured from the live `ray-system` cluster. This cluster
+  has **no KubeRay operator** (no `ray.io` CRDs); "the Ray cluster" is just these objects.
+  `run.sh` with `V4_FLEET=h200_k8s_42node` submits training into the head Deployment here. Start
+  here for anything about the running H200 job.
+- **`raycluster-h20-16node.yaml` + the rest of this README — an UNUSED KubeRay migration draft.**
+  Aspirational: it assumes a KubeRay operator + `RayCluster` CRD that the current cluster does not
+  run. Kept for the eventual operator-based migration; it does not describe anything live today.
+
+Everything below this line is the migration draft.
+
+---
 
 This directory is the first migration layer from the current bare-metal
 Docker-Ray workflow to KubeRay. It is intentionally additive: the existing
@@ -28,6 +43,8 @@ is expressed through Kubernetes `nvidia.com/gpu` resources.
 
 - `raycluster-h20-16node.yaml` - draft RayCluster for the current 16-node H20 fleet.
 - `check_prereqs.sh` - lightweight checks for kubectl, KubeRay CRDs, GPU nodes, and storage paths.
+
+(The real production manifests are under `h200-k8s-42node/`; see that dir's README.)
 
 ## Required platform prerequisites
 

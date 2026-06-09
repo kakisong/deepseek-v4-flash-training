@@ -1,0 +1,184 @@
+# Ray head Deployment + Service — current production H200 42-node fleet (ray-system).
+#
+# Plain Kubernetes (NO KubeRay operator). The head is a single CPU-only pod (num-cpus=0,
+# num-gpus=0: scheduling-only, hosts no actors) pinned to the dedicated head node
+# hyperpod-i-0d4e32b7b3a91c397 == 10.3.234.60. Workers (ray-gpu-worker.yaml) dial this node's
+# GCS at 10.3.234.60:6379 over hostNetwork.
+#
+# Captured from the live object on 2026-06-09 with runtime-only fields stripped (status, uid,
+# resourceVersion, clusterIP, managed/cloudwatch/otel annotations).
+#
+# run.sh submits training here: V4_SUBMIT_MODE=k8s ->
+#   kubectl exec -n ray-system deploy/ray-head-gpu-node-64 -c ray-head -- bash launch_in_container.sh
+# (fleet/h200_k8s_42node.env: V4_K8S_HEAD_DEPLOY=ray-head-gpu-node-64, V4_K8S_HEAD_CONTAINER=ray-head).
+# The Service exposes GCS/dashboard/client/serve/metrics in-cluster; the dashboard/job server on
+# :8201 is what `ray job submit --address=http://127.0.0.1:8201` (run from inside the head pod) hits.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ray-head-gpu-node-64
+  namespace: ray-system
+  labels:
+    app.kubernetes.io/name: ray-head-gpu-node-64
+    app.kubernetes.io/part-of: ray-gpu-node-64
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ray-head-gpu-node-64
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        prometheus.io/port: "8080"
+        prometheus.io/scrape: "true"
+        # Opt out of the cluster's CloudWatch/OpenTelemetry auto-instrumentation webhook.
+        # The live head set these to "false" deliberately; dropping them lets the mutating
+        # webhook re-inject them as "true" (kubectl diff confirmed the flip), so keep them.
+        cloudwatch.aws.amazon.com/auto-annotate-dotnet: "false"
+        cloudwatch.aws.amazon.com/auto-annotate-java: "false"
+        cloudwatch.aws.amazon.com/auto-annotate-nodejs: "false"
+        cloudwatch.aws.amazon.com/auto-annotate-python: "false"
+        instrumentation.opentelemetry.io/inject-dotnet: "false"
+        instrumentation.opentelemetry.io/inject-java: "false"
+        instrumentation.opentelemetry.io/inject-nodejs: "false"
+        instrumentation.opentelemetry.io/inject-python: "false"
+      labels:
+        app.kubernetes.io/name: ray-head-gpu-node-64
+        app.kubernetes.io/part-of: ray-gpu-node-64
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: hyperpod-i-0d4e32b7b3a91c397
+      containers:
+      - name: ray-head
+        image: docker.io/radixark/miles:sft-only-v4deps-20260603
+        imagePullPolicy: IfNotPresent
+        command:
+        - bash
+        - -lc
+        args:
+        - |
+          set -euo pipefail
+          if [ -f ~/miniconda3/bin/activate ]; then
+            source ~/miniconda3/bin/activate
+            conda activate RLSkill || true
+          fi
+          ray stop --force 2>/dev/null || true
+          mkdir -p /ray_local/ray
+          exec ray start \
+            --head \
+            --node-ip-address=10.3.234.60 \
+            --port=6379 \
+            --dashboard-host=0.0.0.0 \
+            --dashboard-port=8201 \
+            --ray-client-server-port=10001 \
+            --metrics-export-port=8080 \
+            --temp-dir=/ray_local/ray \
+            --num-cpus=0 \
+            --num-gpus=0 \
+            --disable-usage-stats \
+            --block
+        env:
+        - name: PYTHONPATH
+          value: /root/Megatron-LM:/root/TileKernels
+        - name: HF_HOME
+          value: /mnt/fsx-cdsn/kaynzhang/deepseek-v4-flash/.cache/huggingface
+        - name: HF_DATASETS_CACHE
+          value: /mnt/fsx-cdsn/kaynzhang/deepseek-v4-flash/.cache/huggingface/datasets
+        - name: TRANSFORMERS_CACHE
+          value: /mnt/fsx-cdsn/kaynzhang/deepseek-v4-flash/.cache/huggingface/transformers
+        - name: HUGGINGFACE_HUB_CACHE
+          value: /mnt/fsx-cdsn/kaynzhang/deepseek-v4-flash/.cache/huggingface/hub
+        - name: TZ
+          value: Asia/Shanghai
+        # Wire the Ray dashboard to the in-cluster Prometheus/Grafana (separate deployments
+        # ray-prometheus-gpu-node-64 / ray-grafana-gpu-node-64 on the same head node).
+        - name: RAY_PROMETHEUS_HOST
+          value: http://10.3.234.60:40001/promql
+        - name: RAY_PROMETHEUS_NAME
+          value: Prometheus
+        - name: RAY_GRAFANA_HOST
+          value: http://10.3.234.60:7777
+        - name: RAY_GRAFANA_IFRAME_HOST
+          value: http://10.3.234.60:7777/grafana
+        # CPU-only head: keep the NVIDIA runtime from claiming any GPU on the head node.
+        - name: NVIDIA_VISIBLE_DEVICES
+          value: void
+        ports:
+        - containerPort: 6379
+          name: gcs
+          protocol: TCP
+        - containerPort: 8201
+          name: dashboard
+          protocol: TCP
+        - containerPort: 10001
+          name: client
+          protocol: TCP
+        - containerPort: 8000
+          name: serve
+          protocol: TCP
+        - containerPort: 8080
+          name: metrics
+          protocol: TCP
+        resources:
+          requests:
+            cpu: "2"
+            memory: 4Gi
+          limits:
+            cpu: "6"
+            memory: 12Gi
+        volumeMounts:
+        - name: fsx-storage
+          mountPath: /mnt/fsx-cdsn/kaynzhang
+          subPath: kaynzhang
+        - name: ray-local
+          mountPath: /ray_local
+        workingDir: /mnt/fsx-cdsn/kaynzhang/deepseek-v4-flash/train/miles
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: fsx-storage
+        persistentVolumeClaim:
+          claimName: fsx-claim2
+      - name: ray-local
+        hostPath:
+          path: /mnt/k8s-disks/0/ray-gpu-node-64
+          type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ray-head-gpu-node-64
+  namespace: ray-system
+  labels:
+    app.kubernetes.io/name: ray-head-gpu-node-64
+    app.kubernetes.io/part-of: ray-gpu-node-64
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: ray-head-gpu-node-64
+  ports:
+  - name: gcs
+    port: 6379
+    targetPort: 6379
+    protocol: TCP
+  - name: dashboard
+    port: 8201
+    targetPort: 8201
+    protocol: TCP
+  - name: client
+    port: 10001
+    targetPort: 10001
+    protocol: TCP
+  - name: serve
+    port: 8000
+    targetPort: 8000
+    protocol: TCP
+  - name: metrics
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
