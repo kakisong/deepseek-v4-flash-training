@@ -11,13 +11,19 @@
 # pure PyTorch). Code + data live on the V4 work root, bind-mounted at /work.
 #
 # Usage:
+#   # full pipeline from a torch_dist iter:
 #   tools/ckpt_to_fp8fp4.sh --iter outputs/<stage>/checkpoints/iter_NNNNNNN --name <prefix>
+#   # OR skip step (1) and start from an existing HF bf16 dir
+#   # (e.g. produced by cluster/convert_torch_dist_to_hf.sh):
+#   tools/ckpt_to_fp8fp4.sh --from-hf <existing HF bf16 dir> --name <prefix>
 #
-# Produces  $V4_MODELS/<prefix>-fp8fp4  (and, unless --keep-bf16, removes the
-# ~540 GB intermediate $V4_MODELS/<prefix>-hf-bf16 afterwards).
+# Produces  $V4_MODELS/<prefix>-fp8fp4. With --iter it writes a ~540 GB
+# intermediate $V4_MODELS/<prefix>-hf-bf16 and removes it afterwards unless
+# --keep-bf16. With --from-hf the supplied dir is never deleted.
 #
-# Env overrides: V4_WORK, V4_CONVERT_IMAGE, V4_MILES_REPO, V4_TRAINING_REPO,
-#                V4_TEMPLATE, V4_BF16_DIR.
+# Flags: --no-mtp (don't graft original MTP), --cpu, --force, --image, --template.
+# Env overrides: V4_WORK, V4_CONVERT_IMAGE, V4_TRAIN_IMAGE, V4_MILES_REPO,
+#                V4_TRAINING_REPO, V4_TEMPLATE, V4_BF16_DIR.
 set -euo pipefail
 
 # ---------------------------------------------------------------- config
@@ -30,13 +36,14 @@ TEMPLATE="${V4_TEMPLATE:-$V4_WORK/models/DeepSeek-V4-Flash}"              # orig
 ORIGIN_HF="${V4_BF16_DIR:-$V4_WORK/models/DeepSeek-V4-Flash-bf16-unpacked}"  # config/tokenizer source + keymap ref
 VOCAB=129280
 
-ITER="" ; NAME="" ; KEEP_BF16=0 ; WITH_MTP=1 ; USE_GPU=1 ; FORCE=0
+ITER="" ; NAME="" ; FROM_HF="" ; KEEP_BF16=0 ; WITH_MTP=1 ; USE_GPU=1 ; FORCE=0
 
-usage() { sed -n '2,30p' "$0"; exit "${1:-0}"; }
+usage() { sed -n '2,/^set -euo pipefail/{/^set -euo pipefail/!p}' "$0"; exit "${1:-0}"; }
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --iter)        ITER="$2"; shift 2;;
     --name)        NAME="$2"; shift 2;;
+    --from-hf)     FROM_HF="$2"; shift 2;;      # skip step 1: start from an existing HF bf16 dir
     --template)    TEMPLATE="$2"; shift 2;;
     --image)       IMAGE="$2"; shift 2;;
     --keep-bf16)   KEEP_BF16=1; shift;;
@@ -47,12 +54,18 @@ while [[ $# -gt 0 ]]; do
     *) echo "unknown arg: $1" >&2; usage 1;;
   esac
 done
-[[ -n "$ITER" && -n "$NAME" ]] || { echo "ERROR: --iter and --name are required" >&2; usage 1; }
+[[ -n "$NAME" ]] || { echo "ERROR: --name is required" >&2; usage 1; }
+[[ -n "$ITER" || -n "$FROM_HF" ]] || { echo "ERROR: pass --iter <torch_dist> or --from-hf <HF bf16 dir>" >&2; usage 1; }
 
-# Absolutise ITER, then make every path relative to the mounted work root.
-[[ "$ITER" = /* ]] || ITER="$V4_WORK/$ITER"
-HF_OUT="$V4_WORK/models/${NAME}-hf-bf16"
 FP_OUT="$V4_WORK/models/${NAME}-fp8fp4"
+if [[ -n "$FROM_HF" ]]; then
+  # Start from an existing HF bf16 dir (e.g. produced by cluster/convert_torch_dist_to_hf.sh).
+  [[ "$FROM_HF" = /* ]] || FROM_HF="$V4_WORK/$FROM_HF"
+  HF_OUT="$FROM_HF" ; SKIP_STEP1=1 ; KEEP_BF16=1   # never delete a user-supplied input
+else
+  [[ "$ITER" = /* ]] || ITER="$V4_WORK/$ITER"
+  HF_OUT="$V4_WORK/models/${NAME}-hf-bf16" ; SKIP_STEP1=0
+fi
 
 rel() {  # host abs path under $V4_WORK -> /work/...
   case "$1" in
@@ -62,28 +75,36 @@ rel() {  # host abs path under $V4_WORK -> /work/...
 }
 
 # ---------------------------------------------------------------- preflight
-[[ -f "$ITER/common.pt" ]]            || { echo "ERROR: $ITER is not a torch_dist ckpt (no common.pt)" >&2; exit 2; }
-[[ -d "$TEMPLATE" ]]                  || { echo "ERROR: template not found: $TEMPLATE" >&2; exit 2; }
-[[ -d "$ORIGIN_HF" ]]                 || { echo "ERROR: origin-hf dir not found: $ORIGIN_HF" >&2; exit 2; }
-[[ -f "$MILES/miles/backends/megatron_utils/megatron_to_hf/deepseekv4.py" ]] \
-  || { echo "ERROR: miles checkout lacks v4 megatron_to_hf: $MILES" >&2; exit 2; }
-if [[ -e "$HF_OUT" || -e "$FP_OUT" ]]; then
-  [[ $FORCE -eq 1 ]] || { echo "ERROR: output exists ($HF_OUT or $FP_OUT); use --force" >&2; exit 2; }
-  docker run --rm -v "$V4_WORK:/work" "$IMAGE" rm -rf "$(rel "$HF_OUT")" "$(rel "$FP_OUT")"
+[[ -d "$TEMPLATE" ]] || { echo "ERROR: template not found: $TEMPLATE" >&2; exit 2; }
+if [[ $SKIP_STEP1 -eq 1 ]]; then
+  [[ -f "$HF_OUT/model.safetensors.index.json" ]] || { echo "ERROR: --from-hf is not an HF dir (no index.json): $HF_OUT" >&2; exit 2; }
+else
+  [[ -f "$ITER/common.pt" ]] || { echo "ERROR: $ITER is not a torch_dist ckpt (no common.pt)" >&2; exit 2; }
+  [[ -d "$ORIGIN_HF" ]] || { echo "ERROR: origin-hf dir not found: $ORIGIN_HF" >&2; exit 2; }
+  [[ -f "$MILES/miles/backends/megatron_utils/megatron_to_hf/deepseekv4.py" ]] \
+    || { echo "ERROR: miles checkout lacks v4 megatron_to_hf: $MILES" >&2; exit 2; }
+fi
+if [[ -e "$FP_OUT" ]]; then
+  [[ $FORCE -eq 1 ]] || { echo "ERROR: output exists ($FP_OUT); use --force" >&2; exit 2; }
+  docker run --rm -v "$V4_WORK:/work" "$IMAGE" rm -rf "$(rel "$FP_OUT")"
 fi
 
 GPU=() ; [[ $USE_GPU -eq 1 ]] && GPU=(--gpus all)
 dock() { docker run --rm "${GPU[@]}" -v "$V4_WORK:/work" "$@"; }
 TOOLS="$(rel "$TRAIN_REPO")/tools"
-echo "[ckpt_to_fp8fp4] image=$IMAGE  iter=$ITER"
-echo "[ckpt_to_fp8fp4] -> $FP_OUT  (intermediate: $HF_OUT, keep=$KEEP_BF16, mtp=$WITH_MTP)"
+echo "[ckpt_to_fp8fp4] -> $FP_OUT  (mtp=$WITH_MTP)"
+echo "[ckpt_to_fp8fp4] HF bf16: $HF_OUT  $([[ $SKIP_STEP1 -eq 1 ]] && echo '(provided, step 1 skipped)' || echo "(from $ITER, keep=$KEEP_BF16)")"
 
 # ---------------------------------------------------------------- (1) torch_dist -> HF BF16
-echo "== [1/3] torch_dist -> HF BF16  (training image) =="
-dock -e PYTHONPATH="$(rel "$MILES")" -w "$(rel "$MILES")" "$TRAIN_IMAGE" \
-  python3 tools/convert_torch_dist_to_hf.py \
-    --input-dir "$(rel "$ITER")" --output-dir "$(rel "$HF_OUT")" \
-    --model-name deepseekv4 --origin-hf-dir "$(rel "$ORIGIN_HF")" --vocab-size "$VOCAB"
+if [[ $SKIP_STEP1 -eq 0 ]]; then
+  echo "== [1/3] torch_dist -> HF BF16  (training image) =="
+  dock -e PYTHONPATH="$(rel "$MILES")" -w "$(rel "$MILES")" "$TRAIN_IMAGE" \
+    python3 tools/convert_torch_dist_to_hf.py \
+      --input-dir "$(rel "$ITER")" --output-dir "$(rel "$HF_OUT")" \
+      --model-name deepseekv4 --origin-hf-dir "$(rel "$ORIGIN_HF")" --vocab-size "$VOCAB"
+else
+  echo "== [1/3] skipped (--from-hf $HF_OUT) =="
+fi
 
 # ---------------------------------------------------------------- (1.5) key-set sanity
 echo "== [1.5] keymap sanity (missing keys are expected to be the MTP layer) =="

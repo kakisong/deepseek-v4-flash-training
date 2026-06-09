@@ -46,8 +46,9 @@ tools/ckpt_to_fp8fp4.sh \
 | 参数 | 含义 |
 |---|---|
 | `--iter <dir>` | 训练 ckpt 的 `iter_*` 目录(相对 `$V4_WORK` 或绝对路径) |
+| `--from-hf <dir>` | **跳过 step①**,直接从一个已有的 HF bf16 目录开始(见下「跳过 step①」);该目录不会被删除 |
 | `--name <prefix>` | 输出目录前缀,生成 `<prefix>-hf-bf16` / `<prefix>-fp8fp4` |
-| `--keep-bf16` | 保留 ~540 GB 的中间 HF BF16(默认转换后删除) |
+| `--keep-bf16` | 保留 ~540 GB 的中间 HF BF16(默认转换后删除;`--from-hf` 时自动保留) |
 | `--no-mtp` | 不从原始模板补 MTP 层(见下方「MTP」) |
 | `--cpu` | 不用 GPU(更慢但可在无卡机器跑) |
 | `--force` | 输出目录已存在时先删后写 |
@@ -107,6 +108,32 @@ docker run --rm -v $ROOT:/work -w /work/deepseek-v4-flash-training/tools $CONV_I
 
 `verify_roundtrip.py` 其它子命令:`keymap`(键集覆盖)、`micro`(量化原语逐位闭环)、
 `cmp-dequant`(把新 ckpt 反量化逐位对比 bf16-unpacked)、`cmp-bf16`(两个 HF bf16 目录逐位对比)。
+
+## 跳过 step①(从已有 HF bf16 开始)
+
+step① 是标准的 `convert_torch_dist_to_hf`(torch_dist→HF bf16),集群侧也有一个等价封装
+`cluster/convert_torch_dist_to_hf.sh`(单进程 CPU Ray job,load 时自动丢弃 ~3478GB 优化器和
+`_extra_state`,并用最小 sglang stub 在无 sglang 的镜像里运行)。它产出的就是标准 HF bf16,
+**与本 step① 完全等价**(同样 `--model-name deepseekv4 --vocab-size 129280`)。
+
+如果你已经有 HF bf16(来自上面的 Ray job 或别处),直接跳过 step①:
+
+```bash
+tools/ckpt_to_fp8fp4.sh --from-hf <已有HF bf16目录> --name <prefix>
+```
+
+省掉重复的 ~20 分钟 load;`--from-hf` 提供的目录不会被删除。
+
+## 两种 step② 目标(按用途选)
+
+step① 产出的 HF bf16 是公共中间态,后面有两条**不同目标**的 step②,按需要选:
+
+| 目标 | 工具 | 产物 | 用途 |
+|---|---|---|---|
+| **发布 / 归档格式** | 本仓 `tools/hf_bf16_to_megablocks.py`(本 doc 主线) | 原始 **46-shard dpsk FP8/FP4**,与 `DeepSeek-V4-Flash` 逐字段一致 | 对外发布、存档、复刻官方布局 |
+| **推理 / 评测** | DeepSeek 官方 `inference/convert.py`(FP4+FP8) | **SGLang 推理引擎布局**(model-parallel `mpX` 分片) | 用 `SGLang/generate.py` 跑 FP8 eval |
+
+两者共用 step①,互不冲突。本一键脚本走的是「发布格式」这条;要跑评测则用 `inference/convert.py` 那条。
 
 ## 注意事项
 
