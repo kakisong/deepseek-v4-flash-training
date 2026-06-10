@@ -1,0 +1,69 @@
+# One-shot image distributor: ctr-imports the kaniko-built tar into every node's containerd
+# (k8s.io namespace) so pods can run e1/deepseek-v4-flash:sft-only-20260609 locally via
+# imagePullPolicy: IfNotPresent — NO registry / NO push. Does NOT start any training container.
+#
+# Each pod uses the host's own /usr/bin/ctr (containerd v2.1.5, static) against the host socket,
+# reads the 14.4G tar from the fsx PVC, imports once, then idles. Delete this DaemonSet after all
+# nodes report present; the imported image persists in each node's containerd.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: image-loader-sft-only-20260609
+  namespace: ray-system
+spec:
+  selector:
+    matchLabels:
+      app: image-loader
+  template:
+    metadata:
+      labels:
+        app: image-loader
+    spec:
+      tolerations:
+      - operator: Exists        # land on every node regardless of taints
+      terminationGracePeriodSeconds: 1
+      containers:
+      - name: loader
+        image: busybox
+        securityContext:
+          privileged: true
+        env:
+        - name: NODE
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        command: ["sh","-c"]
+        args:
+        - |
+          IMG="deepseek-v4-flash:sft-only-20260609"
+          TAR=/fsx/deepseek-v4-flash/build/sft-only-20260609.tar
+          CTR="/host/usr/bin/ctr -a /host/run/containerd/containerd.sock -n k8s.io"
+          if $CTR images ls 2>/dev/null | grep -q "$IMG"; then
+            echo "[$NODE] already present, skip import"
+          else
+            sleep $(( RANDOM % 240 ))                 # jitter: spread the fsx read burst
+            echo "[$NODE] importing $TAR ..."
+            if $CTR images import "$TAR"; then echo "[$NODE] import OK"; else echo "[$NODE] import FAILED"; fi
+          fi
+          $CTR images ls 2>/dev/null | grep -q "$IMG" && echo "[$NODE] PRESENT" || echo "[$NODE] MISSING"
+          sleep infinity
+        resources:
+          requests:
+            cpu: 200m
+            memory: 128Mi
+          limits:
+            cpu: "4"
+            memory: 4Gi
+        volumeMounts:
+        - name: host
+          mountPath: /host
+        - name: fsx
+          mountPath: /fsx
+          subPath: kaynzhang
+      volumes:
+      - name: host
+        hostPath:
+          path: /
+      - name: fsx
+        persistentVolumeClaim:
+          claimName: fsx-claim2

@@ -1,0 +1,58 @@
+# In-cluster image build (no registry / no push) via kaniko.
+#
+# Builds docker/Dockerfile.sft-only -> e1/deepseek-v4-flash:sft-only-20260609 and writes the
+# result as a docker-archive tar onto fsx (--no-push --tarPath). No registry credentials needed.
+# To make the image runnable on a node, import the tar into that node's containerd:
+#   ctr -n k8s.io images import /mnt/fsx-cdsn/kaynzhang/deepseek-v4-flash/build/sft-only-20260609.tar
+# Pods then use it via imagePullPolicy: IfNotPresent (already set on the ray manifests).
+#
+# Pinned to an IDLE H200 node (191 CPU / 2TB / all GPU free, not one of the 42 training nodes),
+# so the live 256K run is untouched. Context + output ride the fsx-claim2 (ReadWriteMany) PVC.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: build-sft-only-20260609
+  namespace: ray-system
+spec:
+  backoffLimit: 0                 # a failed build is not silently retried
+  ttlSecondsAfterFinished: 172800 # auto-clean after 2 days
+  template:
+    metadata:
+      labels:
+        app: kaniko-build
+    spec:
+      restartPolicy: Never
+      nodeSelector:
+        kubernetes.io/hostname: hyperpod-i-00fb7f714ced714a9
+      hostNetwork: true                       # match the proven egress path (github/pypi/gcr reachable)
+      dnsPolicy: ClusterFirstWithHostNet
+      automountServiceAccountToken: false
+      containers:
+      - name: kaniko
+        image: gcr.io/kaniko-project/executor:v1.23.2
+        args:
+        - --dockerfile=docker/Dockerfile.sft-only
+        - --context=dir:///mnt/fsx-cdsn/kaynzhang/deepseek-v4-flash/train/deepseek-v4-flash-training
+        - --build-arg=MILES_REPO=https://github.com/kakisong/miles.git
+        - --build-arg=MILES_COMMIT=6713301501e5401939b500b4d365cbfa3d24aa57
+        - --destination=docker.io/e1/deepseek-v4-flash:sft-only-20260609   # names the image inside the tar
+        - --no-push                                                        # do NOT push to any registry
+        - --tarPath=/mnt/fsx-cdsn/kaynzhang/deepseek-v4-flash/build/sft-only-20260609.tar
+        - --verbosity=info
+        resources:
+          requests:
+            cpu: "8"
+            memory: 32Gi
+            ephemeral-storage: 60Gi
+          limits:
+            cpu: "96"
+            memory: 384Gi
+            ephemeral-storage: 300Gi
+        volumeMounts:
+        - name: fsx
+          mountPath: /mnt/fsx-cdsn/kaynzhang
+          subPath: kaynzhang
+      volumes:
+      - name: fsx
+        persistentVolumeClaim:
+          claimName: fsx-claim2

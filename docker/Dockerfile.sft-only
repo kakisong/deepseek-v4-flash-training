@@ -86,8 +86,10 @@ RUN python3 -m pip install --index-url ${TORCH_CUDA_INDEX} --extra-index-url htt
 # fsx-wheel pip-install at every ray-worker startup. Baking the wheel makes deep_ep
 # part of the image; the import-check near the end of this file fail-fasts if it is
 # ever missing again. (Source-build recipe preserved in this file's git history.)
-COPY docker/wheels/deep_ep-1.2.1+9af0e0d-cp312-cp312-linux_x86_64.whl /tmp/deep_ep.whl
-RUN python3 -m pip install /tmp/deep_ep.whl --no-deps && rm -f /tmp/deep_ep.whl
+# Keep the PEP 427 wheel filename intact (COPY into a dir, don't rename) — modern pip
+# rejects installing a file whose name is not a valid wheel filename (e.g. deep_ep.whl).
+COPY docker/wheels/deep_ep-1.2.1+9af0e0d-cp312-cp312-linux_x86_64.whl /tmp/deepep/
+RUN python3 -m pip install /tmp/deepep/deep_ep-*.whl --no-deps && rm -rf /tmp/deepep
 
 # nccl-tests for cluster diagnostics.
 RUN git clone https://github.com/NVIDIA/nccl-tests.git /tmp/nccl-tests && \
