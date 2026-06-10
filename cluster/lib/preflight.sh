@@ -110,11 +110,15 @@ preflight_64gpu() {
   fi
 
   if (( err == 0 )); then
-    _head_bash "ray status --address=127.0.0.1:$V4_RAY_PORT" 2>&1 \
-      | grep -qiE "active|HEALTHY|node_" || {
+    # 先捕获再 grep。不要直接管道进 `grep -q`:在 `set -o pipefail` 下 grep -q 命中
+    # 首个匹配即退出,会给上游流式的 `kubectl exec ray status` 发 SIGPIPE(退出 141),
+    # 于是即使集群健康,整条管道也被判为失败。把输出整体读入变量可避免该 SIGPIPE。
+    local _ray_status_out
+    _ray_status_out="$(_head_bash "ray status --address=127.0.0.1:$V4_RAY_PORT" 2>&1)"
+    if ! grep -qiE "active|HEALTHY|node_" <<<"$_ray_status_out"; then
         echo "[err] ray cluster not healthy. Prepare the Ray control plane first." >&2
         err=1
-    }
+    fi
     check_ray_capacity || {
       echo "[err] ray cluster does not have the expected fleet capacity. Run cluster/ensure_ray_workers.sh first." >&2
       err=1
