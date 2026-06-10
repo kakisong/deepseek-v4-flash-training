@@ -1,9 +1,8 @@
-"""Hypothesis test: is the NaN caused by reading KV[by, -1, :] garbage memory?
+"""假设检验:NaN 是否由读取 KV[by, -1, :] 的脏内存导致?
 
-Replace -1 indices with 0 inside the wrapper before kernel launch. The kernel's
-`!= -1` mask check then always returns True (so masking semantics are wrong, output
-will be wrong), BUT no garbage memory is read. If NaN disappears, root cause is
-confirmed as garbage memory reads.
+在 kernel 启动前,于 wrapper 内把 -1 索引替换为 0。这样 kernel 里的
+`!= -1` mask 判断恒为 True(mask 语义因此是错的,输出也会错),
+但不会再读到脏内存。如果 NaN 消失,即可确认根因是脏内存读取。
 """
 
 from __future__ import annotations
@@ -18,7 +17,7 @@ from tilelang_sparse_mla_repro import make_inputs
 
 
 def sparse_attn_tilelang_clamped(q, kv, attn_sink, topk_idxs, sm_scale=None):
-    """Same as sparse_attn_tilelang but clamps -1 → 0 before kernel calls."""
+    """与 sparse_attn_tilelang 相同,但在调用 kernel 前把 -1 钳制为 0。"""
     safe_topk_idxs = topk_idxs.clamp(min=0).contiguous()
 
     class _F(torch.autograd.Function):

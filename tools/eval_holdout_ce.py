@@ -1,41 +1,41 @@
-"""Held-out cross-entropy (SFT validation loss) for V4-Flash, scored via an SGLang server.
+"""V4-Flash 的留出集交叉熵(SFT 验证 loss),通过 SGLang 服务打分。
 
-WHY this exists
+为什么需要这个脚本
 ---------------
-The running SFT job has NO held-out validation loss:
-  - miles' built-in eval path asserts `not evaluation` for SFT (sft_rollout.py), so it
-    only does RL-reward generation, never a held-out CE.
-  - all 49,667 le128k samples were trained (3 epochs), so there is no in-run held-out split.
-  - the HF checkpoint has NO transformers modeling code (config auto_map=None,
-    arch=DeepseekV4ForCausalLM unknown to upstream transformers), so a plain
-    `AutoModelForCausalLM` forward is NOT available.
+正在运行的 SFT 任务没有任何留出集验证 loss:
+  - miles 内置的 eval 路径对 SFT 断言 `not evaluation`(sft_rollout.py),因此
+    它只做 RL-reward 生成,从不计算留出集 CE。
+  - 全部 49,667 条 le128k 样本都参与了训练(3 个 epoch),因此训练过程中没有留出切分。
+  - HF checkpoint 没有 transformers 建模代码(config auto_map=None,
+    arch=DeepseekV4ForCausalLM 对上游 transformers 是未知架构),因此无法直接用
+    `AutoModelForCausalLM` 做前向。
 
-So we score held-out CE by **teacher-forcing through an SGLang server** (the same serving
-path used for downstream eval), reusing the PROVEN loss-mask generator so the masked tokens
-are bit-identical to training.
+所以我们改为**通过 SGLang 服务做 teacher-forcing** 来计算留出集 CE(与下游评测使用
+同一条 serving 路径),并复用已验证的 loss-mask 生成器,使被 mask 的 token
+与训练时逐 bit 一致。
 
-WHAT it computes
+它计算什么
 ----------------
-For each held-out sample:
-  1. tokenize + assistant-only loss-mask via MultiTurnLossMaskGenerator (deepseek_v4) — the
-     exact generator verified bit-identical to training (tools/verify_sft_pipeline.py).
-  2. left-truncate to --max-len tokens (keep the tail = the assistant response; the held-out
-     albaliang samples are 131-134K, only 0-3K over the 128K window, so this drops a few K of
-     the OLDEST context and keeps the full response).
-  3. POST input_ids to SGLang /generate with return_logprob + logprob_start_len=0,
-     read meta_info["input_token_logprobs"][i] = logP(token_i | token_<i).
-  4. CE = -mean over positions where loss_mask[i]==1  (same next-token alignment as training:
-     input_token_logprobs[i] scores token_i given its prefix == training's logits[t-1]->token[t]).
+对每条留出样本:
+  1. 用 MultiTurnLossMaskGenerator(deepseek_v4)做 tokenize + 仅 assistant 的 loss-mask —
+     该生成器已被验证与训练逐 bit 一致(tools/verify_sft_pipeline.py)。
+  2. 左截断到 --max-len 个 token(保留尾部 = assistant 回复;留出的
+     albaliang 样本长 131-134K,只超出 128K 窗口 0-3K,所以只会丢掉几 K 最旧的
+     上下文,完整保留回复)。
+  3. 把 input_ids POST 到 SGLang /generate,带上 return_logprob + logprob_start_len=0,
+     读取 meta_info["input_token_logprobs"][i] = logP(token_i | token_<i)。
+  4. CE = 对 loss_mask[i]==1 的位置取 -mean(与训练相同的 next-token 对齐方式:
+     input_token_logprobs[i] 在给定前缀下为 token_i 打分 == 训练里的 logits[t-1]->token[t])。
 
-Aggregate: token-weighted mean CE (nats) per file, plus per-sample distribution.
+汇总:每个文件按 token 加权的平均 CE(nats),外加逐样本分布。
 
-USAGE (post-run, after GPUs free; ~8xH200 for one BF16 replica)
+用法(训练跑完、GPU 空闲后;一个 BF16 副本约需 8xH200)
 ---------------------------------------------------------------
-  # 1. convert a checkpoint to HF (CPU-only, no GPU; see postrun_eval_runbook.md)
-  # 2. serve it (NOTE: bump context-length to >=131072 for the albaliang held-out set):
+  # 1. 把 checkpoint 转成 HF(纯 CPU,无需 GPU;见 postrun_eval_runbook.md)
+  # 2. 启动服务(注意:针对 albaliang 留出集需把 context-length 提到 >=131072):
   #      python3 -m sglang.launch_server --model-path <hf_dir> --tp 8 --trust-remote-code \
   #        --attention-backend triton --context-length 131072 --port 30000 --host 0.0.0.0
-  # 3. score:
+  # 3. 打分:
   python3 tools/eval_holdout_ce.py \
     --data /mnt/fsx-cdsn/kaynzhang/deepseek-v4-flash/data/holdout_eval/holdout_albaliang_077_332.jsonl \
     --hf-tokenizer /mnt/fsx-cdsn/kaynzhang/deepseek-v4-flash/models/DeepSeek-V4-Flash-bf16-unpacked \
@@ -46,17 +46,17 @@ USAGE (post-run, after GPUs free; ~8xH200 for one BF16 replica)
     --hf-tokenizer .../DeepSeek-V4-Flash-bf16-unpacked \
     --sglang-url http://127.0.0.1:30000 --max-len 8192 --out /tmp/ce_openhermes.json
 
-INTERPRETATION
+结果解读
 --------------
-  - albaliang held-out CE  ~ the live train/loss (~2.0-2.2)  -> epochs 2/3 did NOT overfit the
-    task distribution (the plateau is a genuine data floor, not memorization).
-  - albaliang held-out CE  >> train/loss                     -> overfitting; earlier ckpt better.
-  - openhermes (cross-domain) CE stable across iters         -> no catastrophic forgetting of
-    general instruction-following.
+  - albaliang 留出 CE  ~ 在线 train/loss(约 2.0-2.2)  -> epoch 2/3 没有过拟合
+    任务分布(平台期是真实的数据下限,不是记忆效应)。
+  - albaliang 留出 CE  >> train/loss                     -> 过拟合;更早的 ckpt 更好。
+  - openhermes(跨域)CE 在各 iter 间保持稳定           -> 通用指令跟随能力没有
+    灾难性遗忘。
 
-NOTE: the SGLang input_token_logprobs plumbing is validated against miles/rollout/sglang_rollout.py
-payload conventions but has NOT been run end-to-end (no spare GPU during the live run). Validate the
-first response's len(input_token_logprobs)==len(input_ids) before trusting aggregates.
+注意:SGLang 的 input_token_logprobs 链路已对照 miles/rollout/sglang_rollout.py 的
+payload 约定做过校验,但尚未端到端跑通(在线训练期间没有空闲 GPU)。在信任聚合结果前,
+请先验证第一条响应满足 len(input_token_logprobs)==len(input_ids)。
 """
 import argparse
 import json
@@ -84,7 +84,7 @@ def load_samples(path):
 
 
 def score_one(url, input_ids):
-    """Return list of input_token_logprobs aligned to input_ids (logP(tok_i | tok_<i))."""
+    """返回与 input_ids 对齐的 input_token_logprobs 列表(logP(tok_i | tok_<i))。"""
     payload = {
         "input_ids": input_ids,
         "return_logprob": True,
@@ -94,7 +94,7 @@ def score_one(url, input_ids):
     r = requests.post(f"{url}/generate", json=payload, timeout=3600)
     r.raise_for_status()
     meta = r.json()["meta_info"]
-    # input_token_logprobs: list of [logprob, token_id, text|None]; first token has null logprob
+    # input_token_logprobs:由 [logprob, token_id, text|None] 组成的列表;首个 token 的 logprob 为 null
     itl = meta["input_token_logprobs"]
     return [(x[0] if x[0] is not None else None) for x in itl]
 
@@ -121,7 +121,7 @@ def main():
     t0 = time.time()
     for k, (msgs, tools) in enumerate(samples):
         token_ids, loss_mask = gen.get_loss_mask(msgs, tools=tools)
-        # left-truncate to keep the tail (the assistant response)
+        # 左截断,保留尾部(assistant 回复)
         if len(token_ids) > args.max_len:
             cut = len(token_ids) - args.max_len
             token_ids = token_ids[cut:]

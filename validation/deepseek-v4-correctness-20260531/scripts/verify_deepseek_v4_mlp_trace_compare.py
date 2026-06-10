@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare DeepSeek-V4 official and Miles layer-0 MLP trace tensors."""
+"""比较 DeepSeek-V4 官方实现与 Miles 的第 0 层 MLP trace tensor。"""
 
 from __future__ import annotations
 

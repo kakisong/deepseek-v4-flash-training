@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Validate that the Ray control plane, full worker capacity, and monitoring are
-# ready before a training run. Caddy is a public web entry and is optional.
+# 在训练开跑前校验 Ray 控制面、全量 worker 容量与 monitoring 是否就绪。
+# Caddy 是公网 web 入口,属于可选项。
 
 set -euo pipefail
 

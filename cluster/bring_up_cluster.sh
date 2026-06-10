@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Bring up miles containers + ray cluster on V4_NUM_NODES nodes.
-# After completion:
-#   - V4_NUM_NODES containers named $V4_CONTAINER are running
-#   - ray head is started on $V4_RAY_HEAD_IP, workers have joined
-#   - dashboard is reachable at http://$V4_RAY_HEAD_IP:$V4_DASHBOARD_PORT
+# 在 V4_NUM_NODES 台节点上拉起 miles 容器 + ray 集群。
+# 完成后:
+#   - V4_NUM_NODES 个名为 $V4_CONTAINER 的容器在运行
+#   - ray head 已在 $V4_RAY_HEAD_IP 启动,workers 已加入
+#   - dashboard 可通过 http://$V4_RAY_HEAD_IP:$V4_DASHBOARD_PORT 访问
 #
-# Idempotent: if a container already exists, remove and recreate (to guarantee config consistency).
-# Failure: exit immediately on any node failure.
+# 幂等:容器已存在则删除重建(保证配置一致)。
+# 失败:任一节点失败立即退出。
 
 set -euo pipefail
 
@@ -19,7 +19,7 @@ fi
 
 SSH_OPTS="-o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
 
-# Flatten V4_DOCKER_MOUNTS array into docker CLI flags (`-v src:dst -v src:dst ...`).
+# 把 V4_DOCKER_MOUNTS 数组展开成 docker CLI 参数(`-v src:dst -v src:dst ...`)。
 DOCKER_MOUNT_FLAGS=""
 for m in "${V4_DOCKER_MOUNTS[@]}"; do
   DOCKER_MOUNT_FLAGS+=" -v $m"
@@ -78,7 +78,7 @@ start_node_container() {
       -o LogLevel=ERROR \
       root@$IP bash <<EOF
 set -e
-# If already running, remove and recreate (to guarantee config consistency).
+# 若已在运行则删除重建(保证配置一致)。
 if docker ps -a --format '{{.Names}}' | grep -qx '$V4_CONTAINER'; then
   docker rm -f $V4_CONTAINER >/dev/null
 fi
@@ -104,17 +104,17 @@ docker run -d --name $V4_CONTAINER \
     $V4_IMAGE \
     sleep infinity >/dev/null
 docker exec $V4_CONTAINER bash -lc 'pip install -e . --quiet --no-deps --no-build-isolation 2>&1 | tail -1' >/dev/null
-# Runtime framework deps are image-baked. Validate them inside every container
-# so training does not silently fall back to CFS source checkouts.
+# 运行时框架依赖已固化在镜像里。在每个容器内逐一校验,
+# 避免训练悄悄回退到 CFS 上的源码 checkout。
 docker exec $V4_CONTAINER python -c 'import torch, fast_hadamard_transform, tile_kernels; import megatron.core.dist_checkpointing.core as c; from megatron.core.transformer.transformer_config import TransformerConfig; assert c.CONFIG_FNAME == "metadata.json"; assert "dsv4_hc_mult" in TransformerConfig.__dataclass_fields__; print("torch=" + torch.__version__ + " fht=ok megatron=dsv4 tile_kernels=ok")'
 echo "[$IP] container ready"
 EOF
 }
 
 echo "=== Phase 1: starting containers on $(wc -w <<< "$V4_ALL_IPS") Ray nodes (parallel) ==="
-# pre-flight: make sure miles fork is on CFS (used as the workdir + pip install
-# target inside containers). Default V4_MILES_REPO_URL points at our public fork
-# (kakisong/miles); override env var to swap (e.g. internal mirror).
+# 预检:确保 miles fork 已在 CFS 上(容器内用作 workdir + pip install
+# 目标)。V4_MILES_REPO_URL 默认指向我们的公开 fork
+# (kakisong/miles);要换源(如内部镜像)可覆盖该环境变量。
 : "${V4_MILES_REPO_URL:=https://github.com/kakisong/miles.git}"
 if [[ ! -d "$V4_MILES_REPO/.git" ]]; then
   echo "[info] cloning miles fork → $V4_MILES_REPO"
@@ -126,27 +126,27 @@ done
 wait
 echo
 
-# Materialize the in-container commands into temp scripts on CFS (shared with all workers).
+# 把容器内要执行的命令落成 CFS 上的临时脚本(所有 worker 共享)。
 RAY_HEAD_SCRIPT=$V4_OUT/.ray_head.sh
 RAY_WORKER_SCRIPT=$V4_OUT/.ray_worker.sh
 
 cat > "$RAY_HEAD_SCRIPT" <<EOF
 #!/usr/bin/env bash
 set -e
-# Timezone — Ray dashboard / log timestamps read TZ env; default to Asia/Shanghai.
+# 时区 — Ray dashboard / 日志时间戳读 TZ 环境变量;默认 Asia/Shanghai。
 export TZ='${V4_TZ:-Asia/Shanghai}'
 
-# Env vars required for embedding Grafana into the Ray dashboard (only read at ray start).
-# HOST is for Ray head internal health checks (curl from inside container, internal network);
-# IFRAME_HOST is for the browser (public network via Caddy).
-# Any unset field is fine — dashboard just loses that integration.
+# 把 Grafana 嵌入 Ray dashboard 所需的环境变量(只在 ray start 时读取)。
+# HOST 给 Ray head 内部健康检查用(容器内 curl,走内网);
+# IFRAME_HOST 给浏览器用(经 Caddy 走公网)。
+# 任一字段不设也没关系 — dashboard 只是少了对应的集成。
 export RAY_GRAFANA_HOST='${V4_GRAFANA_HOST:-}'
 export RAY_GRAFANA_IFRAME_HOST='${V4_GRAFANA_IFRAME_HOST:-}'
 export RAY_PROMETHEUS_HOST='${V4_PROMETHEUS_HOST:-}'
 export RAY_PROMETHEUS_NAME=Prometheus
 
-# External Redis for GCS (head fault tolerance, optional) — skipped when V4_REDIS_HOST is empty.
-# Workers only talk to GCS; they never connect to Redis directly.
+# GCS 用的外部 Redis(head 容错用,可选)— V4_REDIS_HOST 为空时跳过。
+# worker 只跟 GCS 通信,从不直连 Redis。
 _REDIS_HOST='${V4_REDIS_HOST:-}'
 _REDIS_PORT='${V4_REDIS_PORT:-6379}'
 _REDIS_PASSWORD='${V4_REDIS_PASSWORD:-}'
@@ -154,15 +154,15 @@ _CLUSTER_NS='${V4_CLUSTER_NAME:-default}'
 REDIS_ARGS=()
 if [ -n "\$_REDIS_HOST" ]; then
     export RAY_REDIS_ADDRESS="\$_REDIS_HOST:\$_REDIS_PORT"
-    # namespace prefixes GCS keys so multiple Ray clusters can share one Redis without collisions.
+    # namespace 会作为 GCS key 的前缀,让多个 Ray 集群共用一个 Redis 而互不冲突。
     export RAY_external_storage_namespace="\$_CLUSTER_NS"
     [ -n "\$_REDIS_PASSWORD" ] && REDIS_ARGS+=(--redis-password="\$_REDIS_PASSWORD")
     echo "[ray-head] GCS external Redis: \$RAY_REDIS_ADDRESS (ns=\$_CLUSTER_NS)"
 fi
 
 ray stop --force 2>/dev/null || true
-# Put ray temp dir (logs + spill) on the local NVMe data disk instead of overlayfs.
-# Reason: 10.0.8.7 has a 492G root vs 5.8T local data disk; spill on / can fill overlay.
+# 把 ray 临时目录(日志 + spill)放到本地 NVMe 数据盘而不是 overlayfs。
+# 原因:10.0.8.7 根分区只有 492G,本地数据盘有 5.8T;spill 写到 / 会把 overlay 撑满。
 mkdir -p $V4_RAY_TEMP_DIR
 ray start --head \\
     --node-ip-address=$V4_RAY_HEAD_IP \\
@@ -177,7 +177,7 @@ chmod +x "$RAY_HEAD_SCRIPT"
 
 cat > "$RAY_WORKER_SCRIPT" <<'EOF'
 #!/usr/bin/env bash
-# First argument is the worker's own IP.
+# 第一个参数是 worker 自己的 IP。
 set -e
 export TZ='__TZ__'
 WORKER_IP="$1"

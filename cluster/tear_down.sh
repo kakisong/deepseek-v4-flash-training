@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shut down the ray cluster and remove miles containers across all 8 nodes.
+# 关停 ray 集群,并删除全部 8 台节点上的 miles 容器。
 
 set -euo pipefail
 

@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""QA-fit verification: sample N rows from train set, ask model to predict each
-assistant turn given the prefix, compare against ground truth.
+"""QA 拟合验证：从训练集中采样 N 行，让模型在给定前缀的条件下预测每个
+assistant 轮次，并与 ground truth 对比。
 
-Purpose: validate training framework integrity (gradient flow, loss mask, ckpt
-save/load). On train-set samples, a well-fit model should reproduce assistant
-turns nearly verbatim. Large divergence → framework bug.
+目的：验证训练框架的完整性（梯度流、loss mask、ckpt 保存/加载）。
+在训练集样本上，拟合良好的模型应当几乎逐字复现 assistant 轮次。
+偏差过大 → 框架存在 bug。
 
-Usage (from inside miles-v4-sft container, after launching sglang):
+用法（在 miles-v4-sft 容器内、启动 sglang 之后）：
     python3 qa_fit_check.py \\
         --data /data_train/kaynzhang/v4-sft/data/albaliang_057_le64k.jsonl \\
         --endpoint http://localhost:30000 \\
         --num-samples 10 \\
-        --turn-index 1   # 1st assistant turn (0-indexed in assistant turns)
+        --turn-index 1   # 第 1 个 assistant 轮次（在 assistant 轮次内从 0 开始计数）
 
-Outputs per-sample: prefix length, ground-truth A length, generated A length,
-exact-match, char-level Levenshtein ratio, BLEU-like prefix match length.
+每个样本输出：前缀长度、ground-truth A 长度、生成 A 长度、
+exact-match、字符级 Levenshtein 相似度、类 BLEU 的前缀匹配长度。
 """
 import argparse
 import json
@@ -45,9 +45,9 @@ def load_samples(path, n, seed=0, max_token_length=32000):
 
 
 def split_at_assistant_turn(messages, turn_index):
-    """Return (prefix_messages, ground_truth_assistant_content) for the
-    `turn_index`-th assistant turn (0-indexed). Returns None if not enough
-    assistant turns."""
+    """返回第 `turn_index` 个 assistant 轮次（从 0 开始计数）对应的
+    (prefix_messages, ground_truth_assistant_content)。
+    若 assistant 轮次数量不足则返回 None。"""
     seen = 0
     for i, m in enumerate(messages):
         if m["role"] == "assistant":
@@ -120,7 +120,7 @@ def main():
             continue
         prefix, gt = split
 
-        # Strip non-content fields from prefix that vendor APIs may not accept
+        # 从前缀中剥离厂商 API 可能不接受的非内容字段
         cleaned = []
         for m in prefix:
             cm = {"role": m["role"], "content": m.get("content") or ""}
@@ -145,7 +145,7 @@ def main():
         print(f"[{idx}] prefix_msgs={len(prefix)} gt_chars={len(gt)} gen_chars={len(gen)} "
               f"EM={em} sim={ratio:.3f} common_prefix={cp}")
         if not em:
-            # show first divergence
+            # 展示首个分歧位置
             cut = min(cp + 80, len(gen), len(gt))
             print(f"     gt : ...{gt[max(0,cp-20):cut]!r}")
             print(f"     gen: ...{gen[max(0,cp-20):cut]!r}")

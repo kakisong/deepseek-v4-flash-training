@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""External PyTorch oracle for DeepSeek-V4 layer-0 attention core.
+"""DeepSeek-V4 第 0 层 attention core 的外部 PyTorch oracle。
 
-This verifier consumes recorded mini-checkpoint attention traces and compares
-the dense/sparse/tilelang runtime attention_core tensors against an independent
-PyTorch implementation of the masked attention formula. It intentionally does
-not import the Miles attention_core operator.
+本校验器读取已记录的 mini-checkpoint attention trace,将 dense/sparse/tilelang
+运行时的 attention_core tensor 与一份独立实现的 PyTorch 掩码 attention 公式
+进行对比。它有意不导入 Miles 的 attention_core 算子。
 """
 
 import argparse

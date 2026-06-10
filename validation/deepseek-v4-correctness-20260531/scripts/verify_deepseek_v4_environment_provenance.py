@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate DeepSeek-V4 proof environment provenance."""
+"""校验 DeepSeek-V4 证明环境的来源信息（provenance）。"""
 
 import argparse
 import json

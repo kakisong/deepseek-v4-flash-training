@@ -1,39 +1,39 @@
 #!/usr/bin/env bash
-# One-click: trained Megatron `torch_dist` checkpoint  ->  original dpsk FP8+FP4.
+# 一键完成:训练产出的 Megatron `torch_dist` checkpoint  ->  原版 dpsk FP8+FP4。
 #
 #   (1) convert_torch_dist_to_hf.py   torch_dist (BF16)  ->  HF BF16
-#   (1.5) verify_roundtrip.py keymap  (sanity: HF key set vs the dpsk template)
-#   (2) hf_bf16_to_megablocks.py      HF BF16            ->  dpsk FP8/FP4 (46 shards)
-#   (3) verify_roundtrip.py struct    (names/dtype/shape == original layout)
+#   (1.5) verify_roundtrip.py keymap  (合理性检查:HF key 集合 vs dpsk 模板)
+#   (2) hf_bf16_to_megablocks.py      HF BF16            ->  dpsk FP8/FP4(46 个分片)
+#   (3) verify_roundtrip.py struct    (名称/dtype/shape == 原始布局)
 #
-# Step (1) runs in the TRAINING image (it is a miles/Megatron op that pulls in
-# sglang); steps (2)/(3) run in the lean conversion image (docker/Dockerfile.convert,
-# pure PyTorch). Code + data live on the V4 work root, bind-mounted at /work.
+# 步骤 (1) 在训练镜像中运行(它是 miles/Megatron 的操作,会连带引入
+# sglang);步骤 (2)/(3) 在精简转换镜像中运行(docker/Dockerfile.convert,
+# 纯 PyTorch)。代码与数据位于 V4 工作根目录,bind-mount 到 /work。
 #
-# Usage:
-#   # full pipeline from a torch_dist iter:
+# 用法:
+#   # 从某个 torch_dist iter 跑完整流水线:
 #   tools/ckpt_to_fp8fp4.sh --iter outputs/<stage>/checkpoints/iter_NNNNNNN --name <prefix>
-#   # OR skip step (1) and start from an existing HF bf16 dir
-#   # (e.g. produced by cluster/convert_torch_dist_to_hf.sh):
+#   # 或者跳过步骤 (1),从已有的 HF bf16 目录开始
+#   # (例如由 cluster/convert_torch_dist_to_hf.sh 生成):
 #   tools/ckpt_to_fp8fp4.sh --from-hf <existing HF bf16 dir> --name <prefix>
 #
-# Produces  $V4_MODELS/<prefix>-fp8fp4. With --iter it writes a ~540 GB
-# intermediate $V4_MODELS/<prefix>-hf-bf16 and removes it afterwards unless
-# --keep-bf16. With --from-hf the supplied dir is never deleted.
+# 产物为  $V4_MODELS/<prefix>-fp8fp4。使用 --iter 时会写出约 540 GB 的
+# 中间产物 $V4_MODELS/<prefix>-hf-bf16,除非指定 --keep-bf16,
+# 否则结束后会将其删除。使用 --from-hf 时,传入的目录绝不会被删除。
 #
-# Flags: --no-mtp (don't graft original MTP), --cpu, --force, --image, --template.
-# Env overrides: V4_WORK, V4_CONVERT_IMAGE, V4_TRAIN_IMAGE, V4_MILES_REPO,
-#                V4_TRAINING_REPO, V4_TEMPLATE, V4_BF16_DIR.
+# 可选参数:--no-mtp(不移植原版 MTP)、--cpu、--force、--image、--template。
+# 环境变量覆盖:V4_WORK、V4_CONVERT_IMAGE、V4_TRAIN_IMAGE、V4_MILES_REPO、
+#               V4_TRAINING_REPO、V4_TEMPLATE、V4_BF16_DIR。
 set -euo pipefail
 
-# ---------------------------------------------------------------- config
+# ---------------------------------------------------------------- 配置
 V4_WORK="${V4_WORK:-/data_train/kaynzhang/v4-sft}"
-IMAGE="${V4_CONVERT_IMAGE:-v4-convert:latest}"                            # lean pure-torch image (steps 2/3)
-TRAIN_IMAGE="${V4_TRAIN_IMAGE:-radixark/miles:dev-fht-v4deps-20260529}"   # full miles+sglang stack (step 1)
-MILES="${V4_MILES_REPO:-$V4_WORK/miles}"                                  # has megatron_to_hf/deepseekv4
+IMAGE="${V4_CONVERT_IMAGE:-v4-convert:latest}"                            # 精简的纯 torch 镜像(步骤 2/3)
+TRAIN_IMAGE="${V4_TRAIN_IMAGE:-radixark/miles:dev-fht-v4deps-20260529}"   # 完整的 miles+sglang 软件栈(步骤 1)
+MILES="${V4_MILES_REPO:-$V4_WORK/miles}"                                  # 内含 megatron_to_hf/deepseekv4
 TRAIN_REPO="${V4_TRAINING_REPO:-$V4_WORK/deepseek-v4-flash-training}"
-TEMPLATE="${V4_TEMPLATE:-$V4_WORK/models/DeepSeek-V4-Flash}"              # original dpsk FP8/FP4 = layout template
-ORIGIN_HF="${V4_BF16_DIR:-$V4_WORK/models/DeepSeek-V4-Flash-bf16-unpacked}"  # config/tokenizer source + keymap ref
+TEMPLATE="${V4_TEMPLATE:-$V4_WORK/models/DeepSeek-V4-Flash}"              # 原版 dpsk FP8/FP4 = 布局模板
+ORIGIN_HF="${V4_BF16_DIR:-$V4_WORK/models/DeepSeek-V4-Flash-bf16-unpacked}"  # config/tokenizer 来源 + keymap 参照
 VOCAB=129280
 
 ITER="" ; NAME="" ; FROM_HF="" ; KEEP_BF16=0 ; WITH_MTP=1 ; USE_GPU=1 ; FORCE=0
@@ -43,11 +43,11 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --iter)        ITER="$2"; shift 2;;
     --name)        NAME="$2"; shift 2;;
-    --from-hf)     FROM_HF="$2"; shift 2;;      # skip step 1: start from an existing HF bf16 dir
+    --from-hf)     FROM_HF="$2"; shift 2;;      # 跳过步骤 1:从已有的 HF bf16 目录开始
     --template)    TEMPLATE="$2"; shift 2;;
     --image)       IMAGE="$2"; shift 2;;
     --keep-bf16)   KEEP_BF16=1; shift;;
-    --no-mtp)      WITH_MTP=0; shift;;          # do not graft the original MTP layer
+    --no-mtp)      WITH_MTP=0; shift;;          # 不移植原版 MTP 层
     --cpu)         USE_GPU=0; shift;;
     --force)       FORCE=1; shift;;
     -h|--help)     usage 0;;
@@ -59,22 +59,22 @@ done
 
 FP_OUT="$V4_WORK/models/${NAME}-fp8fp4"
 if [[ -n "$FROM_HF" ]]; then
-  # Start from an existing HF bf16 dir (e.g. produced by cluster/convert_torch_dist_to_hf.sh).
+  # 从已有的 HF bf16 目录开始(例如由 cluster/convert_torch_dist_to_hf.sh 生成)。
   [[ "$FROM_HF" = /* ]] || FROM_HF="$V4_WORK/$FROM_HF"
-  HF_OUT="$FROM_HF" ; SKIP_STEP1=1 ; KEEP_BF16=1   # never delete a user-supplied input
+  HF_OUT="$FROM_HF" ; SKIP_STEP1=1 ; KEEP_BF16=1   # 绝不删除用户提供的输入
 else
   [[ "$ITER" = /* ]] || ITER="$V4_WORK/$ITER"
   HF_OUT="$V4_WORK/models/${NAME}-hf-bf16" ; SKIP_STEP1=0
 fi
 
-rel() {  # host abs path under $V4_WORK -> /work/...
+rel() {  # 宿主机上位于 $V4_WORK 下的绝对路径 -> /work/...
   case "$1" in
     "$V4_WORK"/*) echo "/work/${1#$V4_WORK/}";;
     *) echo "ERROR: path not under V4_WORK ($V4_WORK): $1" >&2; exit 2;;
   esac
 }
 
-# ---------------------------------------------------------------- preflight
+# ---------------------------------------------------------------- 预检
 [[ -d "$TEMPLATE" ]] || { echo "ERROR: template not found: $TEMPLATE" >&2; exit 2; }
 if [[ $SKIP_STEP1 -eq 1 ]]; then
   [[ -f "$HF_OUT/model.safetensors.index.json" ]] || { echo "ERROR: --from-hf is not an HF dir (no index.json): $HF_OUT" >&2; exit 2; }
@@ -106,7 +106,7 @@ else
   echo "== [1/3] skipped (--from-hf $HF_OUT) =="
 fi
 
-# ---------------------------------------------------------------- (1.5) key-set sanity
+# ---------------------------------------------------------------- (1.5) key 集合合理性检查
 echo "== [1.5] keymap sanity (missing keys are expected to be the MTP layer) =="
 dock -w "$TOOLS" "$IMAGE" \
   python3 verify_roundtrip.py keymap --template "$(rel "$TEMPLATE")" --hf-src "$(rel "$HF_OUT")" || \
@@ -119,12 +119,12 @@ dock -w "$TOOLS" "$IMAGE" \
   python3 hf_bf16_to_megablocks.py \
     --hf-src "$(rel "$HF_OUT")" --template "$(rel "$TEMPLATE")" --dst "$(rel "$FP_OUT")" "${FILL[@]}"
 
-# ---------------------------------------------------------------- (3) structural verify
+# ---------------------------------------------------------------- (3) 结构校验
 echo "== [3/3] structural verify vs original layout =="
 dock -w "$TOOLS" "$IMAGE" \
   python3 verify_roundtrip.py struct --a "$(rel "$FP_OUT")" --b "$(rel "$TEMPLATE")"
 
-# ---------------------------------------------------------------- cleanup
+# ---------------------------------------------------------------- 清理
 if [[ $KEEP_BF16 -eq 0 ]]; then
   echo "== cleanup intermediate HF BF16 =="
   docker run --rm -v "$V4_WORK:/work" "$IMAGE" rm -rf "$(rel "$HF_OUT")"

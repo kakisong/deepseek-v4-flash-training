@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""Verify DeepSeek-V4 EP=8 real MoE layer against an external reference.
+"""对照外部参考实现校验 DeepSeek-V4 EP=8 真实 MoE 层。
 
-This verifier closes the gap between the focused EP=8 dispatcher math test and
-the one-rank score-routed MoE block reference.  It runs Megatron's real
-``MoELayer`` on 8 ranks with one expert per rank, real all-to-all dispatch,
-TE grouped expert GEMMs, shared experts, sqrtsoftplus top-k routing, expert
-bias, backward, and a manual SGD update.  The comparison target is an explicit
-PyTorch formula built from tensors gathered across all ranks.
+本校验器弥合了聚焦的 EP=8 dispatcher 数学测试与单 rank score 路由 MoE 块
+参考之间的空缺。它在 8 个 rank 上运行 Megatron 的真实 ``MoELayer``,每个
+rank 一个 expert,使用真实 all-to-all dispatch、TE 分组 expert GEMM、共享
+expert、sqrtsoftplus top-k 路由、expert bias、反向传播以及手动 SGD 更新。
+比较目标是由跨所有 rank gather 得到的 tensor 构建的显式 PyTorch 公式。
 """
 
 from __future__ import annotations

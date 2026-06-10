@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Replay DeepSeek-V4 output head from official and Miles final hidden traces."""
+"""基于官方与 Miles 的最终隐藏层 trace 重放 DeepSeek-V4 输出 head。"""
 
 from __future__ import annotations
 

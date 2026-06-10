@@ -1,11 +1,11 @@
-"""Verify the SFT loss is computed over the RIGHT tokens, on a REAL training sample.
+"""在真实训练样本上验证 SFT loss 是否落在正确的 token 上。
 
-Confirms the #1 SFT-correctness property: loss_mask=1 only on assistant response tokens
-(reasoning+content+tool_calls+eos), 0 on system/user/tool + special/transition tokens. Also
-checks the loss-token ratio matches the live `train/batch/loss_token_ratio` (~0.16-0.20) and
-that response_length == sum(loss_mask). Pure CPU; does not touch the GPU training.
+确认 SFT 正确性的第一性质:loss_mask=1 仅出现在 assistant 回复 token 上
+(reasoning+content+tool_calls+eos),system/user/tool 及特殊/过渡 token 均为 0。同时
+检查 loss-token 比例是否与线上 `train/batch/loss_token_ratio`(约 0.16-0.20)一致,
+以及 response_length == sum(loss_mask)。纯 CPU;不会触碰 GPU 训练。
 
-Run on a pod: python3 tools/verify_sft_loss_mask.py [n_samples]
+在 pod 上运行: python3 tools/verify_sft_loss_mask.py [n_samples]
 """
 import json
 import sys
@@ -24,11 +24,11 @@ def short(s, n=160):
 
 
 def trained_spans_all_assistant(messages, token_ids, loss_mask, gen, tok):
-    """Re-derive per-message char spans and verify EVERY mask=1 token lies in an assistant span."""
-    # Reuse the generator's own rendering to get assistant char-spans, then map tokens.
-    # Cheap proxy: decode each contiguous mask=1 run and confirm it is NOT the system/user header.
-    # (Strong check already: the generator sets mask only inside role=='assistant' spans by offset.)
-    return True  # structural guarantee from gen code (role!='assistant' -> continue); see report
+    """重新推导每条 message 的字符区间,验证所有 mask=1 的 token 都落在 assistant 区间内。"""
+    # 复用生成器自身的渲染来获取 assistant 字符区间,再映射到 token。
+    # 廉价的近似:解码每段连续的 mask=1 区间,确认它不是 system/user 头部。
+    # (已有强保证:生成器只在 role=='assistant' 的区间内按偏移设置 mask。)
+    return True  # gen 代码的结构性保证(role!='assistant' -> continue);详见报告
 
 
 def main():
@@ -52,9 +52,9 @@ def main():
             tot_tok += n_tok
             tot_loss += n_loss
             ratios.append(n_loss / n_tok if n_tok else 0)
-            # quick role check: the first mask=1 run should decode to assistant-style content,
-            # and the leading system prompt must be mask=0.
-            lead_masked = loss_mask[0] == 0  # BOS/system always masked
+            # 快速角色检查:第一段 mask=1 的区间解码后应是 assistant 风格的内容,
+            # 而开头的 system prompt 必须是 mask=0。
+            lead_masked = loss_mask[0] == 0  # BOS/system 总是被 mask
             print(f"  s{si:>2}: tok={n_tok:>7} loss={n_loss:>6} ratio={n_loss/n_tok:.3f} "
                   f"msgs={len(messages):>2} lead_masked={lead_masked}")
 

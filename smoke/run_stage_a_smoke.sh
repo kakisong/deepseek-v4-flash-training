@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# Stage A — 1 node x 8 cards H20, DeepSeek-V4-Flash 4-layer smoke test.
+# Stage A — 1 节点 x 8 卡 H20, DeepSeek-V4-Flash 4 层 smoke 测试。
 #
-# Goal: within 90 minutes verify chat-template + loss-mask + forward/backward + ckpt save/load.
+# 目标: 90 分钟内验证 chat-template + loss-mask + 前向/反向 + ckpt save/load。
 #
-# Required env (see README §1.3):
+# 必需的环境变量 (见 README §1.3):
 #   BASE_FOLDER / MODELS / DATA / OUT / REPO / MEGATRON_PATH / MASTER_ADDR
 #
-# Data: $DATA/openhermes_v4.parquet or $DATA/your_v4_sft.parquet
+# 数据: $DATA/openhermes_v4.parquet 或 $DATA/your_v4_sft.parquet
 # Ckpt: $MODELS/DeepSeek-V4-Flash-4layer_torch_dist (prepare_megatron_ckpt.sh 4layer)
 
 set -euo pipefail
 
-# ---------- 0. clean & sanity ---------------------------------------------------
+# ---------- 0. 清理与检查 ---------------------------------------------------------
 pkill -9 sglang || true
 ray stop --force || true
 pkill -9 ray    || true
@@ -34,7 +34,7 @@ fi
 
 SFT_DATA="${SFT_DATA:-$DATA/openhermes_v4.parquet}"
 TEMPLATE="${REPO}/templates/deepseek_v4.jinja"
-LOSS_MASK_TYPE="${LOSS_MASK_TYPE:-qwen3}"      # default qwen3; switch to deepseek_v4 once verified
+LOSS_MASK_TYPE="${LOSS_MASK_TYPE:-qwen3}"      # 默认 qwen3; 验证通过后切换到 deepseek_v4
 
 if [[ ! -f "$SFT_DATA" ]]; then
   echo "[err] $SFT_DATA does not exist — run prepare_data.py first" >&2
@@ -50,12 +50,12 @@ SAVE_DIR="$OUT/$RUN_ID"
 mkdir -p "$SAVE_DIR"
 echo "[info] run id: $RUN_ID, save: $SAVE_DIR"
 
-# ---------- 1. nvlink probe(NCCL_NVLS_ENABLE) ---------------------------------
+# ---------- 1. nvlink 探测(NCCL_NVLS_ENABLE) ------------------------------------
 NVLINK_COUNT=$(nvidia-smi topo -m 2>/dev/null | grep -o 'NV[0-9][0-9]*' | wc -l)
 HAS_NVLINK=$([[ "$NVLINK_COUNT" -gt 0 ]] && echo 1 || echo 0)
 echo "[info] HAS_NVLINK=$HAS_NVLINK (links=$NVLINK_COUNT)"
 
-# ---------- 2. model args -------------------------------------------------------
+# ---------- 2. 模型参数 -----------------------------------------------------------
 MODEL_CFG="$REPO/scripts/models/deepseek-v4-flash-4layer.sh"
 if [[ ! -f "$MODEL_CFG" ]]; then
   echo "[err] $MODEL_CFG does not exist — checkout PR #1045 first" >&2
@@ -64,7 +64,7 @@ fi
 # shellcheck source=/dev/null
 source "$MODEL_CFG"
 
-# ---------- 3. arg groups -------------------------------------------------------
+# ---------- 3. 参数分组 -----------------------------------------------------------
 CKPT_ARGS=(
   --hf-checkpoint  "$MODELS/DeepSeek-V4-Flash-bf16"
   --ref-load       "$MODELS/DeepSeek-V4-Flash-4layer_torch_dist"
@@ -90,7 +90,7 @@ SFT_ARGS=(
   --debug-train-only
 )
 
-# Stage A prefers the jinja template; falls back to the tokenizer built-in if missing.
+# Stage A 优先使用 jinja 模板; 缺失时回退到 tokenizer 内置模板。
 if [[ -f "$TEMPLATE" ]]; then
   SFT_ARGS+=( --chat-template-path "$TEMPLATE" )
   echo "[info] using jinja template: $TEMPLATE"
@@ -101,7 +101,7 @@ else
 fi
 SFT_ARGS+=( --loss-mask-type "$LOSS_MASK_TYPE" )
 
-# 4 layers + single node: no PP/CP needed; only EP is split to validate the path.
+# 4 层 + 单节点: 不需要 PP/CP; 只切 EP 以验证该路径。
 PERF_ARGS=(
   --tensor-model-parallel-size 1
   --pipeline-model-parallel-size 1
@@ -132,7 +132,7 @@ MISC_ARGS=(
   --hidden-dropout    0.0
   --accumulate-allreduce-grads-in-fp32
   --attention-softmax-in-fp32
-  # V4 is sparse-MLA; do NOT pass --attention-backend flash.
+  # V4 是 sparse-MLA; 不要传 --attention-backend flash。
   --actor-num-nodes "$NUM_NODES"
   --actor-num-gpus-per-node "$NUM_GPUS_PER_NODE"
   --num-gpus-per-node "$NUM_GPUS_PER_NODE"
@@ -160,7 +160,7 @@ RUNTIME_ENV_JSON=$(cat <<EOF
 EOF
 )
 
-# ---------- 5. submit -----------------------------------------------------------
+# ---------- 5. 提交 ---------------------------------------------------------------
 ray job submit --address="http://127.0.0.1:8265" \
    --runtime-env-json="$RUNTIME_ENV_JSON" \
    -- python3 "$REPO/train_async.py" \

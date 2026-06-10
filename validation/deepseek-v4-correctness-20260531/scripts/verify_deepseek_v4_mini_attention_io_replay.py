@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""DeepSeek-V4 mini-checkpoint attention input/output replay probe.
+"""DeepSeek-V4 mini checkpoint 的 attention 输入/输出 replay 探针。
 
-The verifier records dense attention inputs and outputs for each layer, then
-replays the dense inputs through another attention backend and compares the
-computed outputs to dense. This isolates attention backend math from upstream
-state drift and downstream logprob amplification.
+本校验器记录每一层 dense attention 的输入与输出，随后将 dense 输入
+replay 到另一个 attention 后端中，并把计算得到的输出与 dense 结果比较。
+这样可以把 attention 后端的数学运算与上游状态漂移、下游 logprob 放大
+效应隔离开来。
 """
 
 from __future__ import annotations

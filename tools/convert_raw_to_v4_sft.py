@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""Convert raw agent-SFT JSONL (albaliang format) into V4-Flash training-ready JSONL.
+"""将原始 agent-SFT JSONL(albaliang 格式)转换为 V4-Flash 可直接训练的 JSONL。
 
-A hardened, one-stop superset of tools/jsonl_to_v4_dataset.py:
-  * accepts ONE OR MORE raw files and concatenates them into a single --out
-  * auto-detects records that are ALREADY in V4 format and passes them through,
-    so re-running on a mixed / partly-converted set is safe (the le128k/le134k
-    files in data/ are already-V4 despite their names — this avoids double-folding)
-  * float-safe `loss` parsing; defensive empty/None tool_call_id handling
-  * length filter aligned to the training --seq-length, with a loud reminder
-  * full drop accounting to stderr and an optional --stats-out json
+tools/jsonl_to_v4_dataset.py 的加固版、一站式超集:
+  * 接受一个或多个原始文件,并把它们拼接进同一个 --out
+  * 自动检测已经是 V4 格式的记录并原样透传,
+    因此在混合 / 部分已转换的数据集上重复运行是安全的(data/ 下的 le128k/le134k
+    文件名虽如此,其实已是 V4 格式 — 这样可避免二次折叠)
+  * float 安全的 `loss` 解析;对空/None 的 tool_call_id 做防御性处理
+  * 长度过滤与训练用的 --seq-length 对齐,并附带醒目的提醒
+  * 完整的丢弃原因计数输出到 stderr,以及可选的 --stats-out json
 
 ────────────────────────────────────────────────────────────────────────────
-SOURCE schema (raw albaliang; one JSON object per line, blank lines allowed):
+SOURCE schema(原始 albaliang;每行一个 JSON 对象,允许空行):
     {
-      "id","conversation_id","request_id","user_id",      # dropped
-      "tools": "<JSON-encoded OpenAI tools list>",          # NOTE: a string
+      "id","conversation_id","request_id","user_id",      # 丢弃
+      "tools": "<JSON 编码的 OpenAI tools 列表>",          # 注意:是字符串
       "messages": [
         {"role","content","loss": 0|1 (float),"tool_call_id"},
         ...
@@ -22,10 +22,10 @@ SOURCE schema (raw albaliang; one JSON object per line, blank lines allowed):
       "token_length": int
     }
     role in {system, user, assistant, tool_call, tool}
-    - a `tool_call` row's content is JSON: {"name":..,"arguments":"<json-string>"}
-    - each `tool_call` is answered by a following `tool` row (shared tool_call_id)
+    - `tool_call` 行的 content 是 JSON:{"name":..,"arguments":"<json-string>"}
+    - 每个 `tool_call` 都由其后的一个 `tool` 行应答(共享 tool_call_id)
 
-TARGET schema (V4-Flash; what Miles `--prompt-data ... --input-key messages` reads):
+TARGET schema(V4-Flash;即 Miles `--prompt-data ... --input-key messages` 读取的格式):
     {
       "messages": [
         {"role":"system","content":...},
@@ -37,24 +37,24 @@ TARGET schema (V4-Flash; what Miles `--prompt-data ... --input-key messages` rea
                             "_loss_content":0|1,"_loss_tool_calls":[0|1,...]},
         {"role":"tool","content":...,"tool_call_id":...}
       ],
-      "tools": [ ...parsed OpenAI tools list... ],
+      "tools": [ ...解析后的 OpenAI tools 列表... ],
       "token_length": int
     }
-    - tool_call rows are FOLDED into the preceding assistant's `tool_calls`
-    - per-message `loss` flags collapse to a per-assistant-turn `step_loss_mask`
-      (= max over the turn's pieces). The per-piece `_loss_content`/`_loss_tool_calls`
-      are KEPT on purpose: Miles' gen_multi_turn_loss_mask_deepseek_v4 consumes them
-      to mask sub-spans precisely (assistant text vs each tool_call).
+    - tool_call 行会被折叠进前一个 assistant 的 `tool_calls`
+    - 逐消息的 `loss` 标志会合并为按 assistant 轮次的 `step_loss_mask`
+      (= 该轮各子片段的最大值)。逐片段的 `_loss_content`/`_loss_tool_calls`
+      是有意保留的:Miles 的 gen_multi_turn_loss_mask_deepseek_v4 会消费它们,
+      以便精确地 mask 子区间(assistant 文本 vs 每个 tool_call)。
 
-USAGE
+用法
     python3 tools/convert_raw_to_v4_sft.py RAW1.jsonl [RAW2.jsonl ...] \
         --out  $V4_DATA/myrun_v4_le256k.jsonl \
-        --max-tokens 262144            # MUST be <= training --seq-length
-                                       #   256K run -> 262144 ; 128K run -> 131072
+        --max-tokens 262144            # 必须 <= 训练的 --seq-length
+                                       #   256K 训练 -> 262144 ; 128K 训练 -> 131072
 
-Pure stdlib, single process, CPU-only. ~18 GB / 50k convs in a few minutes.
-Drops, with reasons counted: parse errors, unknown role, bad tool_call JSON,
-over-length, missing length, and convs with no trained assistant turn.
+纯标准库,单进程,仅用 CPU。约 18 GB / 5 万条对话,几分钟内完成。
+丢弃并按原因计数:解析错误、未知 role、损坏的 tool_call JSON、
+超长、缺少长度,以及没有任何参与训练的 assistant 轮次的对话。
 """
 from __future__ import annotations
 
@@ -66,7 +66,7 @@ from pathlib import Path
 
 
 def _as_loss(v) -> int:
-    """Raw `loss` may be int, float (1.0), str or missing. Treat >= 0.5 as trained."""
+    """原始 `loss` 可能是 int、float(1.0)、str 或缺失。>= 0.5 视为参与训练。"""
     try:
         return 1 if float(v) >= 0.5 else 0
     except (TypeError, ValueError):
@@ -74,7 +74,7 @@ def _as_loss(v) -> int:
 
 
 def parse_tool_call_content(raw: str):
-    """tool_call.content = JSON('{"name":..,"arguments":<json-string>}'). -> (name, args_str) | None."""
+    """tool_call.content = JSON('{"name":..,"arguments":<json-string>}')。返回 (name, args_str) | None。"""
     try:
         obj = json.loads(raw)
     except (json.JSONDecodeError, TypeError):
@@ -84,15 +84,15 @@ def parse_tool_call_content(raw: str):
         return None
     arguments = obj.get("arguments", "")
     if not isinstance(arguments, str):
-        # OpenAI requires function.arguments to be a string; re-encode if upstream gave an object.
+        # OpenAI 要求 function.arguments 必须是字符串;若上游给的是对象则重新编码。
         arguments = json.dumps(arguments, ensure_ascii=False)
     return name, arguments
 
 
 def is_already_v4(rec: dict) -> bool:
-    """True for a record a prior run already produced: no tool_call role and an
-    assistant turn already carrying step_loss_mask. Passing these through verbatim
-    avoids re-folding (which would corrupt tool_calls / step_loss_mask)."""
+    """对此前运行已产出的记录返回 True:没有 tool_call role,且已有
+    assistant 轮次携带 step_loss_mask。把这类记录原样透传
+    可避免二次折叠(那会破坏 tool_calls / step_loss_mask)。"""
     msgs = rec.get("messages")
     if not isinstance(msgs, list) or not msgs:
         return False
@@ -102,7 +102,7 @@ def is_already_v4(rec: dict) -> bool:
 
 
 def normalize_tools(tools_raw, stats) -> list | None:
-    """Source `tools` is a JSON string; target wants a parsed list. None => drop record."""
+    """源 `tools` 是 JSON 字符串;目标需要解析后的列表。返回 None => 丢弃该记录。"""
     if isinstance(tools_raw, list):
         return tools_raw
     if isinstance(tools_raw, str) and tools_raw.strip():
@@ -116,9 +116,9 @@ def normalize_tools(tools_raw, stats) -> list | None:
 
 
 def convert_conversation(src_msgs: list, stats: dict) -> list | None:
-    """Walk source messages; emit V4 message list. None => drop the conversation."""
+    """遍历源 messages;产出 V4 消息列表。返回 None => 丢弃该对话。"""
     out: list = []
-    pending_assistant: dict | None = None  # assistant we are folding tool_calls into
+    pending_assistant: dict | None = None  # 正在把 tool_calls 折叠进去的 assistant
 
     def flush():
         nonlocal pending_assistant
@@ -156,7 +156,7 @@ def convert_conversation(src_msgs: list, stats: dict) -> list | None:
                 return None
             name, arguments = parsed
             if pending_assistant is None:
-                # tool_call with no preceding assistant; synthesize a stub to hold it.
+                # tool_call 前面没有 assistant;合成一个占位 assistant 来承载它。
                 stats["orphan_tool_call_synth_assistant"] += 1
                 pending_assistant = {
                     "role": "assistant", "content": "",
@@ -184,7 +184,7 @@ def convert_conversation(src_msgs: list, stats: dict) -> list | None:
 
     flush()
 
-    # step_loss_mask per merged assistant = max over its pieces (content + each tool_call).
+    # 每个合并后 assistant 的 step_loss_mask = 其各片段的最大值(content + 每个 tool_call)。
     for msg in out:
         if msg.get("role") != "assistant":
             continue
@@ -194,7 +194,7 @@ def convert_conversation(src_msgs: list, stats: dict) -> list | None:
             msg.pop("tool_calls", None)
             msg.pop("_loss_tool_calls", None)
 
-    # Need at least one trained assistant turn, else the conv is dead weight.
+    # 至少需要一个参与训练的 assistant 轮次,否则该对话只是无用负担。
     if not any(m.get("role") == "assistant" and m.get("step_loss_mask", 0) == 1 for m in out):
         stats["no_training_signal"] += 1
         return None

@@ -1,8 +1,8 @@
 """
-DeepSeek-V4 Encoding
+DeepSeek-V4 编码
 
-A self-contained implementation for encoding/decoding DeepSeek-V4 chat messages
-with tool calling, thinking mode, and quick instruction task support.
+一个自包含的 DeepSeek-V4 聊天消息编码/解码实现，
+支持工具调用、思考模式以及快速指令（quick instruction）任务。
 """
 
 from typing import Any, Dict, List, Union, Optional, Tuple
@@ -11,7 +11,7 @@ import json
 import re
 
 # ============================================================
-# Special Tokens
+# 特殊 Token
 # ============================================================
 
 bos_token: str = "<｜begin▁of▁sentence｜>"
@@ -24,7 +24,7 @@ USER_SP_TOKEN = "<｜User｜>"
 ASSISTANT_SP_TOKEN = "<｜Assistant｜>"
 LATEST_REMINDER_SP_TOKEN = "<｜latest_reminder｜>"
 
-# Task special tokens for internal classification tasks
+# 用于内部分类任务的任务特殊 token
 DS_TASK_SP_TOKENS = {
     "action": "<｜action｜>",
     "query": "<｜query｜>",
@@ -36,7 +36,7 @@ DS_TASK_SP_TOKENS = {
 VALID_TASKS = set(DS_TASK_SP_TOKENS.keys())
 
 # ============================================================
-# Templates
+# 模板
 # ============================================================
 
 system_msg_template: str = "{content}"
@@ -95,11 +95,11 @@ You MUST strictly follow the above defined tool name and parameter schemas to in
 """
 
 # ============================================================
-# Utility Functions
+# 工具函数
 # ============================================================
 
 def to_json(value: Any) -> str:
-    """Serialize a value to JSON string."""
+    """将值序列化为 JSON 字符串。"""
     try:
         return json.dumps(value, ensure_ascii=False)
     except:
@@ -107,12 +107,12 @@ def to_json(value: Any) -> str:
 
 
 def tools_from_openai_format(tools):
-    """Extract function definitions from OpenAI-format tool list."""
+    """从 OpenAI 格式的工具列表中提取函数定义。"""
     return [tool["function"] for tool in tools]
 
 
 def tool_calls_from_openai_format(tool_calls):
-    """Convert OpenAI-format tool calls to internal format."""
+    """将 OpenAI 格式的工具调用转换为内部格式。"""
     return [
         {
             "name": tool_call["function"]["name"],
@@ -123,7 +123,7 @@ def tool_calls_from_openai_format(tool_calls):
 
 
 def tool_calls_to_openai_format(tool_calls):
-    """Convert internal tool calls to OpenAI format."""
+    """将内部格式的工具调用转换为 OpenAI 格式。"""
     return [
         {
             "type": "function",
@@ -138,13 +138,13 @@ def tool_calls_to_openai_format(tool_calls):
 
 def encode_arguments_to_dsml(tool_call: Dict[str, str]) -> str:
     """
-    Encode tool call arguments into DSML parameter format.
+    将工具调用参数编码为 DSML 参数格式。
 
     Args:
-        tool_call: Dict with "name" and "arguments" (JSON string) keys.
+        tool_call: 包含 "name" 和 "arguments"（JSON 字符串）键的字典。
 
     Returns:
-        DSML-formatted parameter string.
+        DSML 格式的参数字符串。
     """
     p_dsml_template = '<{dsml_token}parameter name="{key}" string="{is_str}">{value}</{dsml_token}parameter>'
     P_dsml_strs = []
@@ -168,14 +168,14 @@ def encode_arguments_to_dsml(tool_call: Dict[str, str]) -> str:
 
 def decode_dsml_to_arguments(tool_name: str, tool_args: Dict[str, Tuple[str, str]]) -> Dict[str, str]:
     """
-    Decode DSML parameters back to a tool call dict.
+    将 DSML 参数解码回工具调用字典。
 
     Args:
-        tool_name: Name of the tool.
-        tool_args: Dict mapping param_name -> (value, is_string_flag).
+        tool_name: 工具名称。
+        tool_args: 形如 param_name -> (value, is_string_flag) 的映射字典。
 
     Returns:
-        Dict with "name" and "arguments" (JSON string) keys.
+        包含 "name" 和 "arguments"（JSON 字符串）键的字典。
     """
     def _decode_value(key: str, value: str, string: str):
         if string == "true":
@@ -188,13 +188,13 @@ def decode_dsml_to_arguments(tool_name: str, tool_args: Dict[str, Tuple[str, str
 
 def render_tools(tools: List[Dict[str, Union[str, Dict[str, Any]]]]) -> str:
     """
-    Render tool schemas into the system prompt format.
+    将工具 schema 渲染为系统提示词中的格式。
 
     Args:
-        tools: List of tool schema dicts (each with name, description, parameters).
+        tools: 工具 schema 字典列表（每项包含 name、description、parameters）。
 
     Returns:
-        Formatted tools section string.
+        格式化后的工具部分字符串。
     """
     tools_json = [to_json(t) for t in tools]
 
@@ -207,7 +207,7 @@ def render_tools(tools: List[Dict[str, Union[str, Dict[str, Any]]]]) -> str:
 
 
 def find_last_user_index(messages: List[Dict[str, Any]]) -> int:
-    """Find the index of the last user/developer message."""
+    """查找最后一条 user/developer 消息的索引。"""
     last_user_index = -1
     for idx in range(len(messages) - 1, -1, -1):
         if messages[idx].get("role") in ["user", "developer"]:
@@ -217,25 +217,25 @@ def find_last_user_index(messages: List[Dict[str, Any]]) -> int:
 
 
 # ============================================================
-# Message Rendering
+# 消息渲染
 # ============================================================
 
 def render_message(index: int, messages: List[Dict[str, Any]], thinking_mode: str, drop_thinking: bool = True, reasoning_effort: Optional[str] = None) -> str:
     """
-    Render a single message at the given index into its encoded string form.
+    将给定索引处的单条消息渲染为其编码后的字符串形式。
 
-    This is the core function that converts each message in the conversation
-    into the DeepSeek-V4 format.
+    这是核心函数，负责把对话中的每条消息
+    转换为 DeepSeek-V4 格式。
 
     Args:
-        index: Index of the message to render.
-        messages: Full list of messages in the conversation.
-        thinking_mode: Either "chat" or "thinking".
-        drop_thinking: Whether to drop reasoning content from earlier turns.
-        reasoning_effort: Optional reasoning effort level ("max", "high", or None).
+        index: 要渲染的消息的索引。
+        messages: 对话中的完整消息列表。
+        thinking_mode: "chat" 或 "thinking"。
+        drop_thinking: 是否丢弃较早轮次中的推理内容。
+        reasoning_effort: 可选的推理强度级别（"max"、"high" 或 None）。
 
     Returns:
-        Encoded string for this message.
+        该消息编码后的字符串。
     """
     assert 0 <= index < len(messages)
     assert thinking_mode in ["chat", "thinking"], f"Invalid thinking_mode `{thinking_mode}`"
@@ -257,7 +257,7 @@ def render_message(index: int, messages: List[Dict[str, Any]], thinking_mode: st
     if tool_calls:
         tool_calls = tool_calls_from_openai_format(tool_calls)
 
-    # Reasoning effort prefix (only at index 0 in thinking mode with max effort)
+    # 推理强度前缀（仅在 thinking 模式且 effort 为 max 时加在 index 0 处）
     assert reasoning_effort in ['max', None, 'high'], f"Invalid reasoning effort: {reasoning_effort}"
     if index == 0 and thinking_mode == "thinking" and reasoning_effort == 'max':
         prompt += REASONING_EFFORT_MAX
@@ -285,7 +285,7 @@ def render_message(index: int, messages: List[Dict[str, Any]], thinking_mode: st
     elif role == "user":
         prompt += USER_SP_TOKEN
 
-        # Handle content blocks (tool results mixed with text)
+        # 处理 content blocks（工具结果与文本混合的情形）
         content_blocks = msg.get("content_blocks")
         if content_blocks:
             parts = []
@@ -338,7 +338,7 @@ def render_message(index: int, messages: List[Dict[str, Any]], thinking_mode: st
         summary_content = content or ""
         rc = reasoning_content or ""
 
-        # Check if previous message has a task - if so, this is a task output (no thinking)
+        # 检查前一条消息是否带有 task —— 若有，则本条为任务输出（无 thinking）
         prev_has_task = index - 1 >= 0 and messages[index - 1].get("task") is not None
 
         if thinking_mode == "thinking" and not prev_has_task:
@@ -362,27 +362,27 @@ def render_message(index: int, messages: List[Dict[str, Any]], thinking_mode: st
     else:
         raise NotImplementedError(f"Unknown role: {role}")
 
-    # Append transition tokens based on what follows
+    # 根据后续消息追加过渡 token
     if index + 1 < len(messages) and messages[index + 1].get("role") not in ["assistant", "latest_reminder"]:
         return prompt
 
     task = messages[index].get("task")
     if task is not None:
-        # Task special token for internal classification tasks
+        # 用于内部分类任务的任务特殊 token
         assert task in VALID_TASKS, f"Invalid task: '{task}'. Valid tasks are: {list(VALID_TASKS)}"
         task_sp_token = DS_TASK_SP_TOKENS[task]
 
         if task != "action":
-            # Non-action tasks: append task sp token directly after the message
+            # 非 action 任务：直接在消息后追加任务特殊 token
             prompt += task_sp_token
         else:
-            # Action task: append Assistant + thinking token + action sp token
+            # action 任务：追加 Assistant + thinking token + action 特殊 token
             prompt += ASSISTANT_SP_TOKEN
             prompt += thinking_end_token if thinking_mode != "thinking" else thinking_start_token
             prompt += task_sp_token
 
     elif messages[index].get("role") in ["user", "developer"]:
-        # Normal generation: append Assistant + thinking token
+        # 正常生成：追加 Assistant + thinking token
         prompt += ASSISTANT_SP_TOKEN
         if not drop_thinking and thinking_mode == "thinking":
             prompt += thinking_start_token
@@ -395,25 +395,25 @@ def render_message(index: int, messages: List[Dict[str, Any]], thinking_mode: st
 
 
 # ============================================================
-# Preprocessing
+# 预处理
 # ============================================================
 
 def merge_tool_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
-    Merge tool messages into the preceding user message using content_blocks format.
+    使用 content_blocks 格式将 tool 消息合并到前面的 user 消息中。
 
-    DeepSeek-V4 does not have a standalone "tool" role; instead, tool results
-    are encoded as <tool_result> blocks within user messages.
+    DeepSeek-V4 没有独立的 "tool" 角色；工具结果会被编码为
+    user 消息内部的 <tool_result> 块。
 
-    This function converts a standard OpenAI-format conversation (with separate
-    "tool" role messages) into V4 format where tool results are merged into
-    user messages.
+    本函数将标准 OpenAI 格式的对话（带有独立的 "tool" 角色消息）
+    转换为 V4 格式，即把工具结果合并进
+    user 消息。
 
     Args:
-        messages: List of message dicts in OpenAI format.
+        messages: OpenAI 格式的消息字典列表。
 
     Returns:
-        Processed message list with tool messages merged into user messages.
+        已将 tool 消息合并进 user 消息的处理后消息列表。
     """
     merged: List[Dict[str, Any]] = []
 
@@ -422,13 +422,13 @@ def merge_tool_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         role = msg.get("role")
 
         if role == "tool":
-            # Convert tool message to a user message with tool_result block
+            # 将 tool 消息转换为带 tool_result 块的 user 消息
             tool_block = {
                 "type": "tool_result",
                 "tool_use_id": msg.get("tool_call_id", ""),
                 "content": msg.get("content", ""),
             }
-            # Merge into previous message if it's already a user (merged tool)
+            # 若上一条消息已是 user（已合并过 tool），则并入该消息
             if merged and merged[-1].get("role") == "user" and "content_blocks" in merged[-1]:
                 merged[-1]["content_blocks"].append(tool_block)
             else:
@@ -446,7 +446,7 @@ def merge_tool_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                     "content": msg.get("content", ""),
                     "content_blocks": [text_block],
                 }
-                # Preserve extra fields (task, wo_eos, mask, etc.)
+                # 保留额外字段（task、wo_eos、mask 等）
                 for key in ("task", "wo_eos", "mask"):
                     if key in msg:
                         new_msg[key] = msg[key]
@@ -459,14 +459,14 @@ def merge_tool_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def sort_tool_results_by_call_order(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
-    Sort tool_result blocks within user messages by the order of tool_calls
-    in the preceding assistant message.
+    按前一条 assistant 消息中 tool_calls 的顺序，
+    对 user 消息内的 tool_result 块进行排序。
 
     Args:
-        messages: Preprocessed message list (after merge_tool_messages).
+        messages: 预处理后的消息列表（已经过 merge_tool_messages）。
 
     Returns:
-        Message list with sorted tool result blocks.
+        tool_result 块已排序的消息列表。
     """
     last_tool_call_order: Dict[str, int] = {}
 
@@ -500,7 +500,7 @@ def sort_tool_results_by_call_order(messages: List[Dict[str, Any]]) -> List[Dict
 
 
 # ============================================================
-# Main Encoding Function
+# 主编码函数
 # ============================================================
 
 def encode_messages(
@@ -512,29 +512,29 @@ def encode_messages(
     reasoning_effort: Optional[str] = None,
 ) -> str:
     """
-    Encode a list of messages into the DeepSeek-V4 prompt format.
+    将消息列表编码为 DeepSeek-V4 提示词格式。
 
-    This is the main entry point for encoding conversations. It handles:
-    - BOS token insertion
-    - Thinking mode with optional reasoning content dropping
-    - Tool message merging into user messages
-    - Multi-turn conversation context
+    这是编码对话的主入口。它负责处理：
+    - BOS token 的插入
+    - thinking 模式及可选的推理内容丢弃
+    - 将 tool 消息合并进 user 消息
+    - 多轮对话上下文
 
     Args:
-        messages: List of message dicts to encode.
-        thinking_mode: Either "chat" or "thinking".
-        context: Optional preceding context messages (already encoded prefix).
-        drop_thinking: If True, drop reasoning_content from earlier assistant turns
-                      (only keep reasoning for messages after the last user message).
-        add_default_bos_token: Whether to prepend BOS token at conversation start.
-        reasoning_effort: Optional reasoning effort level ("max", "high", or None).
+        messages: 要编码的消息字典列表。
+        thinking_mode: "chat" 或 "thinking"。
+        context: 可选的前置上下文消息（已编码的前缀）。
+        drop_thinking: 若为 True，丢弃较早 assistant 轮次的 reasoning_content
+                      （仅保留最后一条 user 消息之后消息的推理内容）。
+        add_default_bos_token: 是否在对话开头添加 BOS token。
+        reasoning_effort: 可选的推理强度级别（"max"、"high" 或 None）。
 
     Returns:
-        The encoded prompt string.
+        编码后的提示词字符串。
     """
     context = context if context else []
 
-    # Preprocess: merge tool messages and sort tool results
+    # 预处理：合并 tool 消息并对工具结果排序
     messages = merge_tool_messages(messages)
     messages = sort_tool_results_by_call_order(context + messages)[len(context):]
     if context:
@@ -545,15 +545,15 @@ def encode_messages(
 
     prompt = bos_token if add_default_bos_token and len(context) == 0 else ""
 
-    # Resolve drop_thinking: if any message has tools defined, don't drop thinking
+    # 确定 drop_thinking：若任一消息定义了 tools，则不丢弃 thinking
     effective_drop_thinking = drop_thinking
     if any(m.get("tools") for m in full_messages):
         effective_drop_thinking = False
 
     if thinking_mode == "thinking" and effective_drop_thinking:
         full_messages = _drop_thinking_messages(full_messages)
-        # After dropping, recalculate how many messages to render
-        # (context may have shrunk too)
+        # 丢弃后重新计算需要渲染的消息数量
+        # （context 也可能随之缩短）
         num_to_render = len(full_messages) - len(_drop_thinking_messages(context))
         context_len = len(full_messages) - num_to_render
     else:
@@ -574,13 +574,13 @@ def encode_messages(
 
 def _drop_thinking_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
-    Drop reasoning_content and non-essential messages before the last user message.
+    丢弃最后一条 user 消息之前的 reasoning_content 及非必要消息。
 
-    Behavior:
-    - Messages with role in ["user", "system", "tool", "latest_reminder"] are always kept.
-    - Messages at or after the last user index are always kept.
-    - Assistant messages before the last user get reasoning_content removed.
-    - Developer messages before the last user are dropped entirely.
+    行为：
+    - role 属于 ["user", "system", "tool", "latest_reminder"] 的消息始终保留。
+    - 位于最后一条 user 索引处及之后的消息始终保留。
+    - 最后一条 user 之前的 assistant 消息会被移除 reasoning_content。
+    - 最后一条 user 之前的 developer 消息会被整条丢弃。
     """
     last_user_idx = find_last_user_index(messages)
     result = []
@@ -594,21 +594,21 @@ def _drop_thinking_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, An
             msg = copy.copy(msg)
             msg.pop("reasoning_content", None)
             result.append(msg)
-        # developer and other roles before last_user_idx are dropped
+        # last_user_idx 之前的 developer 及其他角色消息会被丢弃
 
     return result
 
 
 # ============================================================
-# Parsing (Decoding model output)
+# 解析（解码模型输出）
 # ============================================================
 
 def _read_until_stop(index: int, text: str, stop: List[str]) -> Tuple[int, str, Optional[str]]:
     """
-    Read text from index until one of the stop strings is found.
+    从 index 开始读取文本，直到遇到任一停止字符串为止。
 
     Returns:
-        Tuple of (new_index, content_before_stop, matched_stop_string_or_None).
+        元组 (new_index, content_before_stop, matched_stop_string_or_None)。
     """
     min_pos = len(text)
     matched_stop = None
@@ -629,15 +629,15 @@ def _read_until_stop(index: int, text: str, stop: List[str]) -> Tuple[int, str, 
 
 def parse_tool_calls(index: int, text: str) -> Tuple[int, Optional[str], List[Dict[str, str]]]:
     """
-    Parse DSML tool calls from text starting at the given index.
+    从给定索引开始解析文本中的 DSML 工具调用。
 
     Args:
-        index: Starting position in text.
-        text: The full text to parse.
+        index: 在 text 中的起始位置。
+        text: 要解析的完整文本。
 
     Returns:
-        Tuple of (new_index, last_stop_token, list_of_tool_call_dicts).
-        Each tool call dict has "name" and "arguments" keys.
+        元组 (new_index, last_stop_token, list_of_tool_call_dicts)。
+        每个工具调用字典都包含 "name" 和 "arguments" 键。
     """
     tool_calls: List[Dict[str, Any]] = []
     stop_token = None
@@ -686,24 +686,24 @@ def parse_tool_calls(index: int, text: str) -> Tuple[int, Optional[str], List[Di
 
 def parse_message_from_completion_text(text: str, thinking_mode: str) -> Dict[str, Any]:
     """
-    Parse a model completion text into a structured assistant message.
+    将模型补全文本解析为结构化的 assistant 消息。
 
-    This function takes the raw text output from the model (a single assistant turn)
-    and extracts:
-    - reasoning_content (thinking block)
-    - content (summary/response)
-    - tool_calls (if any)
+    本函数接收模型输出的原始文本（单个 assistant 轮次）
+    并从中提取：
+    - reasoning_content（thinking 块）
+    - content（总结/回复）
+    - tool_calls（如有）
 
-    NOTE: This function is designed to parse only correctly formatted strings and
-    will raise ValueError for malformed output.
+    注意：本函数仅用于解析格式正确的字符串，
+    对格式错误的输出会抛出 ValueError。
 
     Args:
-        text: The raw completion text (including EOS token).
-        thinking_mode: Either "chat" or "thinking".
+        text: 原始补全文本（包含 EOS token）。
+        thinking_mode: "chat" 或 "thinking"。
 
     Returns:
-        Dict with keys: "role", "content", "reasoning_content", "tool_calls".
-        tool_calls are in OpenAI format.
+        包含以下键的字典："role"、"content"、"reasoning_content"、"tool_calls"。
+        其中 tool_calls 为 OpenAI 格式。
     """
     summary_content, reasoning_content, tool_calls = "", "", []
     index, stop_token = 0, None

@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
-# Re-apply the ray-worker STORAGE fixes after the cluster / DaemonSet is (re)created.
+# 在集群 / DaemonSet(重)建之后,重新应用 ray-worker 的存储修复。
 #
-# The H200 k8s ray-gpu-worker DaemonSet ships with `ray start --temp-dir=/ray_local/ray`
-# and no object-store cap. /ray_local is a small (~100 GB), shared local NVMe; on sub-42
-# node runs ray object-spill fills it and kills the workers before step 1. This patch:
-#   1. moves ray temp-dir (logs + object spill) to /ray_spill_local on the 286 GB
-#      container overlay (local, sockets OK, no k8s ephemeral-storage limit), and
-#   2. caps the object store at 230 GB (fits the 256 GB /dev/shm, fewer spills).
-# Idempotent: safe to re-run. Rolls the DaemonSet so all 42 workers pick it up.
+# H200 k8s ray-gpu-worker DaemonSet 自带 `ray start --temp-dir=/ray_local/ray`
+# 且没有 object-store 上限。/ray_local 是块很小(约 100 GB)的共享本地 NVMe;在不足 42
+# 节点的运行中,ray object-spill 会把它写满,worker 在 step 1 之前就被打挂。本补丁:
+#   1. 把 ray temp-dir(日志 + object spill)挪到 286 GB 容器 overlay 上的
+#      /ray_spill_local(本地、socket 可用、不受 k8s ephemeral-storage 限制),并
+#   2. 把 object store 上限设为 230 GB(可装进 256 GB 的 /dev/shm,减少 spill)。
+# 幂等:可安全重跑。会滚动重启 DaemonSet,让全部 42 个 worker 生效。
 #
-# NOTE: deep_ep is now baked into the image (docker/Dockerfile.sft-only). This script
-# does NOT add the old startup `pip install deep_ep ...` line; ensure the DaemonSet's
-# image is a build that includes deep_ep (rebuild Dockerfile.sft-only -> push -> set
-# the DaemonSet/fleet image). See docs/h200_bottleneck_analysis.md and the
-# h200-k8s-16node-runbook memory.
+# 注意:deep_ep 现已固化进镜像(docker/Dockerfile.sft-only)。本脚本
+# 不再添加旧的启动行 `pip install deep_ep ...`;请确保 DaemonSet 使用的
+# 镜像是包含 deep_ep 的构建(重新构建 Dockerfile.sft-only -> push -> 设置
+# DaemonSet/fleet 镜像)。参见 docs/h200_bottleneck_analysis.md 与
+# h200-k8s-16node-runbook 记忆。
 #
-# Usage: cluster/k8s/patch_ray_worker_storage.sh [daemonset-name] [namespace]
+# 用法: cluster/k8s/patch_ray_worker_storage.sh [daemonset-name] [namespace]
 set -euo pipefail
 
 DS="${1:-ray-gpu-worker-h200-k8s-42node}"
@@ -32,9 +32,9 @@ kubectl get ds -n "$NS" "$DS" -o json > "$TMP"
 
 jq --arg obj "$OBJ_STORE_BYTES" '
   .spec.template.spec.containers[0].args[0] |= (
-      # 1. temp-dir + its mkdir from the small /ray_local to the big overlay
+      # 1. 把 temp-dir 及其 mkdir 从小容量的 /ray_local 挪到大容量的 overlay
       gsub("/ray_local/ray"; "/ray_spill_local/ray")
-      # 2. add --object-store-memory before --block, only if not already present
+      # 2. 在 --block 前插入 --object-store-memory(仅当尚未存在时)
       | if test("--object-store-memory") then .
         else gsub("  --block"; "  --object-store-memory=" + $obj + " \\\n  --block") end
     )

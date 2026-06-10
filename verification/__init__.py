@@ -1,1 +1,1 @@
-"""Verification utilities for DeepSeek-V4 Flash training."""
+"""DeepSeek-V4 Flash 训练的验证工具。"""

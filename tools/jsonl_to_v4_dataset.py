@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Convert albaliang-format agent SFT JSONL to V4-compatible format.
+"""将 albaliang 格式的 agent SFT JSONL 转换为 V4 兼容格式。
 
-Source schema (per record, single JSON line, may have blank lines between records):
+Source schema(每条记录占一行 JSON,记录之间可能有空行):
     {
       "id", "conversation_id", "request_id", "user_id",
-      "tools":  str  (JSON-encoded list of OpenAI tools),
+      "tools":  str  (JSON 编码的 OpenAI tools 列表),
       "messages": [
           {"role", "content", "loss", "tool_call_id"},
           ...
@@ -12,33 +12,33 @@ Source schema (per record, single JSON line, may have blank lines between record
       "token_length": int
     }
     role in {system, user, assistant, tool_call, tool}
-    Each `tool_call` carries one call; `tool_call_id` matches a following `tool` row.
+    每个 `tool_call` 携带一次调用;`tool_call_id` 与其后的一个 `tool` 行对应。
 
-Target schema (V4-compatible, one record per line):
+Target schema(V4 兼容,每行一条记录):
     {
       "messages": [
           {"role": "system",     "content": ...},
           {"role": "user",       "content": ...},
-          {"role": "assistant",  "content": ..., "tool_calls": [openai-format ...],
+          {"role": "assistant",  "content": ..., "tool_calls": [OpenAI 格式 ...],
                                   "step_loss_mask": 0|1,
                                   "_loss_content": 0|1, "_loss_tool_calls": [0|1, ...]},
           {"role": "tool",       "content": ..., "tool_call_id": ...},
           ...
       ],
-      "tools": [openai-format tools list, parsed from string],
-      "token_length": int (original)
+      "tools": [OpenAI 格式的 tools 列表,由字符串解析而来],
+      "token_length": int (原始值)
     }
 
-Why custom _loss_* fields:
-    encoding_dsv4 renders an assistant message as one unit (content + tool_calls). The
-    default mask generator marks the whole assistant span as loss=1 (or 0 via
-    step_loss_mask). The source data, however, carries a per-message `loss` flag on the
-    individual sub-pieces (text content and each tool_call). To preserve precision we
-    attach the per-piece losses to the merged assistant message; the V4 mask generator
-    consumes them in a follow-up patch (gen_multi_turn_loss_mask_deepseek_v4).
+为什么要自定义 _loss_* 字段:
+    encoding_dsv4 把一条 assistant 消息渲染为一个整体(content + tool_calls)。
+    默认的 mask 生成器把整个 assistant 区间标为 loss=1(或经 step_loss_mask
+    标为 0)。然而源数据在各个子片段(文本 content 和每个 tool_call)上
+    携带逐消息的 `loss` 标志。为保留这一精度,我们把逐片段的 loss
+    附在合并后的 assistant 消息上;V4 的 mask 生成器会在后续补丁
+    (gen_multi_turn_loss_mask_deepseek_v4)中消费它们。
 
-Filter:
-    Drop records with token_length above --max-tokens (default 32768) or with parse errors.
+过滤:
+    丢弃 token_length 超过 --max-tokens(默认 32768)的记录,以及存在解析错误的记录。
 """
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ from pathlib import Path
 
 
 def parse_tool_call_content(raw: str) -> tuple[str, str] | None:
-    """Source tool_call.content = JSON('{"name":..., "arguments": <json-string>}'). Return (name, arguments-string)."""
+    """源 tool_call.content = JSON('{"name":..., "arguments": <json-string>}')。返回 (name, arguments-string)。"""
     try:
         obj = json.loads(raw)
     except (json.JSONDecodeError, TypeError):
@@ -64,9 +64,9 @@ def parse_tool_call_content(raw: str) -> tuple[str, str] | None:
 
 
 def convert_conversation(src_msgs: list[dict], drop_stats: dict) -> list[dict] | None:
-    """Walk source messages; emit V4-compatible message list. Return None to drop the conv."""
+    """遍历源 messages;产出 V4 兼容的消息列表。返回 None 表示丢弃该对话。"""
     out: list[dict] = []
-    pending_assistant: dict | None = None  # the most recent assistant we're folding tool_calls into
+    pending_assistant: dict | None = None  # 最近一个正在把 tool_calls 折叠进去的 assistant
 
     def flush_pending():
         nonlocal pending_assistant
@@ -105,8 +105,8 @@ def convert_conversation(src_msgs: list[dict], drop_stats: dict) -> list[dict] |
             name, arguments = parsed
             tc_id = m.get("tool_call_id") or f"_synth_{len(out)}_{len(pending_assistant['tool_calls']) if pending_assistant else 0}"
             if pending_assistant is None:
-                # Orphan tool_call without a preceding assistant turn.
-                # Synthesize a stub assistant to hold it (rare; logged via stats).
+                # 孤立的 tool_call,前面没有 assistant 轮次。
+                # 合成一个占位 assistant 来承载它(罕见;通过 stats 记录)。
                 drop_stats["orphan_tool_call_synth_assistant"] += 1
                 pending_assistant = {
                     "role": "assistant",
@@ -136,10 +136,10 @@ def convert_conversation(src_msgs: list[dict], drop_stats: dict) -> list[dict] |
 
     flush_pending()
 
-    # Compute step_loss_mask per merged assistant turn = max of all sub-piece losses.
-    # In the albaliang 057 data this is exact (sub-losses agree within every turn;
-    # verified 0/5900 mismatch on a 5k-record sample). Keep the per-sub-piece
-    # _loss_* fields as forensic provenance for any future precise sub-span mask.
+    # 计算每个合并后 assistant 轮次的 step_loss_mask = 所有子片段 loss 的最大值。
+    # 在 albaliang 057 数据上这是精确的(每一轮内各子 loss 彼此一致;
+    # 在 5k 条记录抽样上验证为 0/5900 不一致)。保留逐子片段的
+    # _loss_* 字段作为留痕依据,便于将来实现精确的子区间 mask。
     for msg in out:
         if msg.get("role") != "assistant":
             continue
@@ -149,7 +149,7 @@ def convert_conversation(src_msgs: list[dict], drop_stats: dict) -> list[dict] |
             msg.pop("tool_calls", None)
             msg.pop("_loss_tool_calls", None)
 
-    # Validate: at least one assistant turn with step_loss_mask=1 (otherwise no training signal).
+    # 校验:至少要有一个 step_loss_mask=1 的 assistant 轮次(否则没有训练信号)。
     has_any_loss = any(
         msg.get("role") == "assistant" and msg.get("step_loss_mask", 0) == 1
         for msg in out
@@ -211,7 +211,7 @@ def main() -> int:
 
             tlen = rec.get("token_length")
             if not isinstance(tlen, int) or tlen <= 0:
-                # we don't trust unknown lengths; skip for safety
+                # 不信任未知长度;为安全起见跳过
                 stats["too_long"] += 1
                 continue
             if tlen > args.max_tokens:

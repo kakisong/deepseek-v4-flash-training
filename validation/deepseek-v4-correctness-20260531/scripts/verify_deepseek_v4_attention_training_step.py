@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
-"""DeepSeek-V4 attention module training-step parity.
+"""DeepSeek-V4 attention 模块训练步一致性校验。
 
-This is a module-level gate between the pure PyTorch dense/sparse paths and the
-TileLang sparse path. It builds three identical DeepSeekV4Attention modules,
-runs one deterministic forward/backward/update step for each implementation,
-and compares:
+这是介于纯 PyTorch dense/sparse 路径与 TileLang sparse 路径之间的模块级门禁。
+它构建三个完全相同的 DeepSeekV4Attention 模块,对每种实现各运行一次确定性的
+forward/backward/update 步骤,并比较:
 
-* forward output
+* forward 输出
 * loss
-* input gradient
-* parameter gradients (finite check)
-* post-SGD parameter state
+* 输入梯度
+* 参数梯度(有限性检查)
+* SGD 更新后的参数状态
 
-The module uses production DeepSeek-V4 attention dimensions (H=8 local heads,
-D=512, RoPE=64, O-LoRA=1024, hidden=4096), but disables compressed KV so the
-check isolates the dense/sparse/tilelang attention implementation swap.
+该模块使用生产环境 DeepSeek-V4 attention 维度(H=8 本地 heads、
+D=512、RoPE=64、O-LoRA=1024、hidden=4096),但禁用压缩 KV,使该
+检查只隔离 dense/sparse/tilelang attention 实现切换本身。
 """
 
 from __future__ import annotations
@@ -120,8 +119,8 @@ def _build_config(compress_ratio: int) -> TransformerConfig:
         dsa_indexer_head_dim=128,
         dsa_indexer_topk=512,
     )
-    # These DeepSeek-V4 fields are carried by the runtime HF/mbridge config but
-    # are not dataclass fields in Megatron's generic TransformerConfig.
+    # 这些 DeepSeek-V4 字段由运行时的 HF/mbridge 配置携带,
+    # 但并不是 Megatron 通用 TransformerConfig 中的 dataclass 字段。
     for key, value in {
         "q_lora_rank": 1024,
         "kv_lora_rank": 512,

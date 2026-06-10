@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Stage A FP8 smoke — single 8-GPU node, V4 4-layer SFT with TE FP8 training.
+# Stage A FP8 smoke — 单节点 8 GPU, V4 4 层 SFT, 启用 TE FP8 训练。
 #
-# This keeps the Stage A topology small and only adds:
-#   - TransformerEngine FP8 blockwise training flags
-#   - DeepSeek V4 KV/indexer FP8 QAT simulation env
+# 保持 Stage A 的小拓扑不变, 仅额外加上:
+#   - TransformerEngine FP8 blockwise 训练标志
+#   - DeepSeek V4 KV/indexer FP8 QAT 模拟环境变量
 #
-# Launch: bash smoke/run_stage_a_fp8_smoke.sh
+# 启动: bash smoke/run_stage_a_fp8_smoke.sh
 
 set -euo pipefail
 

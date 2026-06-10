@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Prepare a persistent Ray head/job-server on the master node only.
+# 只在 master 节点上准备一个常驻的 Ray head/job-server。
 #
-# This is the control-plane path for on-demand training workers:
-#   1. keep the master container + Ray dashboard/job server alive
-#   2. submit scripts can later start worker containers and join them to this head
+# 这是按需拉起训练 worker 的控制面路径:
+#   1. 保持 master 容器 + Ray dashboard/job server 常驻
+#   2. 提交脚本之后可以拉起 worker 容器并让它们加入这个 head
 #
-# It intentionally does not start worker containers.
+# 本脚本有意不启动 worker 容器。
 
 set -euo pipefail
 

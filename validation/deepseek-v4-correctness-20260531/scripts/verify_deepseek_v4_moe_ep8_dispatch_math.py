@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Verify EP=8 all-to-all MoE dispatch/combine math.
+"""校验 EP=8 all-to-all MoE dispatch/combine 数学正确性。
 
-This verifier isolates Megatron's all-to-all token dispatcher used by the
-DeepSeek-V4 MoE path.  It runs on 8 ranks, dispatches deterministic routed
-tokens to expert-parallel ranks, applies a hand-checkable expert formula, then
-combines tokens back and compares forward/backward/update against a direct
-reference.
+本校验器隔离 DeepSeek-V4 MoE 路径所使用的 Megatron all-to-all token
+dispatcher。它在 8 个 rank 上运行,将确定性的路由 token 分发到
+expert-parallel rank,套用一个可手工核算的 expert 公式,然后将 token
+combine 回来,并把 forward/backward/update 与直接参考实现进行比较。
 """
 
 from __future__ import annotations
@@ -81,7 +80,7 @@ def _config(hidden_size: int, num_experts: int, topk: int) -> TransformerConfig:
 
 
 def _expert_scale(expert_id: int, hidden_size: int, device: torch.device) -> torch.Tensor:
-    # Powers of two and small integers are exactly representable in BF16.
+    # 2 的幂与小整数在 BF16 中可以被精确表示。
     value = 1.0 + 0.5 * (expert_id % 4)
     return torch.full((hidden_size,), value, device=device, dtype=torch.bfloat16)
 

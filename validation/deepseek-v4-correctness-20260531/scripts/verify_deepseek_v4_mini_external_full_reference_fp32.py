@@ -1,75 +1,67 @@
 #!/usr/bin/env python3
-"""DeepSeek-V4 loaded mini-checkpoint FP32 strict external full-model reference.
+"""DeepSeek-V4 已加载 mini checkpoint 的 FP32 严格外部全模型参考。
 
-Purpose
--------
-This verifier was written to test whether a true FP32 Miles DeepSeek-V4 runtime
-could close the two remaining open strict boundaries that the BF16 full external
-reference deliberately leaves recorded:
+目的
+----
+编写本校验器是为了检验一个真正 FP32 的 Miles DeepSeek-V4 运行时能否
+关闭 BF16 全外部参考刻意保留记录的两个尚未关闭的严格边界：
 
-* ``strict_mini_backend_logprob_parity`` (FAIL) and
-* ``external_reference_mini_checkpoint_one_step_train_parity`` (FAIL_DIAGNOSTIC).
+* ``strict_mini_backend_logprob_parity``（FAIL），以及
+* ``external_reference_mini_checkpoint_one_step_train_parity``（FAIL_DIAGNOSTIC）。
 
-In BF16 both failures are caused by the *same* physical effect, not by a logic
-error:
+在 BF16 下，这两个失败由*同一个*物理效应导致，而不是逻辑错误：
 
-1. Different attention kernels (dense / sparse / tilelang) accumulate the same
-   math in different float orders, producing ~1 ULP BF16 output drift.
-2. That drift is amplified at the MoE top-k routing boundary: a few tokens sit
-   close enough to a top-k tie that the discrete expert choice flips, so a
-   handful of per-token logprobs move by ``O(0.1)`` while the bulk distribution
-   still agrees to ``relative_l2 ~ 1.5e-5``.
-3. Back-propagating that residual forward drift through the full 4-layer graph
-   blows up on small-norm normalization parameters (``q_norm.weight``) where
-   ``|grad_miles - grad_ref| / |param|`` is large by construction.
+1. 不同的 attention 内核（dense / sparse / tilelang）以不同的浮点顺序
+   累加相同的数学运算，产生约 1 ULP 的 BF16 输出漂移。
+2. 该漂移在 MoE top-k 路由边界被放大：少数 token 距 top-k 平局足够近，
+   导致离散的专家选择发生翻转，于是少量 per-token logprob 偏移达到
+   ``O(0.1)``，而整体分布仍在 ``relative_l2 ~ 1.5e-5`` 水平上保持一致。
+3. 将该残余前向漂移反向传播穿过完整的 4 层计算图时，会在小范数的
+   normalization 参数（``q_norm.weight``）上爆炸，因为
+   ``|grad_miles - grad_ref| / |param|`` 按构造就很大。
 
-The hypothesis under test here is therefore precise and falsifiable:
+因此这里待检验的假设是精确且可证伪的：
 
-    **If the residual is purely BF16 rounding, then running the *identical*
-    math in FP32 must make the strict gaps collapse: the score-routed layer
-    stops flipping (router maps match exactly under independent routing), the
-    logit/loss gaps fall to FP32-epsilon scale, and the selected-gradient
-    strict delta drops back under its own 0.01 threshold without any routing
-    replay.**
+    **如果残差纯粹是 BF16 舍入，那么以 FP32 运行*完全相同*的数学运算
+    必然使严格差距坍缩：score 路由层停止翻转（独立路由下 router map
+    完全一致），logit/loss 差距降至 FP32-epsilon 量级，并且 selected
+    gradient 严格 delta 在不做任何路由 replay 的情况下回落到其自身的
+    0.01 阈值之下。**
 
-If that collapse happened, the BF16 ``FAIL`` could honestly upgrade to
-"FP32 strict PASS; BF16 is a documented precision boundary". If it did *not*
-collapse in FP32, that would be exactly the real-bug signal this scaffolding is
-built to catch.
+如果发生了这种坍缩，BF16 的 ``FAIL`` 就可以诚实地升级为
+"FP32 严格 PASS；BF16 是有记录的精度边界"。如果在 FP32 下*没有*
+坍缩，那正是这套脚手架要捕捉的真实 bug 信号。
 
-The attempted 8-rank run on 2026-06-01 found an earlier boundary: the current
-Miles DeepSeek-V4 production runtime cannot instantiate this path in true FP32.
-``DeepSeekV4Attention`` asserts BF16 projection weights during model
-construction, and several DeepSeek-V4 kernel/helper paths assume BF16 input. See
-``artifacts/deepseek-v4-fp32-strict-closure-attempt-20260601.json``.
+2026-06-01 尝试的 8-rank 运行发现了一个更早的边界：当前的 Miles
+DeepSeek-V4 生产运行时无法以真正的 FP32 实例化这条路径。
+``DeepSeekV4Attention`` 在模型构造期间断言投影权重为 BF16，并且若干
+DeepSeek-V4 内核/辅助路径假定输入为 BF16。参见
+``artifacts/deepseek-v4-fp32-strict-closure-attempt-20260601.json``。
 
-Design
-------
-This script reuses the proven explicit reference math from
-``verify_deepseek_v4_mini_external_full_reference`` verbatim (embedding, four
-DeepSeek-V4 layers, dense attention reference, EP=8 hash-/score-routed MoE,
-final norm, output head, SFT loss, and the selected non-expert backward/update
-delta). The only differences are:
+设计
+----
+本脚本逐字复用 ``verify_deepseek_v4_mini_external_full_reference``
+中已验证的显式参考数学（embedding、四个 DeepSeek-V4 层、dense attention
+参考、EP=8 hash 路由/score 路由 MoE、最终 norm、输出头、SFT loss，以及
+selected 非专家 backward/update delta）。仅有的差异是：
 
-* the Miles/Megatron model and the explicit reference are both forced to FP32
-  (``--bf16``/``--fp16``/``--fp8`` off, KV-QAT quantization off by default) so
-  that the comparison isolates floating-point precision rather than the QAT or
-  block-scaling paths;
-* routing is **independent** by default (no Miles router-map replay): the strong
-  claim is that FP32 removes the branch flips, so replay must be unnecessary;
-* per-layer router maps are captured and the artifact FAILs if any router map
-  still flips in FP32 (configurable via ``--allow-router-map-flip``);
-* thresholds default to an FP32-strict profile, and a ``fp32_mode_not_realized``
-  guard refuses to emit a PASS if the model did not actually load in FP32.
+* Miles/Megatron 模型与显式参考都被强制为 FP32
+  （``--bf16``/``--fp16``/``--fp8`` 关闭，KV-QAT 量化默认关闭），从而使
+  比较只隔离浮点精度本身，而不是 QAT 或 block-scaling 路径；
+* 路由默认是**独立的**（不做 Miles router-map replay）：强论断是 FP32
+  会消除分支翻转，因此 replay 必须是不必要的；
+* 捕获每层的 router map，若任何 router map 在 FP32 下仍发生翻转，
+  artifact 记为 FAIL（可通过 ``--allow-router-map-flip`` 配置）；
+* 阈值默认采用 FP32 严格档位，并由 ``fp32_mode_not_realized`` 守卫在
+  模型并未真正以 FP32 加载时拒绝输出 PASS。
 
-Full local-expert EP all-to-all backward/update remains covered by the dedicated
-real EP=8 MoELayer reference, for the same distributed-reduction reason given in
-the BF16 verifier; expert parameters are excluded from the selected backward
-check here.
+完整的 local-expert EP all-to-all backward/update 仍由专用的真实 EP=8
+MoELayer 参考覆盖，原因与 BF16 校验器中给出的分布式归约原因相同；
+专家参数被排除在此处的 selected backward 检查之外。
 
-Status: diagnostic verifier kept for reproducibility. On the current Miles
-DeepSeek-V4 runtime it is expected to fail before checkpoint load if it truly
-forces FP32; that failure is the recorded result, not a numerical parity result.
+状态：为可复现性而保留的诊断校验器。在当前 Miles DeepSeek-V4 运行时上，
+若它真正强制 FP32，预期会在 checkpoint 加载之前就失败；该失败即为记录
+的结果，而不是数值一致性结果。
 """
 
 from __future__ import annotations
@@ -101,21 +93,20 @@ if str(SCRIPT_DIR) not in sys.path:
 
 try:
     from tools import verify_deepseek_v4_mini_external_full_reference as base
-except (ImportError, ModuleNotFoundError):  # pragma: no cover - bare-path execution on cluster
+except (ImportError, ModuleNotFoundError):  # pragma: no cover - 集群上以裸路径方式执行
     import verify_deepseek_v4_mini_external_full_reference as base
 
 
-# FP32-strict tolerance profile. These are intentionally tight: the whole point
-# is that an FP32 run of the *same* math collapses the BF16 gaps. The selected
-# gradient thresholds are deliberately left at the BF16 verifier's values
-# (1e-2) so that "now it passes" is a meaningful, like-for-like result rather
-# than a moved goalpost.
+# FP32 严格容差档位。这些阈值刻意收得很紧：重点正是要证明对*相同*数学
+# 运算的 FP32 运行能使 BF16 差距坍缩。selected gradient 阈值刻意保持为
+# BF16 校验器的取值（1e-2），这样"现在通过了"才是一个有意义的、
+# 同口径可比的结果，而不是被挪动的门槛。
 FP32_THRESHOLDS = {
     "max_logit_abs": 5e-2,
     "max_logit_mean_abs": 2e-3,
     "max_logit_p99_abs": 1e-2,
     "max_logit_rel_gap": 5e-6,
-    "max_loss_abs": 1.0,            # sum-loss guard; per-token below is the binding gate
+    "max_loss_abs": 1.0,            # sum-loss 守卫；下面的 per-token 才是起约束作用的门控
     "max_loss_abs_per_token": 1e-4,
     "max_token_count_abs": 0.0,
     "max_selected_grad_abs": 1e-2,
@@ -166,16 +157,16 @@ def _parse_args() -> argparse.Namespace:
     args.rank = int(os.getenv("RANK", "0"))
     args.world_size = int(os.getenv("WORLD_SIZE", "1"))
 
-    # --- force FP32 everywhere ---------------------------------------------
+    # --- 全程强制 FP32 -------------------------------------------------------
     args.bf16 = False
     args.fp16 = False
     args.fp8 = None
     args.fp8_recipe = None
-    # Independent routing is the strong claim: FP32 should make replay needless.
+    # 独立路由是这里的强论断：FP32 应当使 replay 变得不必要。
     args.replay_miles_routing = False
-    # Capture per-layer outputs (incl. router maps) so we can assert collapse.
+    # 捕获每层输出（含 router map），以便断言差距坍缩。
     args.debug_layer_gaps = True
-    # Tight FP32-strict thresholds (single source of truth for this verifier).
+    # 收紧的 FP32 严格阈值（本校验器的唯一权威来源）。
     for key, value in FP32_THRESHOLDS.items():
         setattr(args, key, value)
     args.tolerance_profile = "fp32_strict_external_reference"
@@ -224,7 +215,7 @@ def main() -> int:
         raw_model = base._unwrap_model(model[0])
         model_config = raw_model.config
 
-        # Hard guard: refuse to emit a PASS if FP32 was not actually realized.
+        # 硬性守卫：若 FP32 并未真正生效，则拒绝输出 PASS。
         param_dtypes = sorted({str(p.dtype) for p in model[0].parameters()})
         fp32_realized = param_dtypes == ["torch.float32"]
 
@@ -275,8 +266,8 @@ def main() -> int:
             "packed_seq_params": get_packed_seq_params(batch, args),
             "loss_mask": batch["full_loss_masks"],
         }
-        # Independent routing => capture Miles router maps to compare against the
-        # reference's independently computed routing maps.
+        # 独立路由 => 捕获 Miles 的 router map，与参考实现独立计算出的
+        # 路由 map 进行比较。
         miles_traces, hooks = base._capture_decoder_layer_outputs(
             model[0],
             first_layer_submodules=False,
@@ -297,7 +288,7 @@ def main() -> int:
                 model[0],
                 batch["tokens"],
                 trace=ref_traces,
-                replay_trace=None,  # independent routing
+                replay_trace=None,  # 独立路由
             )
             if not torch.isfinite(ref_logits).all():
                 raise RuntimeError("reference logits contain non-finite values")
@@ -366,9 +357,9 @@ def main() -> int:
         dist.all_gather_object(gathered_failures, local_failures)
         failures = sorted({item for row in gathered_failures for item in row})
 
-        # The headline claim: FP32 removes the score-routed branch flips, so
-        # independent routing matches exactly. A residual flip is fatal unless
-        # explicitly allowed (then it is recorded as a diagnostic).
+        # 核心论断：FP32 消除了 score 路由的分支翻转，因此独立路由应当
+        # 完全一致。残余翻转是致命的，除非显式允许（此时只作为诊断信息
+        # 记录下来）。
         if router_summary["flipped_layers"] and not args.allow_router_map_flip:
             if "router_map_flip_in_fp32" not in failures:
                 failures.append("router_map_flip_in_fp32")

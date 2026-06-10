@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Prepare DeepSeek-V4-Flash checkpoints on the current K8s Ray cluster.
+# 在当前 K8s Ray 集群上准备 DeepSeek-V4-Flash checkpoint。
 #
-# Pipeline:
-#   1. FP8 HF/MegaBlocks source -> BF16 HF unpacked.
-#   2. BF16 HF unpacked -> Megatron torch_dist.
+# 流水线:
+#   1. FP8 HF/MegaBlocks 源 -> BF16 HF unpacked。
+#   2. BF16 HF unpacked -> Megatron torch_dist。
 #
-# Defaults match the current FSX layout:
+# 默认值与当前 FSX 目录布局一致:
 #   source: $V4_MODELS/DeepSeek-V4-Flash
 #   bf16:   $V4_MODELS/DeepSeek-V4-Flash-bf16-unpacked
 #   dist:   $V4_MODELS/DeepSeek-V4-Flash-FP8_torch_dist

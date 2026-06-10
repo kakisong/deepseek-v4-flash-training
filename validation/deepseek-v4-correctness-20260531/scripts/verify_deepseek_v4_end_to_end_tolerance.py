@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""Validate DeepSeek-V4 end-to-end BF16 tolerance evidence.
+"""校验 DeepSeek-V4 端到端 BF16 容差证据。
 
-This verifier is intentionally separate from strict parity checks.  Strict
-rtol/atol logprob parity is still recorded as failing for the real non-injected
-forward path.  The purpose here is to assert a narrower but operationally useful
-claim: the real mini-checkpoint backend drift is finite, bounded to a BF16
-runtime envelope, and the training update path passes once the localized
-attention forward-value drift is removed.
+本校验器有意与严格一致性检查分离。对于真实的非注入前向路径,严格的
+rtol/atol logprob 一致性仍记录为失败。这里的目的是断言一个范围更窄但
+在工程上有用的结论:真实 mini-checkpoint 的后端漂移是有限的、被约束在
+BF16 运行时容差包络内,并且一旦消除局部化的 attention 前向数值漂移,
+训练更新路径即可通过。
 """
 
 import argparse

@@ -1,19 +1,19 @@
 """
-Verification harness for the BF16 -> dpsk FP8/FP4 round-trip.
+BF16 -> dpsk FP8/FP4 往返转换的验证工具。
 
-Subcommands:
-  micro     : per-tensor closed loop on the ORIGINAL dir. For sampled tensors:
-              (a) dequant original (q,s) -> bf16_a, and confirm bf16_a == the
-                  bf16-unpacked source tensor (validates name map + dequant);
-              (b) requant bf16_src with the forward quantizers -> dequant again
-                  -> bf16_b, assert bf16_b == bf16_a BITWISE (idempotency);
-              (c) report byte-match ratio between requant (q,s) and original.
-  keymap    : every dpsk weight name in TEMPLATE maps to an HF name present in
-              the bf16-unpacked index (coverage of the name map).
-  struct    : compare two dpsk dirs (A: new vs original) — tensor name set,
-              per-tensor dtype + shape, and index weight_map keys must be equal.
-  cmp-bf16  : compare two HF bf16 dirs (B: re-dequant'd new vs bf16-unpacked)
-              tensor-by-tensor, BITWISE; report mismatches + max abs diff.
+子命令:
+  micro     : 在原始目录上做逐 tensor 的闭环验证。对抽样的 tensor:
+              (a) 反量化原始 (q,s) -> bf16_a,并确认 bf16_a ==
+                  bf16-unpacked 源 tensor(验证名称映射 + 反量化);
+              (b) 用正向量化器对 bf16_src 重新量化 -> 再次反量化
+                  -> bf16_b,断言 bf16_b == bf16_a 逐位相等(幂等性);
+              (c) 报告重新量化的 (q,s) 与原始之间的字节匹配率。
+  keymap    : TEMPLATE 中的每个 dpsk 权重名都要映射到 bf16-unpacked
+              index 中已存在的 HF 名称(名称映射的覆盖率)。
+  struct    : 比较两个 dpsk 目录(A:新目录 vs 原始目录)— tensor 名集合、
+              逐 tensor 的 dtype + shape,以及 index weight_map 的键必须相等。
+  cmp-bf16  : 比较两个 HF bf16 目录(B:重新反量化的新目录 vs bf16-unpacked),
+              逐 tensor、逐位比较;报告不匹配数 + 最大绝对差。
 """
 
 from __future__ import annotations
@@ -67,20 +67,20 @@ def cmd_micro(args):
     orig = Dir(args.template)
     hf = Dir(args.hf_src)
 
-    # representative dpsk weight bases across all quant classes
+    # 覆盖所有量化类别的代表性 dpsk 权重 base
     samples = [
         "layers.0.attn.wq_a",            # fp8
-        "layers.0.attn.wq_b",            # fp8 (other block shape)
+        "layers.0.attn.wq_b",            # fp8(另一种 block 形状)
         "layers.0.attn.wkv",             # fp8
         "layers.0.attn.wo_a",            # fp8
         "layers.0.attn.wo_b",            # fp8
-        "layers.0.ffn.shared_experts.w1",# fp8 (shared)
-        "layers.0.ffn.experts.0.w1",     # fp4 (routed)
-        "layers.0.ffn.experts.0.w2",     # fp4 (routed, K=2048)
-        "layers.0.ffn.experts.7.w3",     # fp4 (routed)
-        "layers.21.ffn.experts.100.w1",  # fp4 deeper layer/expert
+        "layers.0.ffn.shared_experts.w1",# fp8(共享专家)
+        "layers.0.ffn.experts.0.w1",     # fp4(路由专家)
+        "layers.0.ffn.experts.0.w2",     # fp4(路由专家,K=2048)
+        "layers.0.ffn.experts.7.w3",     # fp4(路由专家)
+        "layers.21.ffn.experts.100.w1",  # fp4 更深层的 layer/expert
         "mtp.0.e_proj",                  # fp8 (mtp)
-        "mtp.0.ffn.experts.0.w1",        # fp4 (mtp routed)
+        "mtp.0.ffn.experts.0.w1",        # fp4(mtp 路由专家)
     ]
     n_ok = 0
     for base in samples:
@@ -91,7 +91,7 @@ def cmd_micro(args):
         s = orig.get(sn).to(dev)
         is_fp4 = (q.dtype == torch.int8 and _is_routed_expert(wn))
         deq = dequant_fp4 if is_fp4 else dequant_fp8
-        bf16_a = deq(q, s)                                   # original dequant
+        bf16_a = deq(q, s)                                   # 原始反量化
 
         hf_name = map_name_megablocks_to_hf(wn)
         bf16_src = hf.get(hf_name).to(dev)
@@ -101,7 +101,7 @@ def cmd_micro(args):
         assert tuple(qw.shape) == tuple(q.shape), f"{wn} requant weight shape {qw.shape} != {q.shape}"
         assert tuple(sc.shape) == tuple(s.shape), f"{wn} requant scale shape {sc.shape} != {s.shape}"
         assert qw.dtype == q.dtype and sc.dtype == s.dtype
-        bf16_b = deq(qw.to(dev), sc.to(dev))                 # requant -> dequant
+        bf16_b = deq(qw.to(dev), sc.to(dev))                 # 重新量化 -> 再反量化
         eq_round = torch.equal(bf16_b, bf16_a)
 
         wbyte = (qw.view(torch.uint8) == q.view(torch.uint8)).float().mean().item()
@@ -124,7 +124,7 @@ def cmd_keymap(args):
     missing = []
     for name in tmpl_map:
         if name.endswith(".scale"):
-            continue  # scales are regenerated, not sourced
+            continue  # scale 是重新生成的,不从源读取
         hf_name = map_name_megablocks_to_hf(name)
         if hf_name not in hf_map:
             missing.append((name, hf_name))
@@ -145,7 +145,7 @@ def cmd_struct(args):
         for k in list(set(ia) ^ set(ib))[:20]:
             print("   ", k)
         raise SystemExit("struct FAILED (index keys)")
-    # per-shard header dtype+shape
+    # 逐 shard 比较 header 的 dtype+shape
     bad = 0
     shards = sorted(set(ia.values()))
     for sh in shards:
@@ -163,12 +163,12 @@ def cmd_struct(args):
 
 
 def cmd_cmp_dequant(args):
-    """Verification B (cheap, full-coverage, no 543GB write):
+    """验证 B(代价低、全覆盖、无需写 543GB):
 
-    Dequant every weight of the NEW dpsk ckpt with the SAME functions the reverse
-    tool (megablocks_to_hf_bf16.py) uses, map to HF name, and compare BITWISE to
-    the bf16-unpacked dir. If this is identical for all tensors, running the real
-    reverse tool is guaranteed to reproduce bf16-unpacked exactly.
+    用反向工具(megablocks_to_hf_bf16.py)所用的同一组函数,对新 dpsk ckpt 的
+    每个权重做反量化,映射到 HF 名称,并与 bf16-unpacked 目录
+    逐位比较。如果所有 tensor 都一致,那么运行真正的
+    反向工具必然能精确复现 bf16-unpacked。
     """
     dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     new = Dir(args.new)
@@ -189,7 +189,7 @@ def cmd_cmp_dequant(args):
             is_fp4 = (q.dtype == torch.int8 and _is_routed_expert(wn))
             deq = (dequant_fp4 if is_fp4 else dequant_fp8)(q, s)
         else:
-            deq = q  # copy tensor
+            deq = q  # 原样复制的 tensor
         ref = hf.get(map_name_megablocks_to_hf(wn)).to(dev)
         if deq.dtype != ref.dtype or deq.shape != ref.shape:
             print(f"[cmp-dequant] {wn}: dtype/shape {deq.dtype}{tuple(deq.shape)} vs {ref.dtype}{tuple(ref.shape)}")

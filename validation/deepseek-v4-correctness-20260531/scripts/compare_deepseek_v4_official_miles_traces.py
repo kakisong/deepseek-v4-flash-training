@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare official-inference and Miles DeepSeek-V4 trace tensors."""
+"""比较官方推理实现与 Miles 的 DeepSeek-V4 trace tensor。"""
 
 from __future__ import annotations
 

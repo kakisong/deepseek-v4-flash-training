@@ -1,7 +1,7 @@
-"""Test: tilelang bwd with NO masking at all (all topk indices valid).
+"""测试:完全不带 mask 的 tilelang bwd(所有 topk 索引均有效)。
 
-If NaN still appears, the bug is independent of -1 masking — it's intrinsic to the
-kernel for V4 shapes. If NaN goes away, then it's masking-related.
+若 NaN 仍然出现,则该 bug 与 -1 mask 无关 — 是 kernel 在 V4 形状下
+的固有问题。若 NaN 消失,则与 mask 相关。
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ def main():
     kv = torch.randn(B, S_kv, D, dtype=torch.bfloat16, device=device, generator=g)
     attn_sink = torch.zeros(H, dtype=torch.float32, device=device)
 
-    # All valid indices (no -1)
+    # 全部为有效索引(没有 -1)
     topk_idxs = torch.randint(0, S_kv, (B, S, topk), dtype=torch.int32, device=device, generator=g)
 
     print(f"shapes: q={tuple(q.shape)} kv={tuple(kv.shape)} topk={topk_idxs.shape[-1]}")

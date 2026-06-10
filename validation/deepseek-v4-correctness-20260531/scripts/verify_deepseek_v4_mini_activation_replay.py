@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""DeepSeek-V4 mini-checkpoint activation replay probe.
+"""DeepSeek-V4 mini checkpoint 激活值 replay 探针。
 
-This verifier records per-rank activations from one backend, then replays those
-activations into another backend at selected module boundaries. It is a
-full-model drift localization probe for the Miles/Megatron mini checkpoint; it
-does not replace an external reference parity test.
+本校验器先记录某一后端的逐 rank 激活值,然后在选定的模块边界处把这些
+激活值 replay 到另一后端。它是面向 Miles/Megatron mini checkpoint 的
+全模型漂移定位探针;不能替代外部参考实现的一致性测试。
 """
 
 from __future__ import annotations

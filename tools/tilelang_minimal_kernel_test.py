@@ -1,6 +1,6 @@
-"""Minimal test: replace the V4 bwd kernel body with empty body, see if T.clear works.
+"""最小化测试:把 V4 bwd kernel 的主体替换为空实现,验证 T.clear 是否生效。
 
-If T.clear properly initializes acc_dq to 0, the dq output should be all zeros (not NaN).
+如果 T.clear 能把 acc_dq 正确初始化为 0,那么 dq 输出应当全为零(而不是 NaN)。
 """
 
 import tilelang
@@ -13,19 +13,19 @@ from tilelang import language as T
     pass_configs={
         tilelang.PassConfigKey.TL_DISABLE_TMA_LOWER: True,
         tilelang.PassConfigKey.TL_DISABLE_WARP_SPECIALIZED: True,
-        # Aggressive merge aliases acc_dkv_shared with other shared buffers,
-        # corrupting dQ/KV state. Keep this OFF.
+        # 激进合并会让 acc_dkv_shared 与其他 shared buffer 产生别名,
+        # 破坏 dQ/KV 状态。保持关闭。
         # tilelang.PassConfigKey.TL_ENABLE_AGGRESSIVE_SHARED_MEMORY_MERGE: True,
     },
 )
 def make_minimal_kernel(B, S, H, D, threads=128):
-    """Mirror the V4 bwd kernel structure but with synthetic constants — to isolate
-    which part of the pipeline turns numbers into NaN."""
+    """复刻 V4 bwd kernel 的结构,但使用人造常量 — 用于隔离
+    流水线中究竟是哪一段把数值变成了 NaN。"""
     padded_H = max(tilelang.math.next_power_of_2(H), 16)
     block_H = min(64, padded_H)
     NH = padded_H // block_H
     BS = 32
-    NS = 2  # short loop, 2 iterations
+    NS = 2  # 短循环,2 次迭代
     q_shape = [B, S, H, D]
     kv_shape = [B, S, D]
     dtype = T.bfloat16
@@ -87,7 +87,7 @@ def make_minimal_kernel(B, S, H, D, threads=128):
                 T.gemm(P_shared_cast, dO_shared, acc_dkv, transpose_A=True,
                        policy=T.GemmWarpPolicy.FullCol)
 
-                # dKV split_store atomic write
+                # dKV 的 split_store 原子写入
                 for s in range(split_store):
                     for bi_i, d_i in T.Parallel(BS, D):
                         if bi_i < BS // split_store:

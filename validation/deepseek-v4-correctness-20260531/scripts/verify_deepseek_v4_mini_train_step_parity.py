@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""DeepSeek-V4 mini-checkpoint one-step training parity.
+"""DeepSeek-V4 迷你 checkpoint 的单步训练一致性校验。
 
-This verifier loads the same Miles/Megatron mini checkpoint and the same dumped
-training batch, then runs one deterministic SFT step for each attention backend:
+本校验器加载同一份 Miles/Megatron 迷你 checkpoint 与同一份导出的
+训练批次，然后对每个 attention 后端执行一次确定性的 SFT 步骤：
 
 * ``MEGATRON_SPARSE_ATTN_IMPL=dense``
 * ``MEGATRON_SPARSE_ATTN_IMPL=sparse``
 * ``MEGATRON_SPARSE_ATTN_IMPL=tilelang``
 
-For each backend it runs forward, SFT loss, backward, finite-gradient checks,
-and one manual SGD update on the loaded model. It then compares scalar loss,
-selected gradients, and selected post-update parameter tensors. The check is an
-end-to-end Miles/Megatron backend parity probe; it is still not an external
-HF/Transformers reference parity test.
+对每个后端，它在已加载的模型上依次执行前向、SFT loss、反向、
+梯度有限性检查，以及一次手动 SGD 更新。随后对比标量 loss、
+选定的梯度以及选定的更新后参数 tensor。本检查是一个
+端到端的 Miles/Megatron 后端一致性探针；它仍然不是与外部
+HF/Transformers 参考实现的一致性测试。
 """
 
 from __future__ import annotations
@@ -225,7 +225,7 @@ def _summarize_log(loss_log: dict[str, list[str] | torch.Tensor]) -> dict[str, f
     if not isinstance(keys, list) or not torch.is_tensor(values):
         return {}
     vals = values.detach().float().cpu().tolist()
-    # values[0] is sample/token count; the remaining values match keys.
+    # values[0] 是样本/token 计数；其余的值与 keys 一一对应。
     result = {"count": float(vals[0])} if vals else {}
     for key, value in zip(keys, vals[1:], strict=False):
         result[str(key)] = float(value)
@@ -302,9 +302,9 @@ def _manual_update_param(param: torch.nn.Parameter, grad_buffer: torch.Tensor, a
     lr = args.manual_adamw_lr if args.manual_adamw_lr is not None else args.manual_sgd_lr
     grad = grad_buffer.detach().float()
     param_fp32 = param.detach().float()
-    # First AdamW step from zero moments. Bias correction reduces m_hat/v_hat to
-    # grad and grad**2, so no persistent optimizer state is needed for this
-    # one-step parity check.
+    # 从零矩状态开始的第一步 AdamW。偏置校正会把 m_hat/v_hat 化简为
+    # grad 和 grad**2，因此本单步一致性检查无需持久化的
+    # 优化器状态。
     update = grad / (grad.abs() + args.manual_adamw_eps)
     updated = param_fp32.mul(1.0 - lr * args.manual_adamw_weight_decay).add(update, alpha=-lr)
     param.copy_(updated.to(dtype=param.dtype))

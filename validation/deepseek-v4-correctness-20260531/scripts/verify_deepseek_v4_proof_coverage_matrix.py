@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build and validate the DeepSeek-V4 proof coverage matrix."""
+"""构建并校验 DeepSeek-V4 证明覆盖矩阵。"""
 
 import argparse
 import json

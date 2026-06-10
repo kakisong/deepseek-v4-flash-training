@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Validate the official-vs-Miles BF16 forward tolerance gate.
+"""校验官方实现与 Miles 之间的 BF16 前向容差门禁。
 
-This verifier is deliberately not a strict parity gate.  The official inference
-reference and the Miles/Megatron training runtime still fail strict response
-logprob parity at rtol=2e-3/atol=2e-2.  The gate here records the narrower claim
-that the remaining official-vs-Miles forward drift is bounded by an explicit
-BF16 tolerance envelope, and that external one-step train parity must stay
-blocked until strict official/reference forward parity passes.
+该校验器有意不作为严格一致性（parity）门禁。官方推理参考实现与
+Miles/Megatron 训练运行时在 rtol=2e-3/atol=2e-2 下仍无法通过严格的
+response logprob 一致性校验。此处的门禁记录的是一个更窄的结论：
+剩余的官方与 Miles 之间的前向漂移被一个显式的 BF16 容差包络所约束，
+并且在严格的官方/参考前向一致性通过之前，外部单步训练一致性
+必须保持阻塞状态。
 """
 
 import argparse

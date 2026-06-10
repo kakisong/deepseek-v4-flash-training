@@ -1,28 +1,28 @@
 #!/usr/bin/env bash
-# Bring up (or tear down) the production H200 42-node Ray cluster on Kubernetes.
+# 在 Kubernetes 上拉起(或拆除)生产环境 H200 42 节点 Ray 集群。
 #
-# This is the k8s analogue of cluster/bring_up_cluster.sh (which is the ssh/docker path for the
-# H20 / bare-metal H200 fleets). It applies the plain Deployment + Service + DaemonSet captured
-# in this directory — there is NO KubeRay operator in this cluster, so "bring up the containers"
-# == kubectl apply these manifests and wait for their pods.
+# 本脚本是 cluster/bring_up_cluster.sh(即 H20 / 裸金属 H200 fleet 使用的 ssh/docker 路径)
+# 在 k8s 侧的对应物。它直接 apply 本目录中保存的普通 Deployment + Service + DaemonSet——
+# 这个集群里没有 KubeRay operator,所以"拉起容器"
+# == kubectl apply 这些 manifests 并等待对应的 pods 就绪。
 #
-# Order is load-bearing: the head must exist first, because every worker pod blocks up to 300 s
-# waiting for the head GCS at 10.3.234.60:6379 before `ray start` (baked into ray-gpu-worker.yaml).
-# So: apply head -> wait head Ready -> apply workers -> wait DaemonSet rolled out -> verify Ray
-# capacity (43 nodes / 336 GPU) by exec'ing `ray status` inside the head pod.
+# 顺序至关重要:必须先有 head,因为每个 worker pod 在执行 `ray start` 前会阻塞最多 300 s,
+# 等待位于 10.3.234.60:6379 的 head GCS(该逻辑写死在 ray-gpu-worker.yaml 中)。
+# 因此:apply head -> 等待 head Ready -> apply workers -> 等待 DaemonSet 滚动完成 -> 在
+# head pod 内 exec `ray status` 校验 Ray 容量(43 节点 / 336 GPU)。
 #
-# The worker manifest is already the post-patch state (overlay temp-dir, 230 GB object store,
-# deep_ep wheel) — a fresh apply needs no follow-up cluster/k8s/patch_ray_worker_storage.sh.
+# worker manifest 已经是打完补丁后的状态(overlay temp-dir、230 GB object store、
+# deep_ep wheel)——全新 apply 之后无需再补跑 cluster/k8s/patch_ray_worker_storage.sh。
 #
-# Usage:
-#   kuberay/h200-k8s-42node/bring_up.sh                 # apply head+workers, wait, verify
-#   kuberay/h200-k8s-42node/bring_up.sh --dry-run       # server-side validate manifests only
-#   kuberay/h200-k8s-42node/bring_up.sh --head-only     # head Deployment + Service only
-#   kuberay/h200-k8s-42node/bring_up.sh --no-verify     # skip the ray-status capacity gate
-#   kuberay/h200-k8s-42node/bring_up.sh --delete        # tear the whole cluster down
+# 用法:
+#   kuberay/h200-k8s-42node/bring_up.sh                 # apply head+workers,等待并校验
+#   kuberay/h200-k8s-42node/bring_up.sh --dry-run       # 仅对 manifests 做服务端校验
+#   kuberay/h200-k8s-42node/bring_up.sh --head-only     # 仅 head Deployment + Service
+#   kuberay/h200-k8s-42node/bring_up.sh --no-verify     # 跳过 ray-status 容量门禁
+#   kuberay/h200-k8s-42node/bring_up.sh --delete        # 拆除整个集群
 #
-# Env overrides: V4_K8S_NAMESPACE (default ray-system), V4_EXPECTED_GPUS (336),
-# V4_EXPECTED_RAY_NODES (43), HEAD_TIMEOUT (300s), WORKER_TIMEOUT (600s).
+# 可用环境变量覆盖:V4_K8S_NAMESPACE(默认 ray-system)、V4_EXPECTED_GPUS(336)、
+# V4_EXPECTED_RAY_NODES(43)、HEAD_TIMEOUT(300s)、WORKER_TIMEOUT(600s)。
 set -euo pipefail
 
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
@@ -57,7 +57,7 @@ done
 command -v kubectl >/dev/null || { echo "[err] kubectl not found" >&2; exit 1; }
 [[ -f "$HEAD_YAML" && -f "$WORKER_YAML" ]] || { echo "[err] manifests missing next to $0" >&2; exit 1; }
 
-# ---------- teardown ----------------------------------------------------------
+# ---------- 拆除 --------------------------------------------------------------
 if [[ "$MODE" == delete ]]; then
   echo "=== Deleting Ray cluster in namespace $NS (workers first, then head) ==="
   kubectl delete -f "$WORKER_YAML" --ignore-not-found
@@ -75,7 +75,7 @@ if (( DRY_RUN == 1 )); then
   exit 0
 fi
 
-# ---------- soft preflight ----------------------------------------------------
+# ---------- 软性预检 ----------------------------------------------------------
 if [[ ! -f "$DEEPEP_WHEEL" ]]; then
   echo "[warn] deep_ep wheel not found on fsx: $DEEPEP_WHEEL"
   echo "[warn]   workers start anyway (pip line is '|| true'), but PRESET_MOE_DEEPEP=1 will fail."
@@ -99,7 +99,7 @@ kubectl apply -f "$WORKER_YAML"
 echo "=== waiting for DaemonSet rollout (timeout $WORKER_TIMEOUT) ==="
 kubectl rollout status "ds/$WORKER_DS" -n "$NS" --timeout="$WORKER_TIMEOUT"
 
-# ---------- verify ------------------------------------------------------------
+# ---------- 校验 ---------------------------------------------------------------
 if (( VERIFY == 0 )); then
   echo "[done] applied (verification skipped)"
   exit 0
@@ -107,7 +107,7 @@ fi
 
 echo
 echo "=== Phase 3: verifying Ray capacity from inside the head pod ==="
-# Workers dial the head GCS with up to a 300 s backoff; give them a beat before counting.
+# worker 连接 head GCS 的回退等待最长可达 300 s;开始统计前先稍等片刻。
 sleep 10
 kubectl exec -n "$NS" "deploy/$HEAD_DEPLOY" -c "$HEAD_CONTAINER" -- \
   env EXPECTED_GPUS="$EXPECTED_GPUS" EXPECTED_NODES="$EXPECTED_NODES" \
@@ -121,7 +121,7 @@ import ray
 want_gpus = int(os.environ["EXPECTED_GPUS"])
 want_nodes = int(os.environ["EXPECTED_NODES"])
 ray.init(address="auto", logging_level="ERROR")
-# Allow a short settle window in case the last few workers are still joining.
+# 留出短暂的稳定窗口,以防最后几个 worker 仍在加入。
 deadline = time.time() + 120
 while True:
     alive = sum(1 for n in ray.nodes() if n.get("Alive"))

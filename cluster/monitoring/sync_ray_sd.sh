@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Sync Ray's Prometheus service-discovery file from the Ray head container to
-# the host-side monitoring directory consumed by Prometheus.
+# 把 Ray 的 Prometheus 服务发现文件从 Ray head 容器同步到
+# 宿主机侧供 Prometheus 读取的 monitoring 目录。
 
 set -euo pipefail
 

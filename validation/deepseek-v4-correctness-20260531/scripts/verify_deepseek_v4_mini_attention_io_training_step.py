@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""DeepSeek-V4 mini-checkpoint attention I/O training-step replay.
+"""DeepSeek-V4 mini checkpoint attention I/O 训练步回放。
 
-This verifier uses dense attention inputs recorded from the mini checkpoint,
-then runs one local forward/backward/update step for each attention backend on
-the same checkpoint attention weights and the same synthetic upstream gradient.
-It proves the attention backend training surface on real checkpoint inputs,
-separately from upstream state drift and downstream logprob amplification.
+本校验器使用从 mini checkpoint 录制的 dense attention 输入,
+然后在相同的 checkpoint attention 权重和相同的合成上游梯度上,
+为每个 attention 后端各运行一次本地 forward/backward/update 步骤。
+它在真实 checkpoint 输入上验证 attention 后端的训练面,
+与上游状态漂移和下游 logprob 放大效应相互隔离。
 """
 
 from __future__ import annotations

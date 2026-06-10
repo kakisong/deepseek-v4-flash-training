@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Replay DeepSeek-V4 layer-0 routed experts from official and Miles traces."""
+"""基于 official 与 Miles trace 重放 DeepSeek-V4 第 0 层路由专家。"""
 
 from __future__ import annotations
 

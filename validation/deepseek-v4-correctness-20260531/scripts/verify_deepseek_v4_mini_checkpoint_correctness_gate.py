@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""Validate the DeepSeek-V4 mini-checkpoint correctness gate.
+"""校验 DeepSeek-V4 mini checkpoint 的正确性门禁。
 
-This verifier is intentionally a framework-level correctness gate, not a
-strict logprob parity gate.  It proves the narrower claim needed for the Miles
-training path: on the loaded 4-layer mini checkpoint, SFT one-step execution is
-finite, routed MoE math is covered by explicit references, attention training
-drift is bounded, and the complete SFT step passes once the localized attention
-forward-value drift is replayed away.
+本校验器有意设计为框架级正确性门禁,而不是严格的 logprob 一致性门禁。
+它证明的是 Miles 训练路径所需的较窄论断:在已加载的 4 层 mini checkpoint
+上,SFT 单步执行结果是有限值(finite),路由 MoE 数学由显式参考实现覆盖,
+attention 训练漂移有界,并且在把局部化的 attention 前向数值漂移通过 replay
+消除之后,完整的 SFT 步骤能够通过。
 """
 
 import argparse

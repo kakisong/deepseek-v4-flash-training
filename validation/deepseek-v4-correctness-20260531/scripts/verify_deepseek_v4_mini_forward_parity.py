@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""DeepSeek-V4 mini-checkpoint forward parity.
+"""DeepSeek-V4 mini-checkpoint 前向一致性校验。
 
-Run this script with torchrun. Each run loads the same Miles/Megatron mini
-checkpoint, runs a deterministic forward pass over fixed rollout tokens, and
-saves per-token log-probabilities. Run it once per attention implementation
-(`MEGATRON_SPARSE_ATTN_IMPL=dense|sparse|tilelang`), then compare the outputs
-with ``--compare``.
+请用 torchrun 运行本脚本。每次运行都会加载同一个 Miles/Megatron mini
+checkpoint,在固定的 rollout token 上执行确定性前向,并保存逐 token 的
+log-probabilities。请对每种 attention 实现各运行一次
+(`MEGATRON_SPARSE_ATTN_IMPL=dense|sparse|tilelang`),然后用 ``--compare``
+对比输出。
 """
 
 from __future__ import annotations

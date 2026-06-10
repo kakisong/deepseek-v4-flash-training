@@ -1,17 +1,17 @@
 """
-Stage A blocking check: verify the V4 chat template + loss mask.
+Stage A 阻塞性检查：验证 V4 chat template + loss mask。
 
-No GPU, no Megatron dependency. Runs on the head node or any machine.
+无需 GPU，不依赖 Megatron。可在头节点或任意机器上运行。
 
-For every sample, prints a (token_id, mask, decoded_text) table for manual review:
-  - role tags (<|user|>, <|assistant|>, <|system|>) should have mask=0
-  - assistant content (and optional thinking) should have mask=1
-  - user / system / tool content should have mask=0
+对每个样本打印 (token_id, mask, decoded_text) 表格，供人工逐项检查：
+  - 角色标签（<|user|>、<|assistant|>、<|system|>）的 mask 应为 0
+  - assistant 内容（以及可选的 thinking）的 mask 应为 1
+  - user / system / tool 内容的 mask 应为 0
 
-If errors are found, follow README §1.4 to add gen_multi_turn_loss_mask_deepseek_v4
-to miles/utils/mask_utils.py, then rerun with --loss-mask-type deepseek_v4.
+如发现错误，请按 README §1.4 将 gen_multi_turn_loss_mask_deepseek_v4
+添加到 miles/utils/mask_utils.py，然后用 --loss-mask-type deepseek_v4 重新运行。
 
-Usage:
+用法：
     python verification/verify_chat_template.py \\
         --hf-checkpoint        $MODELS/DeepSeek-V4-Flash-bf16 \\
         --chat-template-path   $REPO/templates/deepseek_v4.jinja \\
@@ -83,7 +83,7 @@ def load_samples(path: str, n: int) -> list[list[dict]]:
 
 def patch_chat_template(tok: AutoTokenizer, jinja_path: str | None, mask_type: str) -> None:
     if mask_type == "deepseek_v4":
-        # V4 does not use jinja; it uses encoding_dsv4.py from the model repo (loaded by mask_utils).
+        # V4 不使用 jinja；它使用模型仓库中的 encoding_dsv4.py（由 mask_utils 加载）。
         print(f"{GREEN}[ok]{RESET} V4: using the model's encoding_dsv4.py (no jinja needed)")
         return
     if jinja_path is None:
@@ -124,7 +124,7 @@ def render(token_ids: list[int], mask: list[int], tok: AutoTokenizer, max_print:
 
 
 def sanity_check(messages: list[dict], token_ids: list[int], mask: list[int]) -> list[str]:
-    """Heuristic static check that catches the most common mismatches."""
+    """启发式静态检查，用于捕获最常见的不匹配问题。"""
     warnings = []
     if sum(mask) == 0:
         warnings.append("mask is all 0 — training would learn nothing!")

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Verify V4 loss mask on a converted V4-format JSONL.
+"""在转换后的 V4 格式 JSONL 上验证 V4 loss mask。
 
-For the first --num records, load tokenizer + MultiTurnLossMaskGenerator(type='deepseek_v4'),
-run get_loss_mask, and print:
+对前 --num 条记录，加载 tokenizer + MultiTurnLossMaskGenerator(type='deepseek_v4')，
+运行 get_loss_mask，并打印：
 
-  - token count vs source-claimed token_length
-  - per-assistant-turn: step_loss_mask, token span size, decoded loss=1 span preview
-  - sanity check: are loss=1 token regions actually inside `assistant` rendered text?
+  - token 数量 vs 源数据声明的 token_length
+  - 逐 assistant 轮次：step_loss_mask、token 区间大小、loss=1 区间的解码预览
+  - sanity check：loss=1 的 token 区域是否确实位于 `assistant` 渲染文本内？
 """
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ def main() -> int:
     ap.add_argument("--num", type=int, default=3)
     args = ap.parse_args()
 
-    # Ensure miles is importable
+    # 确保 miles 可被导入
     miles_root = "/data_train/kaynzhang/v4-sft/miles"
     sys.path.insert(0, miles_root)
 
@@ -57,7 +57,7 @@ def main() -> int:
             n_asst_loss_on = sum(1 for m in messages if m.get("role") == "assistant" and m.get("step_loss_mask", 1) == 1)
             print(f"   assistant turns: {n_asst} (step_loss_mask=1: {n_asst_loss_on})")
 
-            # Decode contiguous loss=1 spans; show first 3 previews.
+            # 解码连续的 loss=1 区间；展示前 3 个预览。
             spans = []
             cur = []
             for i, b in enumerate(loss_mask):

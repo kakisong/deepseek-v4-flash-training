@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the DeepSeek-V4 proof ledger from recorded artifacts."""
+"""基于已记录的产物(artifacts)校验 DeepSeek-V4 证明台账(proof ledger)。"""
 
 import argparse
 import json

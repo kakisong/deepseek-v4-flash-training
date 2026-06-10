@@ -1,16 +1,16 @@
-"""Faithfully reproduce the TRAINING data pipeline for rollout 0 and compare token counts
-to the LIVE step-0 metric. This isolates whether the offline-vs-live loss_token_ratio gap is
-a mask bug or just a sampling-order artifact.
+"""忠实复现 rollout 0 的训练数据流水线,并把 token 计数与线上 step-0 指标对比。
+以此区分离线与线上 loss_token_ratio 的差距究竟是 mask bug,
+还是仅仅是采样顺序造成的假象。
 
-Training path (apply_chat_template=False): Dataset stores sample.prompt = raw messages (no
-transform); RolloutDataSource shuffles with random.seed(rollout_seed + epoch_id=0) then pulls
-samples[0:rollout_batch_size]; sft_rollout.generate_rollout runs get_loss_mask on each.
+训练路径(apply_chat_template=False):Dataset 存 sample.prompt = 原始 messages(不做
+变换);RolloutDataSource 用 random.seed(rollout_seed + epoch_id=0) 洗牌后取
+samples[0:rollout_batch_size];sft_rollout.generate_rollout 对每条样本跑 get_loss_mask。
 
-LIVE step-0 metric (rollout 0): tokens=6,638,138  loss_tokens=1,076,592  ratio=0.16218
-So if this script (same shuffle, same 128 samples) reproduces those counts -> mask is correct and
-the earlier 0.07 was just my non-shuffled sampling. If loss_tokens is ~half -> real mask difference.
+线上 step-0 指标(rollout 0):tokens=6,638,138  loss_tokens=1,076,592  ratio=0.16218
+因此若本脚本(同样的洗牌、同样的 128 条样本)能复现这些计数 -> mask 正确,
+之前的 0.07 只是我未洗牌采样所致。若 loss_tokens 约为一半 -> mask 存在真实差异。
 
-Run on a pod: python3 tools/verify_sft_pipeline.py
+在 pod 上运行: python3 tools/verify_sft_pipeline.py
 """
 import json
 import random
@@ -23,7 +23,7 @@ HF = "/mnt/fsx-cdsn/kaynzhang/deepseek-v4-flash/models/DeepSeek-V4-Flash-bf16-un
 DATA = "/mnt/fsx-cdsn/kaynzhang/deepseek-v4-flash/data/albaliang_077_le128k.jsonl"
 ROLLOUT_SEED = 42
 ROLLOUT_BATCH = 128
-# live step-0 ground truth
+# 线上 step-0 真值
 LIVE_TOKENS, LIVE_LOSS, LIVE_RATIO = 6_638_138, 1_076_592, 0.16218
 
 
@@ -31,25 +31,25 @@ def main():
     tok = AutoTokenizer.from_pretrained(HF, trust_remote_code=True)
     gen = MultiTurnLossMaskGenerator(tok, tokenizer_type="deepseek_v4")
 
-    # 1. load all samples exactly as Dataset does (apply_chat_template=False -> raw messages)
+    # 1. 完全按 Dataset 的方式加载所有样本(apply_chat_template=False -> 原始 messages)
     origin = []
     with open(DATA) as f:
         for line in f:
             data = json.loads(line)
-            prompt = data.get("messages")  # _build_messages returns this verbatim
+            prompt = data.get("messages")  # _build_messages 原样返回这个值
             tools = data.get("tools")
             if isinstance(tools, str):
                 tools = json.loads(tools)
             origin.append((prompt, tools))
     n = len(origin)
 
-    # 2. replicate RolloutDataSource shuffle: random.seed(seed + epoch_id=0); shuffle(permutation)
+    # 2. 复刻 RolloutDataSource 的洗牌:random.seed(seed + epoch_id=0); shuffle(permutation)
     perm = list(range(n))
     random.seed(ROLLOUT_SEED + 0)
     random.shuffle(perm)
-    batch_idx = perm[:ROLLOUT_BATCH]  # rollout 0 = first 128 shuffled
+    batch_idx = perm[:ROLLOUT_BATCH]  # rollout 0 = 洗牌后的前 128 条
 
-    # 3. run the real mask on exactly those 128 samples
+    # 3. 对正好这 128 条样本跑真实的 mask
     tot_tok = tot_loss = 0
     for k, i in enumerate(batch_idx):
         messages, tools = origin[i]

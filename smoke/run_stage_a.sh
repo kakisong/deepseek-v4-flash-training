@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# Stage A — single 8-GPU node, V4 4-layer random-init, SFT smoke minimal repro.
-# Purpose: after Stage B0 64-GPU produced PP=7 grad NaN, reproduce in the smallest
-# possible setup and add hooks to localize the failure.
+# Stage A — 单节点 8 GPU, V4 4 层随机初始化, SFT smoke 最小复现。
+# 目的: Stage B0 64-GPU 出现 PP=7 grad NaN 后, 在尽可能小的环境中复现,
+# 并加 hook 定位故障点。
 #
-# Key differences:
-#   - 1 node x 8 GPU (the other 7 workers stay idle ~5 min, within anti-pollution threshold)
-#   - 4-layer V4 (scripts/models/deepseek-v4-flash-4layer.sh)
-#   - TP=1 PP=1 EP=8 ETP=1 (no PP, EP fills all 8 cards)
-#   - No --ref-load (SFT doesn't need KL; only checked at arguments.py:1671), saves 15 min ckpt conversion
-#   - 2 iters, save@1
+# 关键差异:
+#   - 1 节点 x 8 GPU (其余 7 个 worker 空闲约 5 分钟, 在防污染阈值内)
+#   - 4 层 V4 (scripts/models/deepseek-v4-flash-4layer.sh)
+#   - TP=1 PP=1 EP=8 ETP=1 (无 PP, EP 占满 8 卡)
+#   - 不加 --ref-load (SFT 不需要 KL; 仅在 arguments.py:1671 检查), 省下 15 分钟 ckpt 转换
+#   - 跑 2 个 iter, 第 1 步即保存 (save@1)
 #
-# Launch: bash smoke/run_stage_a.sh
+# 启动: bash smoke/run_stage_a.sh
 
 set -euo pipefail
 
@@ -67,7 +67,7 @@ SFT_ARGS=(
   --loss-mask-type deepseek_v4
 )
 
-# 1 node x 8 GPU; EP=8 fills the node; no PP partitioning.
+# 1 节点 x 8 GPU; EP=8 占满整节点; 不做 PP 切分。
 PERF_ARGS=(
   --tensor-model-parallel-size 1
   --sequence-parallel
@@ -117,7 +117,7 @@ MISC_ARGS=(
   --use-fault-tolerance
   --dump-details $SAVE_DIR/dump_details
 
-  # Phase 2 hook: per-module forward hook prints first nan/inf location
+  # 阶段 2 hook: 逐模块 forward hook, 打印首个 nan/inf 出现的位置
   --custom-megatron-before-train-step-hook-path nan_hook.hook_fn
 )
 

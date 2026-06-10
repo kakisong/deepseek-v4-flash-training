@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""DeepSeek-V4 official-inference attention forward parity.
+"""DeepSeek-V4 官方推理 attention 前向一致性校验。
 
-This compares Miles' ``DeepSeekV4Attention`` against the official DeepSeek-V4
-inference ``Attention`` module using the same randomly initialized weights and
-the same input. It is not a full checkpoint parity test; it is an external-code
-module parity check for both the non-compressed sliding-window attention path
-and the compress_ratio=4 compressed-KV/indexer path.
+本脚本使用相同的随机初始化权重和相同输入,将 Miles 的 ``DeepSeekV4Attention``
+与官方 DeepSeek-V4 推理 ``Attention`` 模块进行对比。这不是完整的 checkpoint
+一致性测试,而是基于外部代码的模块级一致性检查,同时覆盖非压缩的
+sliding-window attention 路径和 compress_ratio=4 的压缩 KV/indexer 路径。
 """
 
 from __future__ import annotations

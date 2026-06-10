@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
-"""DeepSeek-V4 mini-checkpoint SFT loss backward/update reference check.
+"""DeepSeek-V4 mini checkpoint 的 SFT loss backward/update reference 检查。
 
-This verifier loads the 4-layer mini checkpoint and fixed rollout batch, runs
-one real Miles/Megatron forward pass, then evaluates two losses on the same
-logits. One path uses the Miles loss_function; the other uses an explicit
-PyTorch SFT objective:
+本校验器加载 4 层 mini checkpoint 与固定的 rollout batch，运行一次真实的
+Miles/Megatron forward，然后在同一份 logits 上计算两种 loss。一条路径使用
+Miles 的 loss_function；另一条使用显式的 PyTorch SFT 目标函数：
 
     sum(-log_softmax(response_logits)[target_token] * loss_mask)
 
-It compares scalar loss and token count directly, then backpropagates
-``Miles loss - explicit loss`` once.  The resulting selected-parameter
-gradient deltas and SGD state deltas must be zero or tiny.  The model forward
-path is intentionally shared with Miles/Megatron; this script proves the
-loaded-checkpoint SFT training objective and its backward/update surface, not a
-monolithic independent model-forward implementation.
+它直接比较标量 loss 与 token 数量，然后对 ``Miles loss - explicit loss``
+做一次反向传播。由此得到的选定参数梯度差值和 SGD 状态差值必须为零或
+极小。模型 forward 路径有意与 Miles/Megatron 共享；本脚本证明的是已加载
+checkpoint 的 SFT 训练目标及其 backward/update 环节，而不是一个完全独立
+的整体模型 forward 实现。
 """
 
 from __future__ import annotations

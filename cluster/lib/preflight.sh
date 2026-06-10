@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Pre-launch environment checks — source from run.sh and call preflight_64gpu.
-# Extracted from the old run_smoke.sh / run_sft_validation.sh / run_cp_smoke.sh.
+# 启动前环境检查 — 由 run.sh source 后调用 preflight_64gpu。
+# 从旧的 run_smoke.sh / run_sft_validation.sh / run_cp_smoke.sh 中抽取而来。
 
 _preflight_repo_root() {
   cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd
@@ -132,7 +132,7 @@ preflight_64gpu() {
   return $err
 }
 
-# Stricter variant: smoke also requires the cast/convert completion marker files.
+# 更严格的变体:smoke 还要求 cast/convert 的完成标记文件存在。
 preflight_64gpu_strict() {
   preflight_64gpu || return 1
   local err=0

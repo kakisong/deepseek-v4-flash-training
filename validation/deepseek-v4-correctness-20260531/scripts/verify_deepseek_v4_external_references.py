@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate external-reference provenance for the DeepSeek-V4 proof doc."""
+"""校验 DeepSeek-V4 证明文档的外部引用来源信息（provenance）。"""
 
 import argparse
 import json

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Start missing worker containers and join them to the already-running Ray head.
+# 补齐缺失的 worker 容器,并让它们加入已在运行的 Ray head。
 #
-# Default behavior is non-destructive:
-#   - existing running containers are reused
-#   - existing worker raylets already pointing at the current head are left alone
-# Use --restart-ray to force ray stop/start inside worker containers.
+# 默认行为是非破坏性的:
+#   - 已在运行的容器直接复用
+#   - 已指向当前 head 的 worker raylet 保持不动
+# 传 --restart-ray 可强制在 worker 容器内执行 ray stop/start。
 
 set -euo pipefail
 

@@ -1,16 +1,16 @@
-"""Minimal repro for tilelang_sparse_mla_bwd NaN bug.
+"""tilelang_sparse_mla_bwd NaN bug 的最小复现脚本。
 
-Run (inside the container with tilelang installed):
+运行方式(在已安装 tilelang 的容器内):
     python3 examples/deepseek_v4_sft/tools/tilelang_sparse_mla_repro.py
 
-This isolates the V4 sparse attention impls (tilelang/sparse_torch/dense_torch) so
-kernels can be iterated on in seconds rather than 70+ s/iter Stage A or 10+ min Stage B0.
+本脚本把 V4 稀疏注意力的各实现(tilelang/sparse_torch/dense_torch)单独抽出来,
+使 kernel 迭代只需数秒,而不是 Stage A 的 70+ 秒/iter 或 Stage B0 的 10+ 分钟。
 
-Reproduces V4-Flash production shapes (config.kv_lora_rank=512):
+复现 V4-Flash 生产形状(config.kv_lora_rank=512):
     B=1, S=1280, S_kv=1280, H=64, D=512, topk=640 (window 128 + compress 512)
-    With early-causal queries that produce all-(-1) topk rows.
+    并包含会产生全 (-1) topk 行的早期因果 query。
 
-Compares tilelang vs sparse_attn_torch vs dense_attn_torch grads.
+对比 tilelang、sparse_attn_torch、dense_attn_torch 三者的梯度。
 """
 
 from __future__ import annotations
@@ -25,18 +25,18 @@ from miles_plugins.models.deepseek_v4.ops.attention_core import (
 
 
 def make_inputs(*, B=1, S=1280, S_kv=1280, H=64, D=512, topk=640, device="cuda", seed=0):
-    """V4-Flash production shapes with realistic causal-mask topk pattern."""
+    """V4-Flash 生产形状,带贴近真实的因果 mask topk 模式。"""
     g = torch.Generator(device=device).manual_seed(seed)
 
     q = torch.randn(B, S, H, D, dtype=torch.bfloat16, device=device, generator=g)
     kv = torch.randn(B, S_kv, D, dtype=torch.bfloat16, device=device, generator=g)
     attn_sink = torch.zeros(H, dtype=torch.float32, device=device)
 
-    # Early-query causal masking: queries at position q < compress_ratio * topk have partial -1.
-    # Positions 0..2 are fully masked (mimics V4 indexer + clean_logits behavior).
+    # 早期 query 的因果 mask:位置 q < compress_ratio * topk 的 query 带有部分 -1。
+    # 位置 0..2 被完全 mask(模拟 V4 indexer + clean_logits 的行为)。
     topk_idxs = torch.randint(0, S_kv, (B, S, topk), dtype=torch.int32, device=device, generator=g)
     for s_pos in range(S):
-        # mimic _make_causal_cu_seqlens(seq_len_q, seq_len_kv, compress_ratio=4)
+        # 模拟 _make_causal_cu_seqlens(seq_len_q, seq_len_kv, compress_ratio=4)
         valid_count = (s_pos + 1) // 4
         if valid_count == 0:
             topk_idxs[:, s_pos, :] = -1

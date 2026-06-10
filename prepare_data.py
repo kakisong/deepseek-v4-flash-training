@@ -1,25 +1,25 @@
 """
-SFT data → Miles `messages` parquet.
+SFT 数据 → Miles `messages` parquet。
 
-Supported sources:
-  - HuggingFace dataset id (e.g. teknium/OpenHermes-2.5)
-  - Local jsonl
-  - Local parquet
+支持的数据源:
+  - HuggingFace 数据集 id (例如 teknium/OpenHermes-2.5)
+  - 本地 jsonl
+  - 本地 parquet
 
-Output schema:
+输出 schema:
   {
     "messages": [
       {"role": "user"|"assistant"|"system"|"tool", "content": "..."},
-      # Assistant turn containing thinking:
+      # 含 thinking 的 assistant 轮次:
       {"role": "assistant", "reasoning_content": "...", "content": "..."},
     ],
-    # Optional step_loss_mask=0 disables mask for the whole turn (see mask_utils.py).
+    # 可选的 step_loss_mask=0 会对整个轮次关闭 mask (见 mask_utils.py)。
   }
 
---mask-mode controls whether the thinking segment participates in training:
-  answer-only      : train only the final answer; reasoning is stripped at prepare time
-  include-thinking : train reasoning + answer together
-  passthrough      : no conversion (use when the data is already in the target format)
+--mask-mode 控制 thinking 片段是否参与训练:
+  answer-only      : 只训练最终答案; 在数据准备阶段剥离 reasoning
+  include-thinking : reasoning + 答案一起训练
+  passthrough      : 不做转换 (数据已是目标格式时使用)
 """
 
 from __future__ import annotations
@@ -72,7 +72,7 @@ def _convert_role(raw: str) -> str:
 
 
 def _coerce_messages(raw_list: Iterable, mask_mode: str) -> list[dict]:
-    """Normalize any common conversation representation into OpenAI-style messages."""
+    """把各种常见的会话表示归一化为 OpenAI 风格的 messages。"""
     out: list[dict] = []
     for turn in raw_list:
         if isinstance(turn, dict):
@@ -87,7 +87,7 @@ def _coerce_messages(raw_list: Iterable, mask_mode: str) -> list[dict]:
 
             if role == "assistant" and reasoning:
                 if mask_mode == "answer-only":
-                    pass  # drop the thinking segment
+                    pass  # 丢弃 thinking 片段
                 elif mask_mode == "include-thinking":
                     msg["reasoning_content"] = reasoning
                 else:  # passthrough
@@ -103,7 +103,7 @@ def _load_source(args: argparse.Namespace) -> Iterable[dict]:
     src: str = args.source
     field = args.input_field
 
-    # Local file.
+    # 本地文件。
     p = Path(src)
     if p.exists():
         if p.suffix == ".jsonl":
@@ -122,7 +122,7 @@ def _load_source(args: argparse.Namespace) -> Iterable[dict]:
             return
         raise ValueError(f"unsupported local source suffix: {p.suffix}")
 
-    # HF dataset id.
+    # HF 数据集 id。
     try:
         from datasets import load_dataset
     except ImportError as e:
@@ -151,7 +151,7 @@ def main() -> int:
         try:
             raw = _select_field(row, args.input_field)
             if args.mask_mode == "passthrough":
-                # Expect source to already be in the target messages format.
+                # 预期数据源已是目标 messages 格式。
                 msgs = list(raw)
             else:
                 msgs = _coerce_messages(raw, args.mask_mode)
@@ -159,7 +159,7 @@ def main() -> int:
             print(f"[skip row {i}] {e!r}")
             continue
 
-        # Need at least one user and one assistant turn to train.
+        # 训练至少需要一个 user 轮次和一个 assistant 轮次。
         roles = {m.get("role") for m in msgs}
         if "assistant" not in roles:
             continue

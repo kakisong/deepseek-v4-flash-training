@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-"""DeepSeek-V4 operator-level precision checks.
+"""DeepSeek-V4 算子级精度检查。
 
-This script is intentionally small and deterministic. It checks the math that is
-hard to prove from a training loss curve alone:
+本脚本有意保持小巧且确定性。它检查那些仅凭训练 loss 曲线难以证明的数学:
 
-* HyperConnection post-mix uses H_res.T @ residual, matching Megatron-LM PR #4839.
-* RoPE returns a new tensor, preserves the input, and inverse rotation recovers it.
-* Dense and sparse PyTorch attention references agree, preserve dtype, and keep
-  fully masked rows finite in forward/backward.
-* TileLang sparse MLA agrees with the dense PyTorch reference when CUDA+TileLang
-  are available.
+* HyperConnection post-mix 使用 H_res.T @ residual,与 Megatron-LM PR #4839 一致。
+* RoPE 返回新 tensor、保持输入不变,且逆向旋转能恢复输入。
+* dense 与 sparse 的 PyTorch attention 参考实现彼此一致、保持 dtype,且完全被
+  mask 的行在前向/反向中保持有限值。
+* 在 CUDA+TileLang 可用时,TileLang sparse MLA 与 dense PyTorch 参考实现
+  一致。
 """
 
 from __future__ import annotations
@@ -155,8 +154,8 @@ def check_hyper_connection(device: torch.device) -> CheckResult:
     expected = post.unsqueeze(-1) * x.unsqueeze(-2) + torch.matmul(comb.transpose(-1, -2), residual)
     wrong = post.unsqueeze(-1) * x.unsqueeze(-2) + torch.matmul(comb, residual)
 
-    # Megatron-LM PR #4839 reference formula uses [S, B, N, C]. Convert layout
-    # only, not the math.
+    # Megatron-LM PR #4839 参考公式使用 [S, B, N, C] 布局。这里只做布局
+    # 转换,不改变数学计算。
     h_res_sbnc = comb.permute(1, 0, 2, 3).contiguous()
     residual_sbnc = residual.permute(1, 0, 2, 3).contiguous()
     post_sbn = post.permute(1, 0, 2).contiguous()
@@ -172,9 +171,8 @@ def check_hyper_connection(device: torch.device) -> CheckResult:
     max_expected = (miles - expected).abs().max().item()
     max_wrong = (miles - wrong).abs().max().item()
     max_fixed = (miles - fixed_bsnc).abs().max().item()
-    # The two expressions reduce products in a different order, so exact
-    # bitwise equality is too strict for fp32. The acceptable drift is only the
-    # expected single-ULP matmul/sum rounding noise.
+    # 两个表达式对乘积的归约顺序不同,因此对 fp32 来说要求逐位完全相等
+    # 过于严格。可接受的漂移仅限于预期中的单 ULP matmul/求和舍入噪声。
     torch.testing.assert_close(miles, expected, rtol=2e-6, atol=3e-7)
     torch.testing.assert_close(miles, fixed_bsnc, rtol=2e-6, atol=3e-7)
     assert max_wrong > 1e-3, "non-symmetric H_res did not distinguish fixed and pre-fix formulas"

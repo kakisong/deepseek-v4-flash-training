@@ -1,15 +1,15 @@
-"""Causal ablation of the dKV atomic scatter in the V4 sparse-MLA backward.
+"""V4 sparse-MLA 反向中 dKV 原子 scatter 的因果消融实验。
 
-Replicates the production bwd kernel EXACTLY except for the dKV store, which is
-parametrized by `store_mode`:
-  atomic     : production -- fp32 T.atomic_addx4 into dKV[Indices] (gather-scatter, RMW)
-  coalesced  : non-atomic vectorized T.copy of the SAME bytes into a contiguous fp32
-               scratch (no gather, no atomic, no contention). Keeps all GEMMs.
-  coalesced16: same but bf16 scratch (half the store bytes) -- the de-atomic target dtype
-  nostore    : skip the global store (GEMMs may be DCE'd; lower-bound sanity only)
+完全复刻生产环境的 bwd kernel,唯一不同是 dKV 的存储方式,由
+`store_mode` 参数化:
+  atomic     : 生产实现 -- 用 fp32 T.atomic_addx4 写入 dKV[Indices](gather-scatter,RMW)
+  coalesced  : 把同样的字节以非原子向量化 T.copy 写入连续的 fp32
+               scratch(无 gather、无原子操作、无竞争)。保留所有 GEMM。
+  coalesced16: 同上但使用 bf16 scratch(存储字节减半)-- 去原子化方案的目标 dtype
+  nostore    : 跳过全局存储(GEMM 可能被 DCE 掉;仅作下界 sanity 参考)
 
-delta(atomic - coalesced) = the direct, causal cost of doing dKV as an fp32 atomic
-gather-scatter. This is the measurement, not an inference-by-elimination.
+delta(atomic - coalesced) = 把 dKV 做成 fp32 原子 gather-scatter 的直接因果开销。
+这是直接测量结果,而不是排除法推断。
 
 Run:  PYTHONPATH=<fsx miles> python3 tools/v4_bwd_ablate.py [S] [topk] [dist]
 """
@@ -29,9 +29,9 @@ from miles_plugins.models.deepseek_v4.ops.kernel.tilelang_sparse_mla_bwd import 
 })
 def make_bwd(B, S, S_kv, H, D, topk, store_mode, sm_scale=None, block_size=32,
              num_stages=2, threads=128, block_H_cap=32, direct_dq=False, split_store_n=2):
-    # Single @tilelang.jit level (matches production bwd()): the shape locals live in
-    # the SAME frame as @T.prim_func so the annotation strings resolve. store_mode is a
-    # trace-time arg -> jit caches one compiled kernel per mode.
+    # 仅一层 @tilelang.jit(与生产 bwd() 一致):形状相关的局部变量与 @T.prim_func
+    # 位于同一栈帧,这样注解字符串才能正确解析。store_mode 是 trace 期参数
+    # -> jit 会为每种模式各缓存一个编译好的 kernel。
     assert topk % block_size == 0
     if sm_scale is None:
         sm_scale = D ** (-0.5)
@@ -49,9 +49,9 @@ def make_bwd(B, S, S_kv, H, D, topk, store_mode, sm_scale=None, block_size=32,
     BS = block_size
     NS = tilelang.cdiv(topk, block_size)
     split_store = split_store_n
-    scratch_rows = NS * BS  # contiguous destination for the coalesced modes
+    scratch_rows = NS * BS  # coalesced 各模式的连续写入目标
     store_dtype = T.bfloat16 if store_mode == "coalesced16" else T.float32
-    # atomic scatters into the full S_kv-length dKV; coalesced writes the contiguous scratch
+    # atomic 模式 scatter 写入完整 S_kv 长度的 dKV;coalesced 模式写入连续 scratch
     if store_mode == "atomic":
         dkv_rows, dkv_dtype = S_kv, T.float32
     else:
@@ -112,7 +112,7 @@ def make_bwd(B, S, S_kv, H, D, topk, store_mode, sm_scale=None, block_size=32,
                        policy=T.GemmWarpPolicy.FullCol, clear_accum=True)
                 T.gemm(P_shared_cast, dO_shared, acc_dkv, transpose_A=True, policy=T.GemmWarpPolicy.FullCol)
 
-                # ---- the only part that varies ----
+                # ---- 唯一有差异的部分 ----
                 if store_mode == "atomic":
                     for s in range(split_store):
                         for bi_i, d_i in T.Parallel(BS, D):
@@ -127,11 +127,11 @@ def make_bwd(B, S, S_kv, H, D, topk, store_mode, sm_scale=None, block_size=32,
                         for bi_i, d_i in T.Parallel(BS, D):
                             if bi_i < BS // split_store:
                                 acc_dkv_shared[bi_i, d_i] = acc_dkv[bi_i + s * (BS // split_store), d_i]
-                        # non-atomic, contiguous, coalesced store of the SAME bytes
+                        # 以非原子、连续、合并访存方式存储同样的字节
                         T.copy(acc_dkv_shared,
                                dKV[by, i_i * BS + s * (BS // split_store):
                                    i_i * BS + s * (BS // split_store) + BS // split_store, :])
-                # nostore: nothing
+                # nostore:什么都不做
 
             if direct_dq:
                 T.copy(acc_dq, dQ[by, s_i, bz * block_H:(bz + 1) * block_H, :D])

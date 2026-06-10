@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Stop worker Ray runtimes and remove worker containers, leaving the master
-# Ray head/job-server container up. This returns the fleet to a head-only
-# empty Ray control plane.
+# 停掉 worker 的 Ray 运行时并删除 worker 容器,保留 master 上的
+# Ray head/job-server 容器。执行后 fleet 回到只剩 head 的
+# 空 Ray 控制面状态。
 
 set -euo pipefail
 

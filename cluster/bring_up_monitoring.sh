@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Bring up Prometheus + Grafana on the master node.
+# 在 master 节点上拉起 Prometheus + Grafana。
 #
-# Ray writes local logs/spill/service discovery under /ray_local/ray inside the
-# master container, backed by the host's /data0 local disk.
-# container. Prometheus/Grafana are long-lived host-level services and should be
-# prepared before training submission.
+# Ray 在 master 容器内的 /ray_local/ray 下写本地日志/spill/服务发现文件,
+# 底层由宿主机的 /data0 本地盘承载。
+# Prometheus/Grafana 是宿主机层面的长生命周期服务,
+# 应在提交训练之前准备就绪。
 
 set -euo pipefail
 

@@ -1,25 +1,22 @@
 #!/usr/bin/env python3
-"""DeepSeek-V4 loaded mini-checkpoint external full-model reference.
+"""DeepSeek-V4 已加载 mini-checkpoint 的外部全模型参考。
 
-This verifier loads the 4-layer mini checkpoint and fixed SFT batch, then runs
-two forward/loss paths over the same model parameters:
+本校验器加载 4 层 mini checkpoint 与固定的 SFT batch,然后在同一份模型参数
+上运行两条 forward/loss 路径:
 
-* the real Miles/Megatron GPTModel path;
-* an explicit PyTorch reference path for embedding, four DeepSeek-V4 layers,
-  dense reference attention, EP=8 hash-routed / score-routed MoE forward,
-  final norm, output head, and SFT loss.
+* 真实的 Miles/Megatron GPTModel 路径;
+* 一条显式 PyTorch 参考路径,覆盖 embedding、四个 DeepSeek-V4 层、
+  稠密参考 attention、EP=8 hash 路由 / score 路由 MoE 前向、
+  最终 norm、输出头以及 SFT loss。
 
-The reference path does not call Megatron module ``forward`` methods for the
-model body.  To keep the loaded checkpoint feasible in memory, it shares the
-same parameter tensors with the Miles path instead of cloning the full 4-layer
-EP=8 model.  The explicit reference is BF16/FP32 PyTorch math; FP8/blockwise
-quantization is not simulated in this verifier, so FP8 Miles runs are recorded
-as diagnostics instead of strict PASS evidence.  Backward is checked by
-backpropagating the local loss delta and measuring selected non-expert parameter
-deltas.  Full EP expert backward/update is intentionally covered by the
-dedicated real EP=8 MoELayer reference because real all-to-all backward
-accumulates local expert gradients from all source ranks while replicated
-non-expert weights are local-rank gradients.
+参考路径在模型主体部分不调用 Megatron 模块的 ``forward`` 方法。为使已加载的
+checkpoint 在内存上可行,它与 Miles 路径共享同一批参数 tensor,而不是克隆
+完整的 4 层 EP=8 模型。显式参考采用 BF16/FP32 的 PyTorch 数学计算;本校验器
+不模拟 FP8/blockwise 量化,因此 FP8 的 Miles 运行只作为诊断记录,而非严格的
+PASS 证据。反向检查通过对本地 loss 差值做反向传播,并度量选定的非专家参数
+增量来完成。完整的 EP 专家反向/更新有意交由专门的真实 EP=8 MoELayer 参考
+来覆盖,因为真实的 all-to-all 反向会累加来自所有源 rank 的本地专家梯度,
+而复制的非专家权重得到的是本地 rank 的梯度。
 """
 
 from __future__ import annotations
@@ -427,8 +424,8 @@ def _moe_ep_reference(
 
     routed_output = torch.zeros_like(x_flat)
     clamp = float(config.activation_func_clamp_value) if config.activation_func_clamp_value is not None else None
-    # All EP ranks must execute broadcasts in the same order even when their
-    # local replayed routing maps select different expert subsets.
+    # 即使各 EP rank 本地回放的 routing map 选中的专家子集不同,
+    # 所有 EP rank 也必须按相同顺序执行 broadcast。
     for expert_id in range(int(config.num_moe_experts)):
         fc1_weight = _expert_tensor(local_fc1, expert_id)
         fc2_weight = _expert_tensor(local_fc2, expert_id)

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Verify DeepSeek-V4 routed expert grouped MLP math.
+"""校验 DeepSeek-V4 路由专家 grouped MLP 的数学正确性。
 
-This is a focused training-path verifier for the Megatron/TE grouped expert
-kernel used by the Miles DeepSeek-V4 MoE path.  It compares TEGroupedMLP
-forward/backward/update against an explicit per-expert BF16 SwiGLU reference
-with the DeepSeek-V4 0415 activation clamp.
+这是一个聚焦训练路径的校验器,针对 Miles DeepSeek-V4 MoE 路径所用的
+Megatron/TE grouped expert kernel。它将 TEGroupedMLP 的
+forward/backward/update 与显式的逐专家 BF16 SwiGLU 参考实现(带
+DeepSeek-V4 0415 激活 clamp)进行对比。
 """
 
 from __future__ import annotations

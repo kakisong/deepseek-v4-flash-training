@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Replay DeepSeek-V4 attention from official and Miles trace tensors."""
+"""基于官方与 Miles trace tensor 回放 DeepSeek-V4 attention。"""
 
 from __future__ import annotations
 

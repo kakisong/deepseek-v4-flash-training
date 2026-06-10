@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify DeepSeek-V4 optimizer path and AdamW update math evidence."""
+"""验证 DeepSeek-V4 优化器路径与 AdamW 更新数学的证据。"""
 
 import argparse
 import json
@@ -157,10 +157,9 @@ def _main() -> int:
         zero_comparison = _compare(name + "_zero_grad_weight_decay_only", zero_update, wd_only, atol=1e-9, rtol=0.0)
         _check(zero_comparison["status"] == "PASS", failures, zero_comparison["name"])
 
-        # Worst-case first-step AdamW adaptive update term is bounded in
-        # [-lr, lr] per element, so two backends with identical starting
-        # parameters can differ by at most 2*lr before dtype rounding, regardless
-        # of gradient magnitude or sign.
+        # 最坏情况下，首步 AdamW 自适应更新项在每个元素上被限制在
+        # [-lr, lr] 区间内，因此两个起始参数完全相同的后端在 dtype
+        # 舍入之前最多相差 2*lr，与梯度的大小或符号无关。
         grad_left = torch.full(shape, -1.0, dtype=torch.float32)
         grad_right = torch.full(shape, 1.0, dtype=torch.float32)
         left = _adamw_step_reference(

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare selected loaded Miles DeepSeek-V4 weights with raw checkpoint tensors."""
+"""将选定的已加载 Miles DeepSeek-V4 权重与原始 checkpoint tensor 进行比较。"""
 
 from __future__ import annotations
 

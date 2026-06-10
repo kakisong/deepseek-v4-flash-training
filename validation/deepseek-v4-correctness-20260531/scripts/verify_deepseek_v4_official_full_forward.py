@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""DeepSeek-V4 official-inference full forward parity.
+"""DeepSeek-V4 官方推理实现的全量前向一致性校验。
 
-This verifier loads the same Megatron distributed checkpoint into the official
-DeepSeek-V4 inference model, runs one full-sequence prefill forward on the same
-rollout sample, and computes response-token log-probabilities. It can compare
-those log-probabilities with a Miles/Megatron forward artifact produced by
-``verify_deepseek_v4_mini_forward_parity.py``.
+本校验器把同一份 Megatron 分布式 checkpoint 加载到官方
+DeepSeek-V4 推理模型中，在同一条 rollout 样本上执行一次全序列
+prefill 前向，并计算 response token 的对数概率。它可以把这些
+对数概率与由 ``verify_deepseek_v4_mini_forward_parity.py``
+生成的 Miles/Megatron 前向产物进行对比。
 """
 
 from __future__ import annotations
@@ -493,7 +493,7 @@ def _install_attention_internal_trace_hooks(
     module: torch.nn.Module,
     traces: dict[str, torch.Tensor],
 ) -> list[Any]:
-    """Trace internal official attention tensors without editing the official model."""
+    """在不修改官方模型代码的前提下追踪官方 attention 的内部 tensor。"""
     handles: list[Any] = []
 
     original_sparse_attn = official_model.sparse_attn

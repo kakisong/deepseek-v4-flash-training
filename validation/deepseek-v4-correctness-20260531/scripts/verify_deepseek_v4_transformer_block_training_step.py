@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
-"""DeepSeek-V4 transformer-block training-step parity.
+"""DeepSeek-V4 transformer block 训练步一致性校验。
 
-This is an integration gate above the bare attention module. It builds a
-Megatron ``TransformerBlock`` with the Miles DeepSeek-V4 block spec, including:
+这是在裸 attention 模块之上的集成门禁。它使用 Miles DeepSeek-V4 block spec
+构建一个 Megatron ``TransformerBlock``,包括:
 
-* block-level HyperConnection expand/head
-* layer-level HyperConnection pre/post around attention and MLP
-* one non-compressed attention layer and one compress_ratio=4 attention layer
-* MLP and final layernorm
+* block 级 HyperConnection expand/head
+* attention 与 MLP 前后的层级 HyperConnection pre/post
+* 一个非压缩 attention 层和一个 compress_ratio=4 的 attention 层
+* MLP 与最终 layernorm
 
-It then runs one deterministic forward/backward/update step with
-``MEGATRON_SPARSE_ATTN_IMPL=dense|sparse|tilelang`` and compares outputs, input
-gradients, and post-step parameters.
+随后在 ``MEGATRON_SPARSE_ATTN_IMPL=dense|sparse|tilelang`` 下运行一次确定性的
+forward/backward/update 步骤,并比较输出、输入梯度以及更新后的参数。
 """
 
 from __future__ import annotations
@@ -123,7 +122,7 @@ def _build_config() -> TransformerConfig:
         dsa_indexer_head_dim=128,
         dsa_indexer_topk=512,
     )
-    # These fields come from the runtime HF/mbridge config in normal training.
+    # 这些字段在正常训练中来自运行时的 HF/mbridge 配置。
     for key, value in {
         "q_lora_rank": 1024,
         "kv_lora_rank": 512,
@@ -152,7 +151,7 @@ def _build_block(config: TransformerConfig) -> TransformerBlock:
 
 
 def _initialize_synthetic_state(block: TransformerBlock) -> None:
-    """Initialize parameters that are normally provided by a checkpoint."""
+    """初始化通常由 checkpoint 提供的参数。"""
     with torch.no_grad():
         for name, param in block.named_parameters():
             if "hc_" in name and ("scale" in name or "base" in name):

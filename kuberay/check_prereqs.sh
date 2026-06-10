@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Check whether the current shell is connected to a Kubernetes cluster capable
-# of running the draft KubeRay manifests.
+# 检查当前 shell 是否已连接到一个能够运行
+# KubeRay 草稿 manifests 的 Kubernetes 集群。
 
 set -euo pipefail
 

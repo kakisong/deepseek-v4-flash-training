@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Static regression guards for DeepSeek-V4 precision fixes.
+"""DeepSeek-V4 精度修复的静态回归守护。
 
-The numerical verifiers prove behavior; this script guards the source shapes of
-the fixes that made those verifiers pass.  It intentionally uses text checks so
-it can run with the local Python 3.6 interpreter even though some source files
-use newer type annotation syntax.
+数值校验器负责证明行为本身；本脚本守护的是让那些校验器得以通过的
+修复在源码中的形态。脚本刻意采用文本检查方式，即使部分源文件
+使用了较新的类型注解语法，也能在本地 Python 3.6 解释器上运行。
 """
 
 import argparse

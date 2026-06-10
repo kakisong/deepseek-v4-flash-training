@@ -1,27 +1,26 @@
 #!/usr/bin/env python3
-"""DeepSeek-V4 external training-reference one-step parity.
+"""DeepSeek-V4 外部训练参考的单步一致性校验。
 
-This verifier is the first external-training-reference gate after the official
-inference parity work.  It does not compare two Miles attention backends.  It
-builds a one-layer Megatron/Miles DeepSeek-V4 ``TransformerBlock`` as the system
-under test, then compares it with an explicit PyTorch reference for the same
-training-time math:
+本校验器是官方推理一致性工作之后的第一个外部训练参考门禁。它并不比较两个
+Miles attention 后端,而是构建一个单层 Megatron/Miles DeepSeek-V4
+``TransformerBlock`` 作为被测系统,再与针对同一套训练时数学计算的显式
+PyTorch 参考实现进行比较:
 
-* block HyperConnection expand/head
-* layer HyperConnection pre/post for attention and MLP
-* RMSNorms
-* non-compressed or deterministic compressed DeepSeek-V4 attention with dense
-  masked reference attention
-* Q/KV LoRA projections, RoPE, KV QAT, output projection
-* standard GELU MLP, or a score-routed MoE MLP with shared expert
-* backward gradients and one manual SGD update
+* block 级 HyperConnection expand/head
+* attention 与 MLP 的层级 HyperConnection pre/post
+* 各 RMSNorm
+* 非压缩或确定性压缩的 DeepSeek-V4 attention,对照稠密带掩码的参考
+  attention
+* Q/KV LoRA 投影、RoPE、KV QAT、输出投影
+* 标准 GELU MLP,或带共享专家的 score 路由 MoE MLP
+* 反向梯度与一次手动 SGD 更新
 
-The reference currently covers ``compress_ratio=0``, ``compress_ratio=4`` with
-the V4 indexer path, and a deterministic ``compress_ratio=128`` compressed-KV
-path with a non-MoE MLP so that each attention gate is mathematically tight. It
-also covers a ``compress_ratio=0`` one-layer score-routed MoE block as the next
-step toward the complete mini-checkpoint external reference. Loaded
-mini-checkpoint SFT is still a separate extension.
+该参考目前覆盖 ``compress_ratio=0``、走 V4 indexer 路径的
+``compress_ratio=4``,以及搭配非 MoE MLP 的确定性 ``compress_ratio=128``
+压缩 KV 路径,从而使每个 attention 门禁在数学上都足够严格。它还覆盖一个
+``compress_ratio=0`` 的单层 score 路由 MoE block,作为迈向完整
+mini-checkpoint 外部参考的下一步。加载 mini-checkpoint 的 SFT 仍是单独的
+后续扩展。
 """
 
 from __future__ import annotations

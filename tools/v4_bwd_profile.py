@@ -1,15 +1,15 @@
-"""Direct empirical cost breakdown of the V4 sparse-MLA backward.
+"""V4 sparse-MLA 反向的直接实测开销拆解。
 
-Times each of the 3 bwd kernels (preprocess / bwd-main / postprocess) and the fwd
-in isolation via CUDA events at production shapes, on an idle H200. The goal is to
-DIRECTLY measure where bwd time goes (esp. the fp32 atomic_addx4 dKV scatter in
-bwd-main) rather than infer it by elimination.
+在空闲 H200 上,以生产形状用 CUDA event 分别独立计时 3 个 bwd kernel
+(preprocess / bwd-main / postprocess)以及 fwd。目标是直接测量
+bwd 时间花在哪里(尤其是 bwd-main 中 fp32 atomic_addx4 的 dKV scatter),
+而不是用排除法推断。
 
-Run inside a GPU pod with the fsx miles on PYTHONPATH:
+在 GPU pod 内运行,需把 fsx 上的 miles 加入 PYTHONPATH:
     PYTHONPATH=/mnt/fsx-cdsn/.../train/miles python3 tools/v4_bwd_profile.py [S] [topk] [dist]
-      S    : query/kv length (default 4096)
-      topk : default 640 (window 128 + compress 512)
-      dist : 'rand' (uniform over S_kv) | 'local' (window-heavy, high contention)
+      S    : query/kv 长度(默认 4096)
+      topk : 默认 640(window 128 + compress 512)
+      dist : 'rand'(在 S_kv 上均匀分布)| 'local'(window 占比高,竞争激烈)
 """
 from __future__ import annotations
 
@@ -22,16 +22,16 @@ from miles_plugins.models.deepseek_v4.ops.kernel import tilelang_sparse_mla_fwd 
 
 
 def make_indices(B, S, S_kv, topk, dist, device, gen):
-    """topk indices per query. 'rand' = uniform; 'local' = 128 window (recent) + rest random."""
+    """每个 query 的 topk 索引。'rand' = 均匀分布;'local' = 128 窗口(最近位置)+ 其余随机。"""
     if dist == "local":
         win = 128
         idx = torch.empty(B, S, topk, dtype=torch.int32, device=device)
         pos = torch.arange(S, device=device).view(1, S, 1)
-        # window part: last `win` positions <= query pos (causal, contiguous -> contended)
+        # window 部分:query 位置之前最近的 `win` 个位置(因果、连续 -> 竞争激烈)
         woff = torch.arange(win, device=device).view(1, 1, win)
         widx = (pos - woff).clamp(min=0)
         idx[:, :, :win] = widx.int()
-        # compress part: random earlier positions
+        # compress 部分:随机的更早位置
         rest = topk - win
         idx[:, :, win:] = torch.randint(0, S_kv, (B, S, rest), dtype=torch.int32, device=device, generator=gen)
         return idx
@@ -49,7 +49,7 @@ def cuda_time(fn, iters=50, warmup=10):
         fn()
     end.record()
     torch.cuda.synchronize()
-    return start.elapsed_time(end) / iters  # ms
+    return start.elapsed_time(end) / iters  # 毫秒
 
 
 def main():
@@ -66,11 +66,11 @@ def main():
     attn_sink = torch.zeros(H, dtype=torch.float32, device=device)
     topk_idxs = make_indices(B, S, S_kv, topk, dist, device, gen)
 
-    # forward to get o + lse
+    # 跑一次前向,得到 o + lse
     o, lse = fwd_mod.sparse_mqa_fwd_interface(q, kv, attn_sink, topk_idxs)
     do = torch.randn_like(o)
 
-    # JIT-compile the three bwd kernels once
+    # 一次性 JIT 编译三个 bwd kernel
     pre_k = bwd_mod.preprocess(B, S, H, D)
     bwd_k = bwd_mod.bwd(B, S, S_kv, H, D, topk)
     post_k = bwd_mod.postprocess(B, S_kv, D)
@@ -99,12 +99,12 @@ def main():
     t_bwd = t_pre + t_main + t_post
 
     tokens = B * S
-    # HBM traffic model for the atomic dKV scatter (bwd-main):
-    #   per query token: NH head-blocks * topk keys * D fp32 vals, each atomic = RMW (read+write) = 8 bytes
+    # 原子 dKV scatter(bwd-main)的 HBM 流量模型:
+    #   每个 query token:NH 个 head-block * topk 个 key * D 个 fp32 值,每次原子操作 = RMW(读+写)= 8 字节
     NH = max(2 ** (H.bit_length() - 1 if H & (H - 1) == 0 else H.bit_length()), 16) // min(32, max(16, H))
-    # NH = padded_H//block_H; for H=64 -> padded 64, block_H 32 -> NH=2
+    # NH = padded_H//block_H;H=64 时 -> padded 64,block_H 32 -> NH=2
     NH = 2 if H == 64 else None
-    scatter_bytes = tokens * (NH or 1) * topk * D * 8  # RMW fp32
+    scatter_bytes = tokens * (NH or 1) * topk * D * 8  # fp32 的 RMW
     hbm_TBs = 4.8e12
     scatter_floor_ms = scatter_bytes / hbm_TBs * 1e3
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Layerwise drift probe for a DeepSeek-V4 mini checkpoint.
+"""DeepSeek-V4 mini checkpoint 的逐层漂移探针。
 
-Run with torchrun to save trace tensors for one attention backend, then run
-``--compare`` on two trace files. This is a diagnostic probe for full-model
-drift; it is not an external reference parity test.
+先用 torchrun 运行以保存某一个 attention 后端的 trace tensor，然后对两个
+trace 文件运行 ``--compare``。这是一个针对全模型漂移的诊断探针；
+它并不是外部参考一致性测试。
 """
 
 from __future__ import annotations

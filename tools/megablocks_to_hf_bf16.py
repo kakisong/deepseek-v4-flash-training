@@ -1,32 +1,32 @@
 """
-DeepSeek-V4-Flash MegaBlocks → unpacked BF16 HF format converter.
+DeepSeek-V4-Flash MegaBlocks → 未打包 BF16 HF 格式转换器。
 
-DeepSeek officially publishes only the megablocks format
-(`layers.X.ffn.experts.{id}.w1.weight + .scale`) and a packed HF format
-(`model.layers.X.mlp.experts.{id}.gate_proj.weight`, but the scales are missing).
-PR #1045's conversion path assumes the input is a real unpacked BF16 HF dir,
-but **that dir does not exist**.
+DeepSeek 官方只发布了 megablocks 格式
+(`layers.X.ffn.experts.{id}.w1.weight + .scale`)以及一种打包的 HF 格式
+(`model.layers.X.mlp.experts.{id}.gate_proj.weight`,但缺少 scale)。
+PR #1045 的转换路径假设输入是一个真实的未打包 BF16 HF 目录,
+但**该目录并不存在**。
 
-This tool: reads weight + .scale from the megablocks SRC, dequantizes FP8/FP4 → BF16,
-renames into HF format, and writes a dir that can be fed directly to mbridge
-`convert_hf_to_torch_dist.py`.
+本工具:从 megablocks SRC 读取 weight + .scale,将 FP8/FP4 反量化 → BF16,
+重命名为 HF 格式,并写出一个可直接喂给 mbridge
+`convert_hf_to_torch_dist.py` 的目录。
 
-Quantization recipes (V4-Flash):
-  - bf16 / fp32 weights (norms, embeds, hc_*, attn_sink, gate.tid2eid):
-        copied as-is (no scale)
-  - fp8_e4m3fn weights (attention wq_*/wkv/wo_*, shared_experts w1/w2/w3, indexer):
-        block 128×128, scale dtype fp8_e8m0fnu (= 2^(byte-127))
+量化方案(V4-Flash):
+  - bf16 / fp32 权重(norms、embeds、hc_*、attn_sink、gate.tid2eid):
+        原样复制(无 scale)
+  - fp8_e4m3fn 权重(attention wq_*/wkv/wo_*、shared_experts w1/w2/w3、indexer):
+        block 128×128,scale dtype 为 fp8_e8m0fnu(= 2^(byte-127))
         weight_bf16 = (weight_fp32 * broadcast_scale).bf16
-  - int8 packed (FP4 e2m1fn_x2) weights (routed experts w1/w2/w3):
-        2 fp4 nibbles per byte along K dim, packed_K = K // 2
-        FP4 lookup table: [0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0, 0, -0.5, -1.0, -1.5, -2.0, -3.0, -4.0, -6.0]
-        scale: per-row (out_dim) × group-32 (K), dtype fp8_e8m0fnu
+  - int8 打包(FP4 e2m1fn_x2)权重(路由专家 w1/w2/w3):
+        沿 K 维每字节存 2 个 fp4 半字节,packed_K = K // 2
+        FP4 查找表:[0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0, 0, -0.5, -1.0, -1.5, -2.0, -3.0, -4.0, -6.0]
+        scale:按行(out_dim)× 沿 K 每 32 个一组,dtype 为 fp8_e8m0fnu
         weight_bf16 = (FP4_TABLE[byte] * broadcast_scale).bf16
 
-Name mapping (megablocks → HF) per V4-Flash conventions:
+名称映射(megablocks → HF),遵循 V4-Flash 约定:
   embed.weight                              → model.embed_tokens.weight
   head.weight                               → lm_head.weight
-  norm.weight                               → model.norm.weight (top-level final norm; verify presence)
+  norm.weight                               → model.norm.weight(顶层最终 norm;需确认存在)
   hc_head_{base,fn,scale}                   → model.hc_head_{base,fn,scale}
   layers.{N}.attn_norm.weight               → model.layers.{N}.input_layernorm.weight
   layers.{N}.ffn_norm.weight                → model.layers.{N}.post_attention_layernorm.weight
@@ -39,7 +39,7 @@ Name mapping (megablocks → HF) per V4-Flash conventions:
   layers.{N}.ffn.experts.{i}.w2.weight      → model.layers.{N}.mlp.experts.{i}.down_proj.weight
   layers.{N}.ffn.experts.{i}.w3.weight      → model.layers.{N}.mlp.experts.{i}.up_proj.weight
   layers.{N}.ffn.shared_experts.{w1,w2,w3}  → model.layers.{N}.mlp.shared_experts.{gate_proj,down_proj,up_proj}.weight
-  mtp.{N}.X                                 → mtp.{N}.X (apply same intra-layer rules: attn→self_attn, ffn→mlp, w1/2/3→gate/down/up)
+  mtp.{N}.X                                 → mtp.{N}.X(应用相同的层内规则:attn→self_attn、ffn→mlp、w1/2/3→gate/down/up)
 """
 
 from __future__ import annotations
@@ -56,7 +56,7 @@ from safetensors import safe_open
 from safetensors.torch import save_file
 from tqdm import tqdm
 
-# FP4 e2m1fn lookup table (DeepSeek official, inference/convert.py)
+# FP4 e2m1fn 查找表(DeepSeek 官方,见 inference/convert.py)
 FP4_TABLE = torch.tensor(
     [0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0,
      0.0, -0.5, -1.0, -1.5, -2.0, -3.0, -4.0, -6.0],
@@ -66,13 +66,13 @@ FP4_TABLE = torch.tensor(
 FP8_BLOCK = 128
 FP4_GROUP = 32
 
-# Name mapping rules (intra-layer suffixes):
+# 名称映射规则(层内后缀):
 W123_TO_HF = {"w1": "gate_proj", "w2": "down_proj", "w3": "up_proj"}
 
 
 def map_name_megablocks_to_hf(name: str) -> str:
-    """Translate a megablocks param name to V4-Flash HF param name."""
-    # Top-level
+    """将 megablocks 参数名转换为 V4-Flash 的 HF 参数名。"""
+    # 顶层
     if name == "embed.weight":
         return "model.embed_tokens.weight"
     if name == "head.weight":
@@ -82,7 +82,7 @@ def map_name_megablocks_to_hf(name: str) -> str:
     if name in ("hc_head_base", "hc_head_fn", "hc_head_scale"):
         return f"model.{name}"
 
-    # mtp.{N}.X — same intra-layer rules
+    # mtp.{N}.X — 应用相同的层内规则
     if name.startswith("mtp."):
         return _map_layer_like(name, prefix="mtp.")
 
@@ -94,11 +94,11 @@ def map_name_megablocks_to_hf(name: str) -> str:
 
 
 def _map_layer_like(name: str, prefix: str) -> str:
-    """Map `layers.{N}.X` or `mtp.{N}.X` to HF naming.
+    """将 `layers.{N}.X` 或 `mtp.{N}.X` 映射为 HF 命名。
 
-    `prefix` is what replaces the leading `layers.` / `mtp.` segment.
+    `prefix` 用于替换开头的 `layers.` / `mtp.` 段。
     """
-    # Strip leading "layers." or "mtp."
+    # 去掉开头的 "layers." 或 "mtp."
     if name.startswith("layers."):
         body = name[len("layers."):]
     elif name.startswith("mtp."):
@@ -110,34 +110,34 @@ def _map_layer_like(name: str, prefix: str) -> str:
     layer_idx = parts[0]
     rest = parts[1:]
 
-    # layer-level scalars: hc_attn_base, hc_attn_fn, hc_attn_scale, hc_ffn_*, hc_head_*
+    # 层级标量:hc_attn_base、hc_attn_fn、hc_attn_scale、hc_ffn_*、hc_head_*
     if len(rest) == 1 and rest[0].startswith(("hc_attn", "hc_ffn", "hc_head")):
         return f"{prefix}{layer_idx}.{rest[0]}"
 
-    # layer-level norms
+    # 层级 norm
     if rest == ["attn_norm", "weight"]:
         return f"{prefix}{layer_idx}.input_layernorm.weight"
     if rest == ["ffn_norm", "weight"]:
         return f"{prefix}{layer_idx}.post_attention_layernorm.weight"
-    if rest == ["enorm", "weight"]:  # mtp specific
+    if rest == ["enorm", "weight"]:  # mtp 专用
         return f"{prefix}{layer_idx}.enorm.weight"
     if rest == ["hnorm", "weight"]:
         return f"{prefix}{layer_idx}.hnorm.weight"
-    if rest == ["norm", "weight"]:  # mtp final norm
+    if rest == ["norm", "weight"]:  # mtp 最终 norm
         return f"{prefix}{layer_idx}.norm.weight"
     if rest == ["input_layernorm", "weight"]:
         return f"{prefix}{layer_idx}.input_layernorm.weight"
     if rest == ["shared_head", "norm", "weight"]:
         return f"{prefix}{layer_idx}.shared_head.norm.weight"
 
-    # Attention sub-tree: attn → self_attn
+    # Attention 子树:attn → self_attn
     if rest[0] == "attn":
         return f"{prefix}{layer_idx}.self_attn." + ".".join(rest[1:])
 
-    # FFN sub-tree: ffn → mlp + w1/w2/w3 → gate/down/up_proj
+    # FFN 子树:ffn → mlp + w1/w2/w3 → gate/down/up_proj
     if rest[0] == "ffn":
-        sub = rest[1:]  # e.g. ["experts", "5", "w1", "weight"] or ["shared_experts", "w1", "weight"] or ["gate", "weight"]
-        # Translate the projection key (w1/w2/w3) to HF name
+        sub = rest[1:]  # 例如 ["experts", "5", "w1", "weight"] 或 ["shared_experts", "w1", "weight"] 或 ["gate", "weight"]
+        # 将投影键(w1/w2/w3)转换为 HF 名称
         sub = [W123_TO_HF.get(t, t) for t in sub]
         # gate.bias → gate.e_score_correction_bias
         if sub == ["gate", "bias"]:
@@ -147,7 +147,7 @@ def _map_layer_like(name: str, prefix: str) -> str:
             return f"{prefix}{layer_idx}.mlp.topk.tid2eid"
         return f"{prefix}{layer_idx}.mlp." + ".".join(sub)
 
-    # MTP-specific projections: e_proj, h_proj
+    # MTP 专用投影:e_proj、h_proj
     if rest[0] in ("e_proj", "h_proj"):
         return f"{prefix}{layer_idx}." + ".".join(rest)
 
@@ -155,10 +155,10 @@ def _map_layer_like(name: str, prefix: str) -> str:
 
 
 def dequant_fp8(weight: torch.Tensor, scale: torch.Tensor) -> torch.Tensor:
-    """FP8 e4m3fn block 128×128 + ue8m0 scale → BF16.
+    """FP8 e4m3fn(128×128 分块)+ ue8m0 scale → BF16。
 
     weight: (M, K) fp8_e4m3fn, M%128==0, K%128==0
-    scale:  (M//128, K//128) fp8_e8m0fnu  (value = 2^(byte-127))
+    scale:  (M//128, K//128) fp8_e8m0fnu  (值 = 2^(byte-127))
     """
     M, K = weight.shape
     bM, bK = M // FP8_BLOCK, K // FP8_BLOCK
@@ -171,36 +171,36 @@ def dequant_fp8(weight: torch.Tensor, scale: torch.Tensor) -> torch.Tensor:
 
 
 def dequant_fp4(weight: torch.Tensor, scale: torch.Tensor) -> torch.Tensor:
-    """FP4 e2m1fn_x2 (packed in int8) + ue8m0 scale (per-row × K-block 32) → BF16.
+    """FP4 e2m1fn_x2(打包在 int8 中)+ ue8m0 scale(按行 × 沿 K 每 32 个一组)→ BF16。
 
     weight: (M, K_packed=K//2) int8/uint8, K = K_packed * 2
     scale:  (M, K // 32) fp8_e8m0fnu
 
-    Returns: (M, K) bf16
+    返回: (M, K) bf16
     """
     M, K_packed = weight.shape
     K = K_packed * 2
     assert scale.shape == (M, K // FP4_GROUP), f"scale shape {scale.shape} != ({M}, {K // FP4_GROUP})"
     table = FP4_TABLE.to(weight.device)
-    # Unpack 2 nibbles per byte (matches inference/convert.py packing)
+    # 每字节解出 2 个半字节(与 inference/convert.py 的打包方式一致)
     w_uint8 = weight.view(torch.uint8)
     low = (w_uint8 & 0x0F).long()
     high = ((w_uint8 >> 4) & 0x0F).long()
     fp4 = torch.stack([table[low], table[high]], dim=-1).flatten(-2)  # (M, K)
-    # Broadcast scale: each scale value covers FP4_GROUP=32 K-elements
+    # 广播 scale:每个 scale 值覆盖 K 维上 FP4_GROUP=32 个元素
     s = scale.to(torch.float32).repeat_interleave(FP4_GROUP, dim=-1)  # (M, K)
     return (fp4 * s).bfloat16()
 
 
-# --------------- Streaming converter -----------------------------------------
+# --------------- 流式转换器 -----------------------------------------
 
 
 def _gather_weight_groups(src_index: dict) -> dict:
-    """Group SRC keys: each entry maps base_key → {weight: name, scale: name or None}.
+    """对 SRC 键分组:每个条目映射 base_key → {weight: name, scale: name or None}。
 
-    base_key is the weight's path without trailing `.weight` / `.scale` suffix
-    when both forms exist; otherwise it's the full key.
-    Non-weight tensors (e.g. attn_sink, hc_attn_base) end up as base_key=name with weight=name, scale=None.
+    当 `.weight` / `.scale` 两种形式同时存在时,base_key 是去掉该末尾后缀的
+    权重路径;否则就是完整的键。
+    非权重 tensor(如 attn_sink、hc_attn_base)会落为 base_key=name,且 weight=name、scale=None。
     """
     weight_map = src_index["weight_map"]
     keys = list(weight_map.keys())
@@ -214,14 +214,14 @@ def _gather_weight_groups(src_index: dict) -> dict:
             base = k[: -len(".scale")]
             groups.setdefault(base, {})["scale"] = k
         else:
-            # Non-weight tensors (attn_sink, hc_*, tid2eid, ape) — single tensor, no scale
+            # 非权重 tensor(attn_sink、hc_*、tid2eid、ape)— 单个 tensor,无 scale
             groups.setdefault(k, {})["weight"] = k
 
     return groups
 
 
 def _is_routed_expert(name: str) -> bool:
-    """True if this is `*ffn.experts.{id}.wN.*` (NOT shared_experts)."""
+    """若为 `*ffn.experts.{id}.wN.*`(且不是 shared_experts)则为 True。"""
     return ".ffn.experts." in name and "shared_experts" not in name
 
 
@@ -233,12 +233,12 @@ def convert_one_tensor(
     f_scale,
     device: torch.device,
 ) -> tuple[str, torch.Tensor]:
-    """Read weight (+ optional scale) and return (hf_name, bf16_tensor)."""
+    """读取 weight(+ 可选的 scale),并返回 (hf_name, bf16_tensor)。"""
     weight = f_weight.get_tensor(weight_name)
 
-    # Dispatch on dtype
+    # 按 dtype 分发
     if scale_name is None:
-        # No quantization — directly emit
+        # 未量化 — 直接输出
         out = weight
     else:
         scale = f_scale.get_tensor(scale_name)
@@ -257,16 +257,16 @@ def convert_one_tensor(
     return new_name, out
 
 
-# --------------- Dry-run mode ------------------------------------------------
+# --------------- Dry-run 模式 ------------------------------------------------
 
 
 def dry_run(src_dir: str):
-    """Sanity-check: dequant a few key tensors, print shape + dtype + value summary."""
+    """健全性检查:反量化几个关键 tensor,打印 shape + dtype + 数值摘要。"""
     idx = json.load(open(os.path.join(src_dir, "model.safetensors.index.json")))
     weight_map = idx["weight_map"]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Pick a few representative tensors
+    # 挑选几个有代表性的 tensor
     samples = [
         ("layers.0.attn.wq_a", "fp8_e4m3fn"),
         ("layers.0.ffn.experts.0.w1", "fp4 (routed)"),
@@ -322,10 +322,10 @@ def main():
 
 
 def full_convert(src_dir: str, dst_dir: str, max_shard_bytes: int = 5 * 1024**3):
-    """Stream every shard, dequant, write HF-format BF16 shards.
+    """流式处理每个 shard,反量化,写出 HF 格式的 BF16 shard。
 
-    Output sharding: ~5 GB target (HF convention), bf16 unpacked is ~3.6× SRC size,
-    so 149 GB SRC → ~540 GB DST split into ~108 shards.
+    输出分片:目标约 5 GB(HF 约定),bf16 解包后约为 SRC 体积的 3.6 倍,
+    因此 149 GB SRC → 约 540 GB DST,拆成约 108 个 shard。
     """
     idx = json.load(open(os.path.join(src_dir, "model.safetensors.index.json")))
     weight_map = idx["weight_map"]
@@ -336,22 +336,22 @@ def full_convert(src_dir: str, dst_dir: str, max_shard_bytes: int = 5 * 1024**3)
     print(f"[info] device={device} src={src_dir} dst={dst_dir}")
     print(f"[info] {len(groups)} weight groups (excluding scales)")
 
-    # Order groups so we read each SRC shard sequentially (minimise random reads)
+    # 对分组排序,使每个 SRC shard 被顺序读取(尽量减少随机读)
     def shard_of(g):
-        # representative shard = the weight's shard
+        # 代表性 shard = 该 weight 所在的 shard
         wkey = g.get("weight")
         return weight_map.get(wkey, "ZZZ_unknown")
 
     bases_sorted = sorted(groups.keys(), key=lambda b: (shard_of(groups[b]), b))
 
-    # Cache safe_open handles, keyed by shard filename
+    # 缓存 safe_open 句柄,以 shard 文件名为键
     open_files: dict[str, object] = {}
     def _f(shard_name):
         if shard_name not in open_files:
             open_files[shard_name] = safe_open(os.path.join(src_dir, shard_name), framework="pt")
         return open_files[shard_name]
 
-    # Out shard accumulation
+    # 输出 shard 的累积缓冲
     cur_state: dict[str, torch.Tensor] = {}
     cur_bytes = 0
     shard_idx = 0
@@ -363,7 +363,7 @@ def full_convert(src_dir: str, dst_dir: str, max_shard_bytes: int = 5 * 1024**3)
         nonlocal cur_state, cur_bytes, shard_idx, total_size_bytes
         if not cur_state:
             return
-        # Final shard naming after we know total count is fixed up later
+        # 最终的 shard 命名会在得知总数后再统一修正
         tmp_name = f".tmp-shard-{shard_idx:05d}.safetensors"
         save_file(cur_state, os.path.join(dst_dir, tmp_name))
         for k in cur_state.keys():
@@ -396,7 +396,7 @@ def full_convert(src_dir: str, dst_dir: str, max_shard_bytes: int = 5 * 1024**3)
 
     flush_shard()
 
-    # Rename .tmp-shard-* → final naming model-{i:05d}-of-{N:05d}.safetensors
+    # 将 .tmp-shard-* 重命名 → 最终命名 model-{i:05d}-of-{N:05d}.safetensors
     n = len(out_shard_files)
     rename_map: dict[str, str] = {}
     final_files: list[str] = []
@@ -407,7 +407,7 @@ def full_convert(src_dir: str, dst_dir: str, max_shard_bytes: int = 5 * 1024**3)
         final_files.append(final)
     final_index_map = {k: rename_map[v] for k, v in out_index_map.items()}
 
-    # Write index.json (HF convention)
+    # 写入 index.json(HF 约定)
     index_payload = {
         "metadata": {"total_size": total_size_bytes},
         "weight_map": final_index_map,
@@ -415,13 +415,13 @@ def full_convert(src_dir: str, dst_dir: str, max_shard_bytes: int = 5 * 1024**3)
     with open(os.path.join(dst_dir, "model.safetensors.index.json"), "w") as f:
         json.dump(index_payload, f, indent=2)
 
-    # Copy config + tokenizer + encoding files
+    # 复制 config + tokenizer + 编码相关文件
     for fname in os.listdir(src_dir):
         if fname.endswith((".json", ".py", ".md", ".txt")) and not fname.endswith("index.json"):
             shutil.copyfile(os.path.join(src_dir, fname), os.path.join(dst_dir, fname))
 
-    # Patch config.json: ensure model_type is deepseek_v4 (already is) and remove
-    # the FP8 quantization_config (since outputs are now BF16 unpacked)
+    # 修补 config.json:确保 model_type 为 deepseek_v4(本来就是),并移除
+    # FP8 的 quantization_config(因为输出现在是未打包的 BF16)
     cfg_path = os.path.join(dst_dir, "config.json")
     if os.path.exists(cfg_path):
         cfg = json.load(open(cfg_path))

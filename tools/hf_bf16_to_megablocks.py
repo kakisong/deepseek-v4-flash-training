@@ -1,38 +1,38 @@
 """
-DeepSeek-V4-Flash  unpacked BF16 HF  →  MegaBlocks (dpsk) FP8/FP4 converter.
+DeepSeek-V4-Flash  未打包 BF16 HF  →  MegaBlocks (dpsk) FP8/FP4 转换器。
 
-This is the EXACT INVERSE of ``megablocks_to_hf_bf16.py``:
-that tool dequantized the official MegaBlocks (dpsk) FP8/FP4 checkpoint into an
-unpacked BF16 HF dir; this tool re-quantizes an unpacked BF16 HF dir back into
-the MegaBlocks (dpsk) FP8/FP4 layout (same tensor names, dtypes, shapes, and
-46-shard split as the original ``DeepSeek-V4-Flash``).
+本工具是 ``megablocks_to_hf_bf16.py`` 的精确逆操作:
+那个工具把官方 MegaBlocks (dpsk) FP8/FP4 checkpoint 反量化为
+未打包 BF16 HF 目录;本工具则把未打包 BF16 HF 目录重新量化回
+MegaBlocks (dpsk) FP8/FP4 布局(与原始 ``DeepSeek-V4-Flash`` 相同的
+tensor 名称、dtype、shape 以及 46 个 shard 的切分)。
 
-It is driven by a *template* (the original ``DeepSeek-V4-Flash`` dir): for every
-tensor in the template we look up its dpsk name + target dtype + shard, fetch
-the matching BF16 source tensor from the HF dir (via the authoritative
-megablocks→HF name map), and re-quantize per the recipe below.
+它由一个*模板*(原始 ``DeepSeek-V4-Flash`` 目录)驱动:对模板中的每个
+tensor,查出其 dpsk 名称 + 目标 dtype + 所在 shard,再(通过权威的
+megablocks→HF 名称映射)从 HF 目录取出对应的 BF16 源 tensor,
+并按下述方案重新量化。
 
-Quantization recipes (must invert dequant_fp8 / dequant_fp4 exactly):
-  - tensors WITHOUT a ``.scale`` sibling in the template  (norms, embed, head,
-    hc_*, attn_sink, gate.weight/bias, compressor.ape/norm/wgate/wkv, ...):
-        copied as-is, cast to the template dtype (bf16 / f32 / i64).
-  - FP8 e4m3fn weights (template dtype F8_E4M3: attn wq_*/wkv/wo_*,
-    shared_experts w1/w2/w3, mtp e_proj):
-        block 128x128; scale = round_up_pow2(absmax / 448) stored as
-        float8_e8m0fnu; weight = round_e4m3(w / scale).
-  - FP4 e2m1fn weights (template dtype I8: routed experts ffn.experts.N.wN):
-        per-row, group-32 along K; scale = round_up_pow2(absmax / 6) stored as
-        float8_e8m0fnu; 2 nibbles per byte along K (even idx -> low nibble,
-        odd idx -> high nibble), encoded via the FP4 e2m1 table.
+量化方案(必须精确反演 dequant_fp8 / dequant_fp4):
+  - 模板中没有 ``.scale`` 伴随项的 tensor (norms、embed、head、
+    hc_*、attn_sink、gate.weight/bias、compressor.ape/norm/wgate/wkv 等):
+        原样复制,转换为模板的 dtype(bf16 / f32 / i64)。
+  - FP8 e4m3fn 权重(模板 dtype 为 F8_E4M3:attn wq_*/wkv/wo_*、
+    shared_experts w1/w2/w3、mtp e_proj):
+        128x128 分块;scale = round_up_pow2(absmax / 448),存为
+        float8_e8m0fnu;weight = round_e4m3(w / scale)。
+  - FP4 e2m1fn 权重(模板 dtype 为 I8:路由专家 ffn.experts.N.wN):
+        按行、沿 K 每 32 个一组;scale = round_up_pow2(absmax / 6),存为
+        float8_e8m0fnu;沿 K 每字节存 2 个半字节(偶数 idx -> 低半字节,
+        奇数 idx -> 高半字节),按 FP4 e2m1 表编码。
 
-Idempotency (why this is a *lossless* round-trip on the dequant side):
-A BF16 value produced by dequant is exactly ``q * 2^e`` where ``q`` is on the
-e4m3/e2m1 grid and ``2^e`` is the (power-of-2) scale. Re-quantizing with a
-power-of-2 (round-up) scale reproduces the SAME real value (possibly with a
-different scale exponent + mantissa when the original block did not use the full
-dynamic range), so ``dequant(requant(bf16)) == bf16`` bit-for-bit.
+幂等性(为何在 dequant 一侧这是*无损*往返):
+dequant 产出的 BF16 值恰好是 ``q * 2^e``,其中 ``q`` 落在
+e4m3/e2m1 网格上,而 ``2^e`` 是(2 的幂的)scale。用 2 的幂(向上取整)的
+scale 重新量化会复现完全相同的实数值(当原始 block 没有用满
+动态范围时,scale 的指数 + 尾数可能与原来不同),
+因此 ``dequant(requant(bf16)) == bf16`` 逐位相等。
 
-Usage:
+用法:
   python hf_bf16_to_megablocks.py \
       --hf-src   /.../DeepSeek-V4-Flash-bf16-unpacked \
       --template /.../DeepSeek-V4-Flash \
@@ -52,7 +52,7 @@ from safetensors import safe_open
 from safetensors.torch import save_file
 from tqdm import tqdm
 
-# Reuse the authoritative name-map + dequant helpers from the forward tool.
+# 复用正向工具中权威的名称映射 + 反量化辅助函数。
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from megablocks_to_hf_bf16 import (  # noqa: E402
     FP4_GROUP,
@@ -66,26 +66,26 @@ FP4_MAX = 6.0
 E8M0_MIN_K = -127
 E8M0_MAX_K = 127
 
-# e2m1 magnitude grid + decision midpoints (matches FP4_TABLE in the forward tool).
+# e2m1 幅值网格 + 判定中点(与正向工具中的 FP4_TABLE 一致)。
 _FP4_MAGS = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0]
 _FP4_MIDS = torch.tensor([0.25, 0.75, 1.25, 1.75, 2.5, 3.5, 5.0], dtype=torch.float32)
 
 
 def round_up_pow2(x: torch.Tensor) -> torch.Tensor:
-    """Smallest power of two >= x, as fp32.  x must be >= 0.
+    """返回 >= x 的最小 2 的幂,以 fp32 表示。  要求 x >= 0。
 
-    Uses frexp so exact powers of two map to themselves (no log2 rounding error).
-    For x == 0 returns 2^E8M0_MIN_K (harmless: the block is all-zero, q == 0).
+    使用 frexp,使精确的 2 的幂映射为其自身(没有 log2 舍入误差)。
+    当 x == 0 时返回 2^E8M0_MIN_K(无害:该 block 全为零,q == 0)。
     """
-    mant, exp = torch.frexp(x)  # x = mant * 2**exp, mant in [0.5, 1) for x>0
-    # ceil(log2(x)): exp-1 when x is an exact power of two (mant == 0.5), else exp.
+    mant, exp = torch.frexp(x)  # x = mant * 2**exp,x>0 时 mant 落在 [0.5, 1) 内
+    # ceil(log2(x)):当 x 恰为 2 的幂(mant == 0.5)时取 exp-1,否则取 exp。
     k = torch.where(mant <= 0.5, exp - 1, exp)
     k = k.clamp(E8M0_MIN_K, E8M0_MAX_K)
     return torch.ldexp(torch.ones_like(x), k)
 
 
 def quant_fp8(w: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-    """BF16 (M,K) -> (e4m3fn weight (M,K), e8m0 scale (M//128, K//128))."""
+    """BF16 (M,K) -> (e4m3fn 权重 (M,K), e8m0 scale (M//128, K//128))。"""
     w = w.to(torch.float32)
     M, K = w.shape
     assert M % FP8_BLOCK == 0 and K % FP8_BLOCK == 0, f"{w.shape} not /{FP8_BLOCK}"
@@ -100,7 +100,7 @@ def quant_fp8(w: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
 
 
 def quant_fp4(w: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-    """BF16 (M,K) -> (int8 packed weight (M,K//2), e8m0 scale (M, K//32))."""
+    """BF16 (M,K) -> (int8 打包权重 (M,K//2), e8m0 scale (M, K//32))。"""
     w = w.to(torch.float32)
     M, K = w.shape
     assert K % FP4_GROUP == 0, f"K={K} not /{FP4_GROUP}"
@@ -108,14 +108,14 @@ def quant_fp4(w: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
     wg = w.view(M, g, FP4_GROUP)
     amax = wg.abs().amax(dim=-1)                    # (M,g)
     scale = round_up_pow2(amax / FP4_MAX)           # (M,g) pow2 fp32
-    v = (wg / scale[..., None]).reshape(M, K)       # scaled, on/near e2m1 grid
+    v = (wg / scale[..., None]).reshape(M, K)       # 已缩放,落在/接近 e2m1 网格
 
     sign = (v < 0).to(torch.uint8)
     a = v.abs().clamp(0.0, FP4_MAX)
     mids = _FP4_MIDS.to(v.device)
-    m = torch.bucketize(a, mids).to(torch.uint8)    # magnitude index 0..7
+    m = torch.bucketize(a, mids).to(torch.uint8)    # 幅值索引 0..7
     nib = (sign << 3) | m
-    nib = torch.where(m == 0, torch.zeros_like(nib), nib)  # canonical +0
+    nib = torch.where(m == 0, torch.zeros_like(nib), nib)  # 规范化为 +0
 
     nib = nib.view(M, K // 2, 2)
     packed = (nib[..., 0] | (nib[..., 1] << 4)).to(torch.uint8)  # (M,K//2)
@@ -125,7 +125,7 @@ def quant_fp4(w: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
 
 
 def _read_header(path: str) -> dict:
-    """Return {tensor_name: {'dtype':..., 'shape':...}} from a safetensors file."""
+    """从 safetensors 文件返回 {tensor_name: {'dtype':..., 'shape':...}}。"""
     import struct
 
     with open(path, "rb") as f:
@@ -136,14 +136,14 @@ def _read_header(path: str) -> dict:
 
 
 def _group_bases(names: list[str]) -> dict:
-    """Group template tensor names into base -> {'weight':name, 'scale':name|None}."""
+    """将模板 tensor 名分组为 base -> {'weight':name, 'scale':name|None}。"""
     groups: dict[str, dict] = {}
     for k in names:
         if k.endswith(".scale"):
             groups.setdefault(k[: -len(".scale")], {})["scale"] = k
         elif k.endswith(".weight"):
             groups.setdefault(k[: -len(".weight")], {})["weight"] = k
-        else:  # standalone tensor (attn_sink, hc_*, ape, tid2eid, ...)
+        else:  # 独立 tensor(attn_sink、hc_*、ape、tid2eid 等)
             groups.setdefault(k, {})["weight"] = k
     return groups
 
@@ -157,12 +157,12 @@ def convert(hf_src: str, template: str, dst: str, device: str = "cuda", fill_mis
     hf_index = json.load(open(os.path.join(hf_src, "model.safetensors.index.json")))
     hf_map = hf_index["weight_map"]
 
-    # shard file -> [dpsk tensor names], preserving the template's exact split.
+    # shard 文件 -> [dpsk tensor 名列表],保持与模板完全一致的切分。
     shard_to_keys: dict[str, list[str]] = {}
     for name, shard in tmpl_map.items():
         shard_to_keys.setdefault(shard, []).append(name)
 
-    # lazy safe_open cache over the HF (bf16) source shards.
+    # 针对 HF(bf16)源 shard 的惰性 safe_open 缓存。
     hf_handles: dict[str, object] = {}
 
     def hf_get(hf_name: str) -> torch.Tensor:
@@ -190,9 +190,9 @@ def convert(hf_src: str, template: str, dst: str, device: str = "cuda", fill_mis
             w_dtype = hdr[wn]["dtype"]
             hf_name = map_name_megablocks_to_hf(wn)
 
-            # If the HF source lacks this tensor (e.g. training didn't save the MTP
-            # layer), optionally copy the already-quantized tensor straight from the
-            # template (original dpsk ckpt) instead of re-quantizing.
+            # 若 HF 源缺少该 tensor(例如训练没有保存 MTP 层),
+            # 可选择直接从模板(原始 dpsk ckpt)复制
+            # 已量化好的 tensor,而不是重新量化。
             if fill_missing and hf_name not in hf_map:
                 out_state[wn] = tmpl_handle.get_tensor(wn)
                 if sn is not None:
@@ -203,7 +203,7 @@ def convert(hf_src: str, template: str, dst: str, device: str = "cuda", fill_mis
             src = hf_get(hf_name).to(dev)
 
             if sn is None:
-                # No scale in template -> copy as-is, cast to the template dtype.
+                # 模板中无 scale -> 原样复制,转换为模板的 dtype。
                 out_state[wn] = src.to(_DTYPE[w_dtype]).cpu()
             elif w_dtype == "F8_E4M3":
                 qw, s = quant_fp8(src)
@@ -216,14 +216,14 @@ def convert(hf_src: str, template: str, dst: str, device: str = "cuda", fill_mis
             else:
                 raise RuntimeError(f"Unexpected scaled tensor {wn} dtype={w_dtype}")
 
-            # Hard invariants: produced tensors must match the template exactly.
+            # 硬性不变量:产出的 tensor 必须与模板完全一致。
             assert tuple(out_state[wn].shape) == tuple(hdr[wn]["shape"]), (
                 f"{wn}: shape {tuple(out_state[wn].shape)} != template {hdr[wn]['shape']}")
             if sn is not None:
                 assert tuple(out_state[sn].shape) == tuple(hdr[sn]["shape"]), (
                     f"{sn}: shape {tuple(out_state[sn].shape)} != template {hdr[sn]['shape']}")
 
-        # sanity: same key set as the template shard
+        # 健全性检查:键集合须与模板 shard 相同
         assert set(out_state) == set(hdr), (
             f"{shard}: key mismatch "
             f"missing={set(hdr)-set(out_state)} extra={set(out_state)-set(hdr)}")
@@ -232,7 +232,7 @@ def convert(hf_src: str, template: str, dst: str, device: str = "cuda", fill_mis
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
-    # Copy index verbatim (identical key->shard layout) + all non-weight aux files.
+    # 原样复制 index(key->shard 布局完全相同)+ 所有非权重辅助文件。
     shutil.copyfile(
         os.path.join(template, "model.safetensors.index.json"),
         os.path.join(dst, "model.safetensors.index.json"),

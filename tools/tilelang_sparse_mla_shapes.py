@@ -1,7 +1,7 @@
-"""Sweep shapes to find where tilelang bwd NaN starts.
+"""扫描各种形状,找出 tilelang bwd 从何处开始出现 NaN。
 
-Run a series of (B, S, H, D, topk) configurations with all-valid indices and
-check whether dq/dkv go NaN. This isolates which dimension(s) trigger the bug.
+用全部有效的索引跑一系列 (B, S, H, D, topk) 配置,
+检查 dq/dkv 是否变成 NaN。以此隔离触发该 bug 的维度。
 """
 
 from __future__ import annotations
@@ -42,19 +42,19 @@ def trial(B, S, H, D, topk, S_kv=None, label=""):
 
 def main():
     print("=== shape sweep ===")
-    # Production V4-Flash (baseline, known NaN)
+    # 生产 V4-Flash(基线,已知会 NaN)
     trial(1, 1280, 64, 512, 640, label="prod V4-Flash")
-    # Smaller H
+    # 更小的 H
     trial(1, 1280, 16, 512, 640, label="small H=16")
-    # Smaller D (keep power of 2)
+    # 更小的 D(保持 2 的幂)
     trial(1, 1280, 64, 128, 640, label="small D=128")
     trial(1, 1280, 64, 256, 640, label="D=256")
-    # Smaller S
+    # 更小的 S
     trial(1, 256, 64, 512, 64, label="small S=256")
-    # Smaller topk
+    # 更小的 topk
     trial(1, 1280, 64, 512, 64, label="topk=64")
     trial(1, 1280, 64, 512, 128, label="topk=128")
-    # All small
+    # 全部取小值
     trial(1, 256, 16, 128, 64, label="all small")
 
 

@@ -1,8 +1,8 @@
-"""Query-centric quick lever: block_H (heads per block) controls NH = #head-blocks, and
-EACH head-block emits its own atomic dKV scatter -> NH multiplies the op_red count.
-block_H=64 (NH=1) halves the atomic-reduction ops vs the production block_H=32 (NH=2),
-at the cost of ~2x shared memory (may force num_stages=1). The kernel is L2-reduction
-bound, so this is a candidate free win. Measure it directly.
+"""以 query 为中心的快速调优杠杆:block_H(每 block 的 head 数)决定 NH = head-block 数量,
+而每个 head-block 都会发出自己的原子 dKV scatter -> NH 会成倍放大 op_red 次数。
+block_H=64(NH=1)相比生产配置 block_H=32(NH=2)能把原子归约操作减半,
+代价是约 2 倍的 shared memory(可能被迫降到 num_stages=1)。该 kernel 受
+L2 归约带宽限制,因此这有望是免费收益。直接测量验证。
 
 Run: PYTHONPATH=<fsx miles> python3 tools/v4_bwd_blockh.py [S] [topk]
 """
@@ -64,9 +64,9 @@ def main():
         except Exception as e:
             print(f"  {bh:>8} {64 // bh:>3} {ns:>3} ddq={str(ddq):>5} ss={ss} {'FAIL':>9}  {note}: {str(e)[:45]}")
 
-    # ---- correctness: candidate (NH=1, direct_dq) vs PRODUCTION bwd kernel, same inputs ----
+    # ---- 正确性:候选配置(NH=1, direct_dq)对比生产 bwd kernel,输入相同 ----
     print("\n=== correctness: candidate block_H=64/direct_dq atomic vs production block_H=32 ===")
-    ref_k = prod_bwd(B, S, S_kv, H, D, topk)          # production kernel
+    ref_k = prod_bwd(B, S, S_kv, H, D, topk)          # 生产 kernel
     cand_k = make_bwd(B, S, S_kv, H, D, topk, "atomic", num_stages=1, block_H_cap=64,
                       direct_dq=True, split_store_n=2)
     dkv_ref = torch.zeros(B, S_kv, D, dtype=torch.float32, device=dev)

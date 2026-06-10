@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-"""DeepSeek-V4 mini-checkpoint SFT loss explicit-reference check.
+"""DeepSeek-V4 mini checkpoint 的 SFT loss 显式参考检查。
 
-This verifier loads the 4-layer mini checkpoint and fixed rollout batch, runs a
-Miles/Megatron forward pass, and recomputes the SFT negative log-likelihood with
-an explicit PyTorch formula:
+本校验器加载 4 层 mini checkpoint 与固定的 rollout 批次，运行一次
+Miles/Megatron 前向，并用显式的 PyTorch 公式重新计算 SFT 负对数似然：
 
     log_softmax(response_logits).gather(target_tokens) * loss_mask
 
-The check isolates the SFT loss from the model forward.  It does not prove
-strict backend logprob parity; it proves that the SFT loss used in the training
-step matches an external formula on the loaded mini-checkpoint logits.
+该检查把 SFT loss 与模型前向隔离开来。它并不证明后端 logprob 的严格
+一致性；它证明的是：训练步中使用的 SFT loss 在已加载的 mini checkpoint
+logits 上与一个外部公式一致。
 """
 
 import argparse

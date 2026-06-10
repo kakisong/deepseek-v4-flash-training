@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Distributed HF BF16 → Megatron torch_dist conversion across 8 nodes.
-# Config: TP=1 PP=8 EP=4 (PR #1045 default 8-node).
+# 跨 8 节点分布式执行 HF BF16 → Megatron torch_dist 转换。
+# 配置:TP=1 PP=8 EP=4(PR #1045 默认的 8 节点配置)。
 
 set -euo pipefail
 
@@ -26,19 +26,19 @@ mkdir -p "$V4_TORCH_DIST"
 echo "[info] target: $V4_TORCH_DIST"
 echo "[info] using TP=1 PP=8 EP=4 across 8 nodes"
 
-# Materialize the conversion python call into a script file and run it inside the container.
-# Monkey-patch exec_command_all_ray_node to inject NCCL/distributed debug env in front of each
-# per-node command, so the next time init_process_group hangs (we lost 91 minutes once) we can
-# see exactly where the NCCL handshake stalls.
+# 把转换用的 python 调用落成脚本文件,在容器内执行。
+# Monkey-patch exec_command_all_ray_node,在每个节点的命令前注入 NCCL/分布式调试环境变量,
+# 这样下次 init_process_group 卡死时(我们曾为此损失过 91 分钟)
+# 就能准确看到 NCCL 握手卡在哪一步。
 CONV_PY=$V4_OUT/.convert_v4.py
 cat > "$CONV_PY" <<EOF
 import miles.utils.misc as _misc
 import miles.utils.external_utils.command_utils as _cu
 
 _DEBUG_ENV = (
-    # Disable IB for conversion — host's `ibv_reg_mr_iova2` returns Invalid argument
-    # under our IB driver. TP=ETP=1 so scatter group_size=1 (no real cross-rank traffic),
-    # falling back to socket only costs init-time setup, no perf hit.
+    # 转换阶段禁用 IB — 宿主机的 `ibv_reg_mr_iova2` 在我们的 IB 驱动下
+    # 返回 Invalid argument。TP=ETP=1,scatter group_size=1(没有真正的跨 rank 流量),
+    # 回退到 socket 只多花初始化时间,不损失性能。
     "NCCL_IB_DISABLE=1 "
     "NCCL_NET_GDR_LEVEL=0 "
     "NCCL_DEBUG=WARN "
@@ -74,15 +74,15 @@ _cu.convert_checkpoint(
     ),
     dir_dst="$V4_MODELS",
     hf_checkpoint="$V4_BF16_DIR",
-    # Prepend mbridge_debug (CFS-shadowed mbridge with MILES-DEBUG scatter prints)
-    # so all worker nodes import the patched bridge.py before pip-installed mbridge.
+    # 把 mbridge_debug(带 MILES-DEBUG scatter 打印的 CFS 影子版 mbridge)放到最前面,
+    # 让所有 worker 节点先于 pip 安装的 mbridge 导入打过补丁的 bridge.py。
     megatron_path="$V4_WORK/mbridge_debug:$V4_MEGATRON",
 )
 EOF
 
 CONV_SH=$V4_OUT/.convert_v4.sh
-# Use the CFS-shadowed mbridge with debug prints (added MILES-DEBUG for scatter shape mismatch)
-# so all 8 nodes import the patched mbridge before the pip-installed one.
+# 使用带调试打印的 CFS 影子版 mbridge(针对 scatter shape 不匹配加了 MILES-DEBUG),
+# 让全部 8 个节点先于 pip 安装版导入打过补丁的 mbridge。
 MBRIDGE_DEBUG=$V4_WORK/mbridge_debug
 cat > "$CONV_SH" <<EOF
 #!/usr/bin/env bash

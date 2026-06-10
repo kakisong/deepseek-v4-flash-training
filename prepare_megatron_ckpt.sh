@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# HF (BF16) → Megatron torch_dist.
+# HF (BF16) → Megatron torch_dist。
 #
-# Usage:
+# 用法:
 #   bash examples/deepseek_v4_sft/prepare_megatron_ckpt.sh 4layer   # Stage A
 #   bash examples/deepseek_v4_sft/prepare_megatron_ckpt.sh full     # Stage B
 #
-# Prerequisites:
-#   - $MODELS/DeepSeek-V4-Flash-bf16 exists (fp8_cast_bf16 has been run)
-#   - Current branch contains PR #1045 (scripts/models/deepseek-v4-flash{,-4layer}.sh)
-#   - $MEGATRON_PATH points at the Megatron-LM source tree
+# 前置条件:
+#   - $MODELS/DeepSeek-V4-Flash-bf16 已存在 (已运行过 fp8_cast_bf16)
+#   - 当前分支包含 PR #1045 (scripts/models/deepseek-v4-flash{,-4layer}.sh)
+#   - $MEGATRON_PATH 指向 Megatron-LM 源码树
 
 set -euo pipefail
 
@@ -49,8 +49,8 @@ else
   TP=1
   PP=8
   EP=4
-  # If PP first/last stages are unbalanced, the convert tool auto-balances them.
-  # To override manually, add --decoder-first-pipeline-num-layers / -last-... to EXTRA.
+  # 如果 PP 首/末 stage 层数不均衡, 转换工具会自动均衡。
+  # 如需手动覆盖, 在 EXTRA 中加 --decoder-first-pipeline-num-layers / -last-...。
   EXTRA="--expert-tensor-parallel-size 1"
 fi
 

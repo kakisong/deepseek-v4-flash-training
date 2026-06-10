@@ -1,4 +1,4 @@
-"""Inspect Lse and Delta values from fwd + preprocess to spot NaN source."""
+"""检查 fwd + preprocess 产出的 Lse 与 Delta 值,定位 NaN 来源。"""
 
 from __future__ import annotations
 
@@ -36,12 +36,12 @@ def main():
           f"inf={torch.isinf(delta).sum().item()}")
     print(f"       min={delta.min():.3e} max={delta.max():.3e}")
 
-    # Manual: delta_ref = sum_d o[b,s,h,d] * do[b,s,h,d]
+    # 手工计算:delta_ref = sum_d o[b,s,h,d] * do[b,s,h,d]
     delta_ref = (o.float() * do.float()).sum(dim=-1)
     diff = (delta.float() - delta_ref).abs()
     print(f"delta vs ref: max_abs_diff = {diff.max():.3e}, mean_abs_diff = {diff.mean():.3e}")
 
-    # Now run bwd
+    # 接着运行 bwd
     bwd_kernel = bwd_mod.bwd(B, S, S_kv, H, D, topk, sm_scale)
     postprocess_kernel = bwd_mod.postprocess(B, S_kv, D)
 

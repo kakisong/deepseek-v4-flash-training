@@ -1,24 +1,24 @@
 #!/usr/bin/env bash
-# Stage B0 — 8 nodes x 8 cards H20 full-scale dry-run.
+# Stage B0 — 8 节点 x 8 卡 H20 全尺寸 dry-run。
 #
-# Goals (within 1-2 hours):
-#   1. Verify the TP=4 / PP=4 / CP=2 / EP=16 partition starts on real 284B weights.
-#   2. Peak memory < 92GB (leave headroom).
-#   3. Cross-node IB / GPUDirect bandwidth is in place (single-step wall-time within budget).
-#   4. ckpt save/load works under the real sharding.
-#   5. Data prefetch does not starve training.
+# 目标 (1-2 小时内完成):
+#   1. 验证 TP=4 / PP=4 / CP=2 / EP=16 切分能在真实 284B 权重上启动。
+#   2. 峰值显存 < 92GB (留出余量)。
+#   3. 跨节点 IB / GPUDirect 带宽就位 (单步耗时在预算内)。
+#   4. ckpt save/load 在真实分片下可用。
+#   5. 数据预取不会让训练饿等。
 #
-# Differences from Stage B:
-#   - Only 50 steps (--num-rollout runs through once)
-#   - Uses the same small data set as Stage A to avoid IO interference
-#   - Explicit --debug-train-only so SGLang is not started
-#   - --save-interval 25 triggers save at least twice to validate the ckpt path
+# 与 Stage B 的差异:
+#   - 只跑 50 步 (--num-rollout 一次跑完)
+#   - 复用 Stage A 的同一份小数据集, 避免 IO 干扰
+#   - 显式 --debug-train-only, 不启动 SGLang
+#   - --save-interval 25 至少触发两次保存, 验证 ckpt 路径
 #
-# Pass criteria (README §6.B0):
-#   - Startup < 15 minutes
-#   - Step 1 < 90s, steady-state 30-50s
-#   - Per-node peak memory < 92GB
-#   - Both saves land on disk and reload consistently
+# 通过标准 (README §6.B0):
+#   - 启动 < 15 分钟
+#   - 第 1 步 < 90s, 稳态 30-50s
+#   - 单节点峰值显存 < 92GB
+#   - 两次保存均落盘, 且能一致地重新加载
 
 set -euo pipefail
 
@@ -85,19 +85,19 @@ CKPT_ARGS=(
   --ref-load       "$TORCH_DIST"
   --load           "$SAVE_DIR"
   --save           "$SAVE_DIR"
-  --save-interval  25                 # fires twice within 50 steps to validate save/load
+  --save-interval  25                 # 50 步内触发两次, 验证 save/load
   --save-retain-interval 25
 )
 
-# Key idea: dry-run uses a small batch and few steps; the only goal is to verify the
-# path can handle real-scale weights.
+# 核心思路: dry-run 用小 batch、少步数; 唯一目标是验证整条链路
+# 能承载真实规模的权重。
 SFT_ARGS=(
   --rollout-function-path miles.rollout.sft_rollout.generate_rollout
   --prompt-data    "$SFT_DATA"
   --input-key      messages
   --rollout-shuffle
   --num-rollout            "$DRY_RUN_STEPS"
-  --rollout-batch-size     128         # half of Stage B for faster steps
+  --rollout-batch-size     128         # Stage B 的一半, 加快单步速度
   --global-batch-size      128
 
   --loss-type sft_loss
@@ -110,7 +110,7 @@ SFT_ARGS=(
   --loss-mask-type     "$LOSS_MASK_TYPE"
 )
 
-# Identical to Stage B — the whole point of this stage is to validate this partition.
+# 与 Stage B 完全一致 — 本阶段的意义就在于验证这套切分。
 PERF_ARGS=(
   --tensor-model-parallel-size 4
   --sequence-parallel
@@ -133,7 +133,7 @@ PERF_ARGS=(
 OPTIMIZER_ARGS=(
   --optimizer adam
   --lr 5e-6
-  --lr-decay-style constant            # dry-run does not need cosine
+  --lr-decay-style constant            # dry-run 不需要 cosine
   --weight-decay 0.1
   --adam-beta1 0.9
   --adam-beta2 0.95
@@ -157,7 +157,7 @@ MISC_ARGS=(
   --disable-weights-backuper
 )
 
-# ray head + workers (same as Stage B).
+# ray head + workers (与 Stage B 相同)。
 export no_proxy="127.0.0.1,${MASTER_ADDR}"
 ray start --head --node-ip-address "${MASTER_ADDR}" \
     --num-gpus "$NUM_GPUS_PER_NODE" --disable-usage-stats \
